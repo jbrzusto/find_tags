@@ -13,10 +13,10 @@ CXX=i686-w64-mingw32-g++
 CPPFLAGS=-Wall -O3 -std=c++0x  -ffast-math -ftree-vectorize -static-libgcc -static-libstdc++ 
 
 
-all: find_tags find_tags_unifile
+all: find_tags.exe find_tags_unifile.exe
 
 clean:
-	rm -f *.o find_tags find_tags_unifile
+	rm -f *.o find_tags.exe find_tags_unifile.exe
 
 Freq_Setting.o: Freq_Setting.cpp Freq_Setting.hpp find_tags_common.hpp
 
