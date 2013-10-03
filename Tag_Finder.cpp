@@ -4,12 +4,11 @@ Tag_Finder::Tag_Finder (Nominal_Frequency_kHz nom_freq, Tag_Set *tags, string pr
   nom_freq(nom_freq),
   tags(tags),
   graph(),
-  cands(),
+  cands(NUM_CAND_LISTS),
   pulse_slop(default_pulse_slop),
   burst_slop(default_burst_slop),
   burst_slop_expansion(default_burst_slop_expansion),
   max_skipped_bursts(default_max_skipped_bursts),
-  hit_rate_window(default_hit_rate_window),
   prefix(prefix)
 {
 };
@@ -114,19 +113,13 @@ Tag_Finder::set_out_stream(ostream *os) {
 };
 
 void
-Tag_Finder::set_default_hit_rate_window(Gap h) {
-  default_hit_rate_window = h;
-};
-
-void
 Tag_Finder::init() {
   setup_graph();
-  initialize_tag_buffers();
 };
 
 void
 Tag_Finder::output_header(ostream * out) {
-  (*out) << "\"ant\",\"ts\",\"id\",\"freq\",\"freq.sd\",\"sig\",\"sig.sd\",\"noise\",\"run.id\",\"pos.in.run\",\"slop\",\"burst.slop\",\"hit.rate\",\"ant.freq\"" 
+  (*out) << "\"ant\",\"ts\",\"id\",\"freq\",\"freq.sd\",\"sig\",\"sig.sd\",\"noise\",\"run.id\",\"pos.in.run\",\"slop\",\"burst.slop\",\"ant.freq\"" 
       
 #ifdef FIND_TAGS_DEBUG
 		<< " ,\"p1\",\"p2\",\"p3\",\"p4\",\"ptr\""
@@ -162,129 +155,99 @@ Tag_Finder::process(Pulse &p) {
      Tag_Candidate at this pulse.
   */
 
-  Cand_Set cloned_candidates;
+  // the clone list 
+  Cand_List & cloned_candidates = cands[3];
 
-  // unless this pulse is used to confirm a tag candidate (in which case it's
-  // very likely to be part of that tag) we will start a new tag candidate with it
+  bool confirmed_acceptance = false; // has hit been accepted by a confirmed candidate?
+ 
+  for (int i = 0; i < NUM_CAND_LISTS && ! confirmed_acceptance; ++i) {
 
-  bool start_new_candidate_with_pulse = true;
+    Cand_List & cs = cands[i];
 
-  for (Cand_Set::iterator ci = cands.begin(); ci != cands.end(); /**/ ) {
-
-    if (ci->is_too_old_given_pulse_time(p)) {
-
-      if (ci->get_tag_id_level() == Tag_Candidate::CONFIRMED && ci->has_burst()) {
-	bool is_last_of_its_kind = true;
-
-	// if this is the only candidate with the given tag_ID, then dump any bursts before deleting
-
-	for (Cand_Set::iterator cci = cands.begin(); cci != cands.end(); ++cci ) {
-	  if (cci != ci 
-	      && cci->get_tag_id() == ci->get_tag_id()
-	      && cci->get_tag_id_level() == Tag_Candidate::CONFIRMED
-	      && cci->has_burst())
-	    {
-	      is_last_of_its_kind = false;
-	      break;
-	    }
-	}
-	if (is_last_of_its_kind)
-	  ci->dump_bursts(out_stream, prefix);
+    for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); /**/ ) {
+      
+      if (ci->is_too_old_given_pulse_time(p)) {
+        Cand_List::iterator di = ci;
+        ++ci;
+        cs.erase(di);
+        continue;
       }
 
-#ifdef FIND_TAGS_DEBUG
-      std::cerr << "Killing too old candidate " << &(*ci) << " with unique_id = " << ci->unique_id << "; last_ts " << ci->last_ts << "; pulse.ts " << p.ts << std::endl;
-#endif
-
-      Cand_Set::iterator di = ci;
-      ++ci;
-      cands.erase(di);
-      continue;
-    }
-
-    // see whether this Tag Candidate can accept this pulse
-    DFA_Node * next_state = ci->advance_by_pulse(p);
-
-    if (!next_state) {
-      ++ci;
-      continue;
-    }
-
-    // we will be adding the pulse to this tag candidate.  See whether we need
-    // to clone a copy without the new pulse.  If a candidate has narrowed
-    // down to a unique tag ID, we only clone when adding the first point from
-    // a new burst; this allows us to have large burst slop, necessary when dealing
-    // with frequent clock resets from some deployments
-
-    if (ci->get_tag_id_level() == Tag_Candidate::MULTIPLE 
-	|| ci->at_end_of_burst()) 
-      {
-	// clone the candidate, but without the added pulse
-	cloned_candidates.push_back(*ci);
-
-#ifdef FIND_TAGS_DEBUG
-	std::cerr << "cloned candidate " << &(*ci) << " with run id = " 
-		  << ci->unique_id  << " to candidate " 
-		  << &cloned_candidates.back() << std::endl;
-#endif
-	  
+      // see whether this Tag Candidate can accept this pulse
+      DFA_Node * next_state = ci->advance_by_pulse(p);
+      
+      if (!next_state) {
+        ++ci;
+        continue;
       }
 
-    if (ci->add_pulse(p, next_state)) {
-      // this candidate tag is at level CONFIRMED, and
-      // has at least one new burst
-
-      // now see what candidates should be deleted because they
-      // have the same ID or share any pulses
-
-      for (Cand_Set::iterator cci = cands.begin(); cci != cands.end(); /**/ ) {
-	if (cci != ci 
-	    && (cci->has_same_id_as(*ci)
-		|| cci->shares_any_pulses(*ci)))
-	  {
-	    Cand_Set::iterator di = cci;
-	    ++cci;
-	      
-#ifdef FIND_TAGS_DEBUG
-	    std::cerr << "Killing (because of id/pulse overlap with confirmed " << &(*ci) << ") candidate " << &(*di) << " with unique_id = " << di->unique_id << std::endl;
-#endif
-	      
-	    cands.erase(di);
-	  } else {
-	  ++cci;
-	};
+      confirmed_acceptance = (ci->get_tag_id_level() == Tag_Candidate::CONFIRMED);
+      
+      if (! ci->is_confirmed() && ! ci->next_pulse_confirms()) {
+        // clone the candidate, but without the added pulse
+        cloned_candidates.push_back(*ci);
       }
+  
+      if (ci->add_pulse(p, next_state)) {
+        // this candidate tag just got to the CONFIRMED level
+        
+        // now see what candidates should be deleted because they
+        // have the same ID or share any pulses
+        
+        for (int j = 0; j < NUM_CAND_LISTS; ++j) {
+          Cand_List & ccs = cands[j];
+          for (Cand_List::iterator cci = ccs.begin(); cci != ccs.end(); /**/ ) {
+            if (cci != ci 
+                && (cci->has_same_id_as(*ci) || cci->shares_any_pulses(*ci)))
+              {
+                Cand_List::iterator di = cci;
+                ++cci;
+                ccs.erase(di);
+              } else {
+              ++cci;
+            };
+          }
+        }
+
+        // push this candidate to end of the confirmed list
+        // so it has priority for accepting new hits
+        
+        Cand_List &confirmed = cands[0];
+        confirmed.splice(confirmed.end(), cs, ci);
+      }
+      if (ci->is_confirmed()) {
 	
-      // dump all complete bursts from this confirmed tag
-      ci->dump_bursts(out_stream, prefix);
+        // dump all complete bursts from this confirmed tag
+        ci->dump_bursts(out_stream, prefix);
 	
-      // don't start a new candidate with this pulse
-      start_new_candidate_with_pulse = false;
-
-      // don't try to add this pulse to other candidates
-      break;
-    }
-    ++ci;
-  } // continue trying letting other tag_candidates try this pulse
-
+        // don't start a new candidate with this pulse
+        confirmed_acceptance = true;
+        
+        // don't try to add this pulse to other candidates
+        break;
+      }
+      ++ci;
+    } // continue trying letting other tag_candidates try this pulse
+    
     // add any cloned candidates to the end of the list
-  cands.splice(cands.end(), cloned_candidates);
-
+    cs.splice(cs.end(), cloned_candidates);
+  }
   // maybe start a new Tag_Candidate with this pulse 
-  if (start_new_candidate_with_pulse) {
-    cands.push_back(Tag_Candidate(this, graph.get_root(), p));
+  if (! confirmed_acceptance) {
+    cands[2].push_back(Tag_Candidate(this, graph.get_root(), p));
+  }
 
 #ifdef FIND_TAGS_DEBUG
     std::cerr << "started candidate " << &cands.back() << " with run id = " << cands.back().unique_id << std::endl;
 #endif
 
-  }
 };
 
 void
 Tag_Finder::end_processing() {
   // dump any confirmed candidates which have bursts
 
+#if 0
   for (Cand_Set::iterator ci = cands.begin(); ci != cands.end(); ++ci ) {
       
     if (ci->get_tag_id_level() == Tag_Candidate::CONFIRMED && ci->has_burst()) {
@@ -312,34 +275,8 @@ Tag_Finder::end_processing() {
       ci->dump_bursts(out_stream, prefix);
     }
   }
-};
 
-void
-Tag_Finder::initialize_tag_buffers() {
-  for (Tag_Set::iterator itag = tags->begin(); itag != tags->end(); ++itag)
-    tag_times[itag->first] = std::list < Timestamp > ();
-};
-
-void
-Tag_Finder::add_tag_hit_timestamp(Tag_ID id, Timestamp ts) {
-  std::list < Timestamp > &tts = tag_times[id];
-  tts.push_back(ts);
-  Timestamp end = tts.back();
-  Tag_Finder::Tag_Time_Buffer::iterator it = tts.begin();
-  while(end - *it > hit_rate_window)
-    ++it;
-  tts.erase(tts.begin(), it);
-};
-
-float
-Tag_Finder::get_tag_hit_rate(Tag_ID tid) {
-  std::list < Timestamp > &tts = tag_times[tid];
-  if (tts.size() < 2)
-    return -1;
-  Timestamp gap = tts.back() - tts.front();
-  if (gap == 0.0)
-    gap = 0.0001; 
-  return (tts.size() - 1) / gap;
+#endif 
 };
 
 float *
@@ -358,5 +295,4 @@ Gap Tag_Finder::default_pulse_slop = 0.0015; // 1.5 ms
 Gap Tag_Finder::default_burst_slop = 0.010; // 10 ms
 Gap Tag_Finder::default_burst_slop_expansion = 0.001; // 1ms = 1 part in 10000 for 10s BI
 unsigned int Tag_Finder::default_max_skipped_bursts = 60;
-Gap Tag_Finder::default_hit_rate_window = 60;
 
