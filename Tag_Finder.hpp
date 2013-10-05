@@ -7,6 +7,10 @@
 #include "Freq_Setting.hpp"
 #include "DFA_Graph.hpp"
 
+class Tag_Foray;
+
+// #include "Tag_Foray.hpp"
+
 // forward declaration for inclusion of Tag_Candidate
 
 class Tag_Finder;
@@ -29,6 +33,8 @@ class Tag_Finder {
 public:
 
   static const int NUM_CAND_LISTS = 4; // 3 levels of tag candidates: 0 = confirmed, 1 = single ID, 2 = multiple ID, 3 = clones
+
+  Tag_Foray * owner;
 
   Nominal_Frequency_kHz nom_freq;
 
@@ -83,9 +89,9 @@ public:
 
   string prefix;   // prefix before each tag record (e.g. port number then comma)
 
-  Tag_Finder(){};
+  Tag_Finder(Tag_Foray * owner){};
 
-  Tag_Finder (Nominal_Frequency_kHz nom_freq, Tag_Set * tags, string prefix="");
+  Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, Tag_Set * tags, string prefix="");
 
   void setup_graph();
 

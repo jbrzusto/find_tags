@@ -23,9 +23,9 @@ private:
   bool at_end;
 
 public:
-  Rate_Limiting_Tag_Finder() {};
+  Rate_Limiting_Tag_Finder(Tag_Foray *owner);
 
-  Rate_Limiting_Tag_Finder (Nominal_Frequency_kHz nom_freq, Tag_Set * tags, Gap rate_window, float max_rate, Gap min_bogus_spacing, string prefix="");
+  Rate_Limiting_Tag_Finder (Tag_Foray *owner, Nominal_Frequency_kHz nom_freq, Tag_Set * tags, Gap rate_window, float max_rate, Gap min_bogus_spacing, string prefix="");
 
   virtual void process(Pulse &p);
 

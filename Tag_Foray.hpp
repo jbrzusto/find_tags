@@ -4,8 +4,10 @@
 #include "find_tags_common.hpp"
 
 #include "Tag_Database.hpp"
+
 #include "Tag_Finder.hpp"
 #include "Rate_Limiting_Tag_Finder.hpp"
+
 
 /*
   Tag_Foray - manager a collection of tag finders searching the same data stream.
@@ -22,11 +24,11 @@ public:
   //  ~Tag_Foray ();
 
   void start();
+  Tag_Database tags; // registered tags on all known nominal frequencies
 
 protected:
   // settings
 
-  Tag_Database tags; // registered tags on all known nominal frequencies
   std::istream * data; // stream from which data records are read
   std::ostream * out;  // stream to which tag ID hits are output 
   Frequency_MHz default_freq; // default listening frequency on a port where no frequency setting has been seen
