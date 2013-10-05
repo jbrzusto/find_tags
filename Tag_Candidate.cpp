@@ -212,6 +212,17 @@ Burst_Params * Tag_Candidate::calculate_burst_params() {
   burst_par.num_pred = in_a_row;
   return &burst_par;
 };
+
+void
+Tag_Candidate::output_header(ostream * out) {
+  (*out) << "\"ant\",\"ts\",\"id\",\"freq\",\"freq.sd\",\"sig\",\"sig.sd\",\"noise\",\"run.id\",\"pos.in.run\",\"slop\",\"burst.slop\",\"ant.freq\",\"nom.freq\"" 
+      
+#ifdef FIND_TAGS_DEBUG
+		<< " ,\"p1\",\"p2\",\"p3\",\"p4\",\"ptr\""
+#endif
+      
+		<< std::endl;
+}; 
  
 void Tag_Candidate::dump_bursts(ostream *os, string prefix) {
   // dump as many bursts as we have data for
@@ -239,7 +250,9 @@ void Tag_Candidate::dump_bursts(ostream *os, string prefix) {
 	  << ',' << in_a_row
 	  << ',' << bp->slop
 	  << ',' << bp->burst_slop
-	  << ',' << std::setprecision(6) << pulses.begin()->second.ant_freq << std::setprecision(4);
+	  << ',' << std::setprecision(6) << pulses.begin()->second.ant_freq 
+          << ',' << owner->nom_freq / 1000.0
+          << std::setprecision(4);
 
 #ifdef FIND_TAGS_DEBUG
     Pulses_Iter	p = pulses.begin();
