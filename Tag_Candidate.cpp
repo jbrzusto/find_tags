@@ -58,10 +58,7 @@ bool Tag_Candidate::add_pulse(const Pulse &p, DFA_Node *new_state) {
     Add this pulse to the tag candidate, given the new state this
     will advance the DFA to.
 
-    Return true if after adding the pulse the Tag_Candidate is at
-    the CONFIRMED tag ID level, and has at least one burst yet-to-be
-    output.
-
+    Return true if adding the pulse confirms the tag ID.
   */
 
   pulses[p.seq_no] = p;
@@ -105,24 +102,11 @@ bool Tag_Candidate::add_pulse(const Pulse &p, DFA_Node *new_state) {
     break;
 
   case CONFIRMED:
-    if (pulses.size() >= PULSES_PER_BURST)
-      rv = true;
     break;
 
   default:
     break;
   };
-
-  // if this pulse completes a burst, get the hit rate estimate
-  // on the tag ID, and add this hit's timestamp to the buffer for this tag
-  // Note: we are adding the timestamp of the last pulse rather than of
-  // the first pulse of the burst, but this won't affect hit rate
-  // estimates.  (We do this since otherwise we'd have to back up 
-  // through the pulse buffer, which takes time).
-  if (pulse_completes_burst) {
-    owner->add_tag_hit_timestamp(tag_id, pulses.rbegin()->second.ts);
-    hit_rates.push_back(owner->get_tag_hit_rate(tag_id));
-  }
 
   return rv;
 };
@@ -138,8 +122,17 @@ Tag_Candidate::Tag_ID_Level Tag_Candidate::get_tag_id_level() {
   return tag_id_level;
 };
 
+bool
+Tag_Candidate::is_confirmed() {
+  return tag_id_level == CONFIRMED;
+};
+
 bool Tag_Candidate::has_burst() {
   return pulses.size() >= PULSES_PER_BURST;
+};
+
+bool Tag_Candidate::next_pulse_confirms() {
+  return pulses.size() == pulses_to_confirm_id - 1;
 };
 
 bool Tag_Candidate::at_end_of_burst() {
@@ -237,9 +230,6 @@ void Tag_Candidate::dump_bursts(ostream *os, string prefix) {
     ++in_a_row;
     Burst_Params *bp = calculate_burst_params();
     ts = pulses.begin()->second.ts;
-    float hit_rate = hit_rates.front();
-    if (hit_rate == -1 && hit_rates.size() > 1)
-      hit_rate = *(++hit_rates.begin());
     (*os) << prefix << std::setprecision(14) << ts << std::setprecision(4)
 	  << ',' << tag_id
 	  << ',' << bp->freq << ','  << std::setprecision(3) << bp->freq_sd
@@ -249,7 +239,6 @@ void Tag_Candidate::dump_bursts(ostream *os, string prefix) {
 	  << ',' << in_a_row
 	  << ',' << bp->slop
 	  << ',' << bp->burst_slop
-	  << ',' << hit_rate
 	  << ',' << std::setprecision(6) << pulses.begin()->second.ant_freq << std::setprecision(4);
 
 #ifdef FIND_TAGS_DEBUG
@@ -262,7 +251,6 @@ void Tag_Candidate::dump_bursts(ostream *os, string prefix) {
 
     (*os) << std::endl;
     clear_pulses();
-    hit_rates.pop_front();
   }
 };
 

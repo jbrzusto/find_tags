@@ -3,7 +3,7 @@
 
 #include "find_tags_common.hpp"
 
-#include <map>
+#include <unordered_map>
 
 struct Known_Tag {
 
@@ -35,6 +35,6 @@ public:
 
 };
 
-typedef std::map < Tag_ID, Known_Tag > Tag_Set; 
+typedef std::unordered_map < Tag_ID, Known_Tag > Tag_Set; 
 
 #endif // KNOWN_TAG_HPP

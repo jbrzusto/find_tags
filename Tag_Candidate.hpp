@@ -24,7 +24,7 @@ class Tag_Candidate {
 
 public:
 
-  typedef enum {MULTIPLE, SINGLE, CONFIRMED} Tag_ID_Level;	// how well-resolved is the tag ID?
+  typedef enum {CONFIRMED=0, SINGLE=1, MULTIPLE=2} Tag_ID_Level;	// how well-resolved is the tag ID?  Note the order.
 
 private: 
   // fundamental structure
@@ -32,7 +32,6 @@ private:
   Tag_Finder    *owner;
   DFA_Node	*state;		 // where in the appropriate DFA I am
   Pulse_Buffer	 pulses;	 // pulses in the path so far
-  std::list < float > hit_rates; // hit rates estimated at each tag hit
   Timestamp	 last_ts;        // timestamp of last pulse in last burst
   Timestamp	 last_dumped_ts; // timestamp of last pulse in last dumped burst (used to calculate burst slop when dumping)
   Tag_ID	 tag_id;         // current unique tag ID, or BOGUS_TAG_ID when more than one is compatible
@@ -72,7 +71,11 @@ public:
 
   Tag_ID_Level get_tag_id_level();
 
+  bool is_confirmed();
+
   bool has_burst();
+
+  bool next_pulse_confirms();
 
   bool at_end_of_burst();
 
