@@ -1,6 +1,7 @@
 #include "Tag_Finder.hpp"
 
-Tag_Finder::Tag_Finder (Nominal_Frequency_kHz nom_freq, Tag_Set *tags, string prefix) :
+Tag_Finder::Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, Tag_Set *tags, string prefix) :
+  owner(owner),
   nom_freq(nom_freq),
   tags(tags),
   graph(),

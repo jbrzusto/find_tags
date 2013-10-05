@@ -36,6 +36,7 @@ private:
   Timestamp	 last_dumped_ts; // timestamp of last pulse in last dumped burst (used to calculate burst slop when dumping)
   Tag_ID	 tag_id;         // current unique tag ID, or BOGUS_TAG_ID when more than one is compatible
   Tag_ID_Level   tag_id_level;   // how well-resolved is the current tag ID?
+  Known_Tag     *conf_tag;       // when confirmed, a pointer to the tag. else 0
 
   unsigned long long	unique_id;	// unique ID for bursts output by this candidate (i.e. consecutive in-phase hits on a tag)
   unsigned int		in_a_row;	// counter of bursts output by this tag

@@ -84,9 +84,9 @@ Tag_Foray::start() {
             std::ostringstream prefix;
             prefix << port_num << ",";
             if (max_pulse_rate > 0)
-              newtf = new Rate_Limiting_Tag_Finder(key.second, tags.get_tags_at_freq(key.second), pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix.str());
+              newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags.get_tags_at_freq(key.second), pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix.str());
             else
-              newtf = new Tag_Finder(key.second, tags.get_tags_at_freq(key.second), prefix.str());
+              newtf = new Tag_Finder(this, key.second, tags.get_tags_at_freq(key.second), prefix.str());
             newtf->set_out_stream(out);
             newtf->init();
             tag_finders[key] = newtf;

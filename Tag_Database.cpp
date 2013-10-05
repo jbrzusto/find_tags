@@ -54,5 +54,9 @@ Tag_Database::get_tags_at_freq(Nominal_Frequency_kHz freq) {
   return & tags[freq];
 };
 
+Known_Tag *
+Tag_Database::get_tag(Nominal_Frequency_kHz freq, Tag_ID id) {
+  return & tags[freq][id];
+};
   
 

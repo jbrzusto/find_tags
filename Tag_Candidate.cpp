@@ -1,5 +1,7 @@
 #include "Tag_Candidate.hpp"
 
+#include "Tag_Foray.hpp"
+
 Tag_Candidate::Tag_Candidate(Tag_Finder *owner, DFA_Node *state, const Pulse &pulse) :
   owner(owner),
   state(state),
@@ -97,6 +99,7 @@ bool Tag_Candidate::add_pulse(const Pulse &p, DFA_Node *new_state) {
   case SINGLE:
     if (pulses.size() >= pulses_to_confirm_id) {
       tag_id_level = CONFIRMED;
+      conf_tag = owner->owner->tags.get_tag(owner->nom_freq, tag_id);
       rv= true;
     };
     break;
@@ -215,7 +218,7 @@ Burst_Params * Tag_Candidate::calculate_burst_params() {
 
 void
 Tag_Candidate::output_header(ostream * out) {
-  (*out) << "\"ant\",\"ts\",\"id\",\"freq\",\"freq.sd\",\"sig\",\"sig.sd\",\"noise\",\"run.id\",\"pos.in.run\",\"slop\",\"burst.slop\",\"ant.freq\",\"nom.freq\"" 
+  (*out) << "\"ant\",\"ts\",\"id\",\"freq\",\"freq.sd\",\"sig\",\"sig.sd\",\"noise\",\"run.id\",\"pos.in.run\",\"slop\",\"burst.slop\",\"ant.freq\",\"nom.freq\",\"tag.proj\"" 
       
 #ifdef FIND_TAGS_DEBUG
 		<< " ,\"p1\",\"p2\",\"p3\",\"p4\",\"ptr\""
@@ -252,6 +255,7 @@ void Tag_Candidate::dump_bursts(ostream *os, string prefix) {
 	  << ',' << bp->burst_slop
 	  << ',' << std::setprecision(6) << pulses.begin()->second.ant_freq 
           << ',' << owner->nom_freq / 1000.0
+          << ',' << conf_tag->proj
           << std::setprecision(4);
 
 #ifdef FIND_TAGS_DEBUG
