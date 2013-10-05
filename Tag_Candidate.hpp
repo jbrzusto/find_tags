@@ -85,6 +85,8 @@ public:
 
   Burst_Params * calculate_burst_params();
  
+  static void output_header(ostream *out);
+    
   void dump_bursts(ostream *os, string prefix="");
 
   static void set_freq_slop_kHz(float slop);

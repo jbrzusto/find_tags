@@ -398,7 +398,7 @@ main (int argc, char **argv) {
             usage();
             exit(0);
 	case OPT_HEADER_ONLY:
-	  Tag_Finder::output_header(&std::cout);
+	  Tag_Candidate::output_header(&std::cout);
 	  exit(0);
         case OPT_SIG_SLOP:
 	  Tag_Candidate::set_sig_slop_dB(atof(optarg));
@@ -481,7 +481,7 @@ main (int argc, char **argv) {
       throw std::runtime_error(string("Couldn't open pulse database file ") + pulse_filename);
 
     if (header_desired)
-      Tag_Finder::output_header(&std::cout);
+      Tag_Candidate::output_header(&std::cout);
 
     // process incoming pulses
 
