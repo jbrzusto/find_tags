@@ -101,8 +101,6 @@ public:
 
   void init();
 
-  static void output_header(ostream *out);
-    
   virtual void process (Pulse &p);
 
   virtual void end_processing();

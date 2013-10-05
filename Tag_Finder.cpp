@@ -118,17 +118,6 @@ Tag_Finder::init() {
 };
 
 void
-Tag_Finder::output_header(ostream * out) {
-  (*out) << "\"ant\",\"ts\",\"id\",\"freq\",\"freq.sd\",\"sig\",\"sig.sd\",\"noise\",\"run.id\",\"pos.in.run\",\"slop\",\"burst.slop\",\"ant.freq\"" 
-      
-#ifdef FIND_TAGS_DEBUG
-		<< " ,\"p1\",\"p2\",\"p3\",\"p4\",\"ptr\""
-#endif
-      
-		<< std::endl;
-};
-    
-void
 Tag_Finder::process(Pulse &p) {
   /* 
      Process one pulse from the input stream.  
