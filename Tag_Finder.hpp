@@ -13,6 +13,11 @@ class Tag_Finder;
 
 #include "Tag_Candidate.hpp"
 
+// Set of running DFAs representing possible tags burst sequences
+typedef std::list < Tag_Candidate > Cand_List;
+
+typedef std::vector < Cand_List > Cand_List_Vec;
+
 class Tag_Finder {
 
   /*
@@ -22,26 +27,19 @@ class Tag_Finder {
   */
 
 public:
-  // - internal representation of tag database
-  // the set of tags at a single nominal frequency is a "Tag_Set"
+
+  static const int NUM_CAND_LISTS = 4; // 3 levels of tag candidates: 0 = confirmed, 1 = single ID, 2 = multiple ID, 3 = clones
 
   Nominal_Frequency_kHz nom_freq;
+
+  // - internal representation of tag database
+  // the set of tags at a single nominal frequency is a "Tag_Set"
 
   Tag_Set *tags;
 
   DFA_Graph graph;
 
-  // Set of running DFAs representing possible tags burst sequences
-
-  typedef std::list < Tag_Candidate > Cand_Set;
-
-  Cand_Set	cands;
-
-  typedef std::list < Timestamp > Tag_Time_Buffer; // timestamps of recently seen hits on a tag
-
-  typedef std::map < Tag_ID, Tag_Time_Buffer >  All_Tag_Time_Buffer; // timestamps of recent tag hit times by tag ID 
-
-  All_Tag_Time_Buffer tag_times; // retain recent hit times for all tags
+  Cand_List_Vec	cands;
 
   // algorithmic parameters
 
@@ -78,9 +76,6 @@ public:
   unsigned int max_skipped_bursts;
   static unsigned int default_max_skipped_bursts;
 
-  // over how long a time window do we estimate hit rates for each tag? (seconds)
-  Gap hit_rate_window;
-  static Gap default_hit_rate_window;
 
   // output parameters
 
@@ -104,8 +99,6 @@ public:
 
   void set_out_stream(ostream *os);
 
-  static void set_default_hit_rate_window(Gap h);
-
   void init();
 
   static void output_header(ostream *out);
@@ -115,10 +108,6 @@ public:
   virtual void end_processing();
 
   void initialize_tag_buffers();
-
-  void add_tag_hit_timestamp(Tag_ID id, Timestamp ts);
-
-  float get_tag_hit_rate(Tag_ID tid);
 
   float *get_true_gaps(Tag_ID tid);
 

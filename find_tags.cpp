@@ -326,7 +326,6 @@ main (int argc, char **argv) {
 	OPT_NO_HEADER	         = 'n',
         OPT_PULSE_SLOP	         = 'p',
 	OPT_MAX_PULSE_RATE       = 'R',
-	OPT_HIT_RATE_WINDOW      = 'r',
 	OPT_FREQ_SLOP	         = 's',
 	OPT_MAX_SKIPPED_BURSTS   = 'S',
 	OPT_PULSE_RATE_WINDOW    = 'w'
@@ -347,7 +346,6 @@ main (int argc, char **argv) {
 	{"no-header"		   , 0, 0, OPT_NO_HEADER},
         {"pulse-slop"		   , 1, 0, OPT_PULSE_SLOP},
 	{"max-pulse-rate"          , 1, 0, OPT_MAX_PULSE_RATE},
-	{"hit-rate-window"         , 1, 0, OPT_HIT_RATE_WINDOW},
         {"frequency-slop"	   , 1, 0, OPT_FREQ_SLOP},
 	{"max-skipped-bursts"      , 1, 0, OPT_MAX_SKIPPED_BURSTS},
 	{"pulse-rate-window"       , 1, 0, OPT_PULSE_RATE_WINDOW},
@@ -416,9 +414,6 @@ main (int argc, char **argv) {
 	  break;
 	case OPT_MAX_PULSE_RATE:
 	  max_pulse_rate = atof(optarg);
-	  break;
-	case OPT_HIT_RATE_WINDOW:
-	  Tag_Finder::set_default_hit_rate_window(atof(optarg));
 	  break;
         case OPT_FREQ_SLOP:
 	  Tag_Candidate::set_freq_slop_kHz(atof(optarg));
