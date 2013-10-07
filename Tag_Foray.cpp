@@ -27,6 +27,7 @@ Tag_Foray::start() {
       if (! data->getline(buf, MAX_LINE_SIZE)) {
         if (data->eof())
           break;
+        data->clear();
         continue;
       }
 
