@@ -22,7 +22,7 @@ Tag_Finder::setup_graph() {
 
   Tag_ID_Set s;
   for (Tag_Set::iterator i = tags->begin(); i != tags->end(); ++i)
-    s.insert(i->second.id);
+    s.insert((*i));
 
   graph.set_all_ids(s);
 
@@ -55,7 +55,7 @@ Tag_Finder::setup_graph() {
       // for each tag, add its (gap range, ID) pair to the interval_map
 	  
       for (Tag_ID_Iter i = it->first.begin(); i != it->first.end(); ++i) {
-	Gap g = (*tags)[*i].gaps[(phase - 1) % PULSES_PER_BURST];
+	Gap g = (*i)->gaps[(phase - 1) % PULSES_PER_BURST];
 	Tag_ID_Set id;
 	id.insert(*i);
 	Gap slop = ((phase - 1) % PULSES_PER_BURST == PULSES_PER_BURST - 1) ? burst_slop : pulse_slop;
@@ -68,8 +68,8 @@ Tag_Finder::setup_graph() {
 	Tag_ID_Iter i = it->first.begin();
 	Tag_ID_Set id;
 	id.insert(*i);
-	Gap bi = (*tags)[*i].gaps[PULSES_PER_BURST];
-	Gap g4 = (*tags)[*i].gaps[PULSES_PER_BURST - 1];
+	Gap bi = (*i)->gaps[PULSES_PER_BURST];
+	Gap g4 = (*i)->gaps[PULSES_PER_BURST - 1];
 	for (unsigned int j=2; j <= max_skipped_bursts + 1; ++j) {
 	  Gap base = (j - 1) * bi + g4;
 	  Gap slop = burst_slop + (j - 1) * burst_slop_expansion;
@@ -273,7 +273,7 @@ float *
 Tag_Finder::get_true_gaps(Tag_ID tid) {
       // get the pointer to the true gaps from the database,
       // for calculation of burst parameters
-  return &(*tags)[tid].gaps[0];
+  return &tid->gaps[0];
 }
 
 void

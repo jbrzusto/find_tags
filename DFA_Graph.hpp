@@ -6,6 +6,7 @@
 #include "DFA_Node.hpp"
 
 #include <vector>
+#include <unordered_map>
 
 class DFA_Graph {
   // the graph representing a DFA for the NDFA full-burst recognition

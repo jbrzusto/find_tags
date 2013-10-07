@@ -99,7 +99,7 @@ bool Tag_Candidate::add_pulse(const Pulse &p, DFA_Node *new_state) {
   case SINGLE:
     if (pulses.size() >= pulses_to_confirm_id) {
       tag_id_level = CONFIRMED;
-      conf_tag = owner->owner->tags.get_tag(owner->nom_freq, tag_id);
+      conf_tag = owner->owner->tags.get_tag(tag_id);
       rv= true;
     };
     break;
@@ -245,7 +245,7 @@ void Tag_Candidate::dump_bursts(ostream *os, string prefix) {
     Burst_Params *bp = calculate_burst_params();
     ts = pulses.begin()->second.ts;
     (*os) << prefix << std::setprecision(14) << ts << std::setprecision(4)
-	  << ',' << tag_id
+	  << ',' << tag_id->lid
 	  << ',' << bp->freq << ','  << std::setprecision(3) << bp->freq_sd
 	  << ',' << bp->sig << ',' << bp->sig_sd
 	  << ',' << bp->noise

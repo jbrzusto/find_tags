@@ -19,7 +19,7 @@ class Tag_Foray {
 
 public:
   
-  Tag_Foray (Tag_Database &tags, std::istream * data, std::ostream * out, Frequency_MHz default_freq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing);
+  Tag_Foray (Tag_Database &tags, std::istream * data, std::ostream * out, Frequency_MHz default_freq, bool force_default_freq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing);
 
   //  ~Tag_Foray ();
 
@@ -32,6 +32,7 @@ protected:
   std::istream * data; // stream from which data records are read
   std::ostream * out;  // stream to which tag ID hits are output 
   Frequency_MHz default_freq; // default listening frequency on a port where no frequency setting has been seen
+  bool force_default_freq; // ignore in-line frequency settings and always use default?
   float max_dfreq; // maximum allowed magnitude of pulse offset frequency; pulses with larger offset frequency are discarded
   // rate-limiting parameters:
 

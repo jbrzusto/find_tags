@@ -12,7 +12,8 @@ struct Known_Tag {
 
 public:
 
-  Tag_ID		id;				// lotek ID
+  Tag_ID                id;                             // internal tag ID
+  Lotek_Tag_ID		lid;				// lotek ID
   string		proj;				// project name
   Frequency_MHz		freq;				// nominal transmit frequency (MHz)
   Frequency_MHz		fcd_freq;			// frequency of funcubedongle at which tag was registered (MHz)
@@ -22,8 +23,6 @@ public:
 							// then gaps[0] = p1-p0; gaps[1] = p2-p1; gaps[2] = p3-p2; gaps[3] = p4 - p3
 							// Also, gaps[PULSES_PER_BURST] is the burst interval (sec) = gaps[0] + gaps[1] + gaps[2] + gaps[3] = p4-p0.
 
-  Timestamp	last_good;				// timestamp of last good match on this tag
-
   static float	max_burst_length;			// maximum across known tags of gap between first and last pulses in a burst
 
   Known_Tag(){};
@@ -31,10 +30,10 @@ public:
   // Note: in the following, gaps points to an array of PULSES_PER_BURST gaps;
   // the first PULSES_PER_BURST-1 gaps are intra burst gaps, but the last gap is the burst interval
 
-  Known_Tag(Tag_ID id, string proj, Frequency_MHz freq, Frequency_MHz fcd_freq, Frequency_Offset_kHz dfreq, float *gaps);
+  Known_Tag(Lotek_Tag_ID lid, string proj, Frequency_MHz freq, Frequency_MHz fcd_freq, Frequency_Offset_kHz dfreq, float *gaps);
 
 };
 
-typedef std::unordered_map < Tag_ID, Known_Tag > Tag_Set; 
+typedef std::unordered_set < Known_Tag * > Tag_Set; 
 
 #endif // KNOWN_TAG_HPP

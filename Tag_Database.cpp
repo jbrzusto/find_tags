@@ -35,12 +35,7 @@ Tag_Database::Tag_Database(string filename) {
       nominal_freqs.insert(nom_freq);
       tags[nom_freq] = Tag_Set();
     }
-    if (tags[nom_freq].count(id) == 0) {
-      Known_Tag t(id, string(proj), freq_MHz, fcd_freq, dfreq, &gaps[0]);
-      tags[nom_freq][id] = t;
-    } else {
-      std::cerr << "Ignoring duplicated data for tag ID == " << id << "\nAlready have tag " << id << " with proj='" << tags[nom_freq][id].proj << "' at freq=" << tags[nom_freq][id].freq << "MHz\n";
-    } 
+    tags[nom_freq].insert (new Known_Tag (id, string(proj), freq_MHz, fcd_freq, dfreq, &gaps[0]));
   };
   if (tags.size() == 0)
     throw std::runtime_error("No tags registered.");
@@ -56,8 +51,8 @@ Tag_Database::get_tags_at_freq(Nominal_Frequency_kHz freq) {
 };
 
 Known_Tag *
-Tag_Database::get_tag(Nominal_Frequency_kHz freq, Tag_ID id) {
-  return & tags[freq][id];
+Tag_Database::get_tag(Tag_ID id) {
+  return id;
 };
 
 

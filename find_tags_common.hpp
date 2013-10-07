@@ -2,6 +2,7 @@
 #define FIND_TAGS_COMMON_HPP
 
 #include <set>
+#include <unordered_set>
 
 const static unsigned int PULSES_PER_BURST = 4;	// pulses in a burst (Lotek VHF tags)
 const static unsigned int MAX_LINE_SIZE = 512;	// characters in a .CSV file line
@@ -23,10 +24,19 @@ typedef float Frequency_Offset_kHz;
 
 typedef int Nominal_Frequency_kHz;
 
-// type representing a tag ID
+// Tag IDs: so far, Lotek tags have 3 digit IDs.  But we want to be
+// able to distinguish among tags with the same Lotek ID but
+// (sufficiently) different burst intervals. 
 
-typedef int Tag_ID;
-static const Tag_ID BOGUS_TAG_ID = -1;
+typedef int Lotek_Tag_ID;  // only 3 digits
+static const Lotek_Tag_ID BOGUS_LOTEK_TAG_ID = -1;
+
+// type representing an internal tag ID; each entry in the database
+// receives its own internal tag ID
+
+class Known_Tag;
+typedef Known_Tag * Tag_ID;
+static const Tag_ID BOGUS_TAG_ID = 0;
 
 // a set of tag IDs;
 typedef std::set< Tag_ID > Tag_ID_Set;

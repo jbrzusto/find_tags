@@ -24,7 +24,7 @@ public:
 
   Tag_Set * get_tags_at_freq(Nominal_Frequency_kHz freq);
 
-  Known_Tag * get_tag(Nominal_Frequency_kHz freq, Tag_ID id);
+  Known_Tag * get_tag(Tag_ID id);
 };
 
 #endif // TAG_DATABASE_HPP
