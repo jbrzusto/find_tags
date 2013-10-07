@@ -234,6 +234,10 @@ usage() {
         "    Although input data files contain frequency setting records, this option can\n"
         "    be used to set the frequency when processing a fragment of an input file that\n"
         "    doesn't contain an initial frequency setting\n\n"
+        
+        "-F --force-default-freq\n"
+        "    Ignore frequency settings in the input dataset; always assume\n"
+        "    all receivers are tuned to the default frequency\n\n"
 
 	"-b, --burst-slop=BSLOP\n"
 	"    how much to allow time between consecutive bursts\n"
@@ -316,6 +320,7 @@ main (int argc, char **argv) {
 	OPT_BURST_SLOP_EXPANSION = 'B',
 	OPT_PULSES_TO_CONFIRM    = 'c',
 	OPT_DEFAULT_FREQ         = 'f',
+	OPT_FORCE_DEFAULT_FREQ   = 'F',
         COMMAND_HELP	         = 'h',
 	OPT_HEADER_ONLY	         = 'H',
 	OPT_SIG_SLOP	         = 'l',
@@ -329,12 +334,13 @@ main (int argc, char **argv) {
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:f:F:hHl:m:np:s:S:";
+    static const char short_options[] = "b:B:c:f:FhHl:m:np:s:S:";
     static const struct option long_options[] = {
         {"burst-slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst-slop-expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
 	{"pulses-to-confirm"	   , 1, 0, OPT_PULSES_TO_CONFIRM},
         {"default-freq"		   , 1, 0, OPT_DEFAULT_FREQ},
+        {"force-default-freq"      , 0, 0, OPT_FORCE_DEFAULT_FREQ},
         {"help"			   , 0, 0, COMMAND_HELP},
 	{"header-only"		   , 0, 0, OPT_HEADER_ONLY},
 	{"signal-slop"             , 1, 0, OPT_SIG_SLOP},
@@ -358,6 +364,7 @@ main (int argc, char **argv) {
     bool header_desired = true;
 
     float max_dfreq = 0.0;
+    bool force_default_freq = false;
 
     // rate-limiting buffer parameters
 
@@ -379,6 +386,9 @@ main (int argc, char **argv) {
 	case OPT_DEFAULT_FREQ:
 	  default_freq = atof(optarg);
 	  break;
+	case OPT_FORCE_DEFAULT_FREQ:
+          force_default_freq = true;
+          break;
         case COMMAND_HELP:
             usage();
             exit(0);
@@ -448,7 +458,7 @@ main (int argc, char **argv) {
     if (header_desired)
       Tag_Candidate::output_header(&std::cout);
 
-    Tag_Foray foray(tag_db, pulses, & std::cout, default_freq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
+    Tag_Foray foray(tag_db, pulses, & std::cout, default_freq, force_default_freq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
 
     foray.start();
 }
