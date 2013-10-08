@@ -182,9 +182,12 @@ Tag_Finder::process(Pulse &p) {
         // this candidate tag just got to the CONFIRMED level
         
         // now see what candidates should be deleted because they
-        // have the same ID or share any pulses
+        // have the same ID or share any pulses; only seek among
+        // unconfirmed candidates, as the current one would have
+        // already been eliminated if it shared any pulses
+        // with a confirmed candidate.
         
-        for (int j = 0; j < NUM_CAND_LISTS; ++j) {
+        for (int j = 1; j < NUM_CAND_LISTS; ++j) {
           Cand_List & ccs = cands[j];
           for (Cand_List::iterator cci = ccs.begin(); cci != ccs.end(); /**/ ) {
             if (cci != ci 
