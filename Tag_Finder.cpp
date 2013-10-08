@@ -171,8 +171,6 @@ Tag_Finder::process(Pulse &p) {
         continue;
       }
 
-      confirmed_acceptance = (ci->get_tag_id_level() == Tag_Candidate::CONFIRMED);
-      
       if (! ci->is_confirmed() && ! ci->next_pulse_confirms()) {
         // clone the candidate, but without the added pulse
         cloned_candidates.push_back(*ci);
