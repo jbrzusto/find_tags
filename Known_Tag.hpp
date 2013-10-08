@@ -4,6 +4,7 @@
 #include "find_tags_common.hpp"
 
 #include <unordered_map>
+#include <unordered_set>
 
 struct Known_Tag {
 
@@ -12,7 +13,6 @@ struct Known_Tag {
 
 public:
 
-  Tag_ID                id;                             // internal tag ID
   Lotek_Tag_ID		lid;				// lotek ID
   string		proj;				// project name
   Frequency_MHz		freq;				// nominal transmit frequency (MHz)
@@ -23,8 +23,14 @@ public:
 							// then gaps[0] = p1-p0; gaps[1] = p2-p1; gaps[2] = p3-p2; gaps[3] = p4 - p3
 							// Also, gaps[PULSES_PER_BURST] is the burst interval (sec) = gaps[0] + gaps[1] + gaps[2] + gaps[3] = p4-p0.
 
-  static float	max_burst_length;			// maximum across known tags of gap between first and last pulses in a burst
+  static float	        max_burst_length;		// maximum across known tags of gap between first and last pulses in a burst
 
+  std::string           fullID;                         // full ID, used when printing tags
+
+private:
+  static std::unordered_set < std::string > all_fullIDs;       // full ID list
+
+public:
   Known_Tag(){};
 
   // Note: in the following, gaps points to an array of PULSES_PER_BURST gaps;

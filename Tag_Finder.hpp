@@ -115,7 +115,7 @@ public:
 
   float *get_true_gaps(Tag_ID tid);
 
-  void dump_bogus_burst(Pulse &p, Tag_ID tag_id);
+  void dump_bogus_burst(Pulse &p);
 
 };
 

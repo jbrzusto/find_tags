@@ -217,7 +217,7 @@ Burst_Params * Tag_Candidate::calculate_burst_params() {
 
 void
 Tag_Candidate::output_header(ostream * out) {
-  (*out) << "\"ant\",\"ts\",\"id\",\"freq\",\"freq.sd\",\"sig\",\"sig.sd\",\"noise\",\"run.id\",\"pos.in.run\",\"slop\",\"burst.slop\",\"ant.freq\",\"nom.freq\",\"tag.proj\"" 
+  (*out) << "\"ant\",\"ts\",\"fullID\",\"freq\",\"freq.sd\",\"sig\",\"sig.sd\",\"noise\",\"run.id\",\"pos.in.run\",\"slop\",\"burst.slop\",\"ant.freq\"" 
       
 #ifdef FIND_TAGS_DEBUG
 		<< " ,\"p1\",\"p2\",\"p3\",\"p4\",\"ptr\""
@@ -244,7 +244,7 @@ void Tag_Candidate::dump_bursts(ostream *os, string prefix) {
     Burst_Params *bp = calculate_burst_params();
     ts = pulses.begin()->second.ts;
     (*os) << prefix << std::setprecision(14) << ts << std::setprecision(4)
-	  << ',' << tag_id->lid
+          << ',' << conf_tag->fullID
 	  << ',' << bp->freq << ','  << std::setprecision(3) << bp->freq_sd
 	  << ',' << bp->sig << ',' << bp->sig_sd
 	  << ',' << bp->noise
@@ -253,8 +253,6 @@ void Tag_Candidate::dump_bursts(ostream *os, string prefix) {
 	  << ',' << bp->slop
 	  << ',' << bp->burst_slop
 	  << ',' << std::setprecision(6) << pulses.begin()->second.ant_freq 
-          << ',' << owner->nom_freq / 1000.0
-          << ',' << conf_tag->proj
           << std::setprecision(4);
 
 #ifdef FIND_TAGS_DEBUG
@@ -271,18 +269,20 @@ void Tag_Candidate::dump_bursts(ostream *os, string prefix) {
 };
 
 void
-Tag_Candidate::dump_bogus_burst(Timestamp ts, Tag_ID tag_id, Frequency_MHz freq, float sig, float noise, ostream *os) {
-  (*os) << std::setprecision(14) << ts << std::setprecision(4)
-	<< ',' << tag_id
-	<< ',' << 0 << ','  << std::setprecision(3) << 0
-	<< ',' << sig << ',' << 0
-	<< ',' << noise
+Tag_Candidate::dump_bogus_burst(Timestamp ts, std::string &prefix, Frequency_MHz antfreq, ostream *os) {
+  (*os) << prefix 
+        << std::setprecision(14) << ts << std::setprecision(4)
+        << ",BOGUS_TAG"
+	<< ',' << 0 
+        << ',' << std::setprecision(3) << 0 << std::setprecision(4)
+	<< ',' << 0 
+        << ',' << 0
 	<< ',' << 0
-	<< ',' << 1
 	<< ',' << 0
 	<< ',' << 0
 	<< ',' << 0
-	<< ',' << std::setprecision(6) << freq << std::setprecision(4)
+	<< ',' << 0
+	<< ',' << std::setprecision(6) << antfreq << std::setprecision(4)
 	<< std::endl;
 }
 

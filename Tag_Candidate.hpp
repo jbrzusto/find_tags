@@ -96,7 +96,7 @@ public:
 
   static void set_pulses_to_confirm_id(unsigned int n);
 
-  static void dump_bogus_burst(Timestamp ts, Tag_ID tag_id, Frequency_MHz freq, float sig, float noise, ostream *os);
+  static void dump_bogus_burst(Timestamp ts, std::string & prefix, Frequency_MHz antfreq, ostream *os);
 };
 
 #endif // TAG_CANDIDATE_HPP

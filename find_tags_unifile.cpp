@@ -288,9 +288,6 @@ usage() {
 	"    the pulse rate exceeds MAXPULSERATE are simply discarded.\n\n"
 	"    default: 0 pulses per second, meaning no rate limiting is done.\n\n"
 
-	"-r, --hit-rate-window=HITRATEWIN\n"
-	"    size of time window (seconds) over which to estimate tag hit rates\n\n"
-
 	"-s, --frequency-slop=FSLOP\n"
 	"    tag frequency slop, in KHz.  A tag burst will only be recognized\n"
 	"    if its bandwidth (i.e. range of frequencies of its component pulses)\n"
@@ -334,7 +331,7 @@ main (int argc, char **argv) {
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:f:FhHl:m:np:s:S:";
+    static const char short_options[] = "b:B:c:f:FhHl:m:np:R:s:S:w:";
     static const struct option long_options[] = {
         {"burst-slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst-slop-expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
@@ -368,9 +365,9 @@ main (int argc, char **argv) {
 
     // rate-limiting buffer parameters
 
-    float max_pulse_rate = 0;   // no rate-limiting
+    float max_pulse_rate = 0;    // no rate-limiting
     Gap pulse_rate_window = 60;  // 1 minute window
-    Gap min_bogus_spacing = 600; // emit tag ID 0 at most once every 10 minutes
+    Gap min_bogus_spacing = 600; // emit bogus tag ID at most once every 10 minutes
 
     while ((c = getopt_long(argc, argv, short_options, long_options, &option_index)) != -1) {
         switch (c) {

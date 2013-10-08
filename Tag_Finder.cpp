@@ -278,8 +278,8 @@ Tag_Finder::get_true_gaps(Tag_ID tid) {
 }
 
 void
-Tag_Finder::dump_bogus_burst(Pulse &p, Tag_ID tag_id) {
-  Tag_Candidate::dump_bogus_burst(p.ts, tag_id, p.ant_freq, -96, -96, out_stream);
+Tag_Finder::dump_bogus_burst(Pulse &p) {
+  Tag_Candidate::dump_bogus_burst(p.ts, prefix, p.ant_freq, out_stream);
 };
 
 Gap Tag_Finder::default_pulse_slop = 0.0015; // 1.5 ms

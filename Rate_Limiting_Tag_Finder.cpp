@@ -40,7 +40,7 @@ void Rate_Limiting_Tag_Finder::process(Pulse &p) {
     } else {
       if ((! at_end) && (first_pulse.ts - last_bogus_emit_ts) >= min_bogus_spacing) {
 	last_bogus_emit_ts = first_pulse.ts;
-	dump_bogus_burst(first_pulse, 0);
+	dump_bogus_burst(first_pulse);
       }
     }
     pulses.pop_front();
