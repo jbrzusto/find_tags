@@ -27,11 +27,10 @@ bool Tag_Candidate::has_same_id_as(Tag_Candidate &tc) {
 
 bool Tag_Candidate::shares_any_pulses(Tag_Candidate &tc) {
   // does this tag candidate use any of the pulses
-  // from the burst detected by another candidate?
-  // The burst is passed as an iterator to (at least)
-  // PULSES_PER_BURST pulses.
+  // used by another candidate?
 
   Pulse_Buffer::iterator hit_pulses = tc.pulses.begin();
+
   for (unsigned int i = 0; i < pulses_to_confirm_id; ++i, ++hit_pulses)
     if (pulses.count(hit_pulses->first))
       return true;
