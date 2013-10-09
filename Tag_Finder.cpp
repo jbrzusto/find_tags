@@ -146,25 +146,36 @@ Tag_Finder::process(Pulse &p) {
   */
 
   // the clone list 
-  Cand_List & cloned_candidates = cands[3];
+  Cand_List & cloned_candidates = cands[NUM_CAND_LISTS - 1];
+
+  // the confirmed list
+  Cand_List &confirmed = cands[0];
 
   bool confirmed_acceptance = false; // has hit been accepted by a confirmed candidate?
- 
-  for (int i = 0; i < NUM_CAND_LISTS && ! confirmed_acceptance; ++i) {
+
+  for (int i = 0; i < NUM_CAND_LISTS - 1 && ! confirmed_acceptance; ++i) {
 
     Cand_List & cs = cands[i];
 
     for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); /**/ ) {
       
-      if (ci->is_too_old_given_pulse_time(p)) {
+      Tag_Candidate &tc = *ci;
+      Gap gap = p.ts - tc.last_ts;
+      if (gap > tc.state->max_age) {
         Cand_List::iterator di = ci;
+          ++ci;
+          cs.erase(di);
+          continue;
+      } 
+
+      if (tc.freq_range.fast_incompatible(p.dfreq)
+          || tc.sig_range.fast_incompatible(p.sig)) {
         ++ci;
-        cs.erase(di);
         continue;
       }
 
       // see whether this Tag Candidate can accept this pulse
-      DFA_Node * next_state = ci->advance_by_pulse(p);
+      DFA_Node * next_state = tc.state->next(gap);
       
       if (!next_state) {
         ++ci;
@@ -203,7 +214,6 @@ Tag_Finder::process(Pulse &p) {
         // push this candidate to end of the confirmed list
         // so it has priority for accepting new hits
         
-        Cand_List &confirmed = cands[0];
         confirmed.splice(confirmed.end(), cs, ci);
       }
       if (ci->is_confirmed()) {

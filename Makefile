@@ -1,7 +1,7 @@
 ## Makefile for linux
 
 ## PROFILING FLAGS (uncomment to enable profiling)
-## PROFILING=-g -pg
+## PROFILING=-g -pg -fprofile-arcs -ftest-coverage 
 
 ## DEBUG FLAGS:
 ##CPPFLAGS=-Wall -g3 -std=c++0x $(PROFILING)
