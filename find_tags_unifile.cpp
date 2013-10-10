@@ -198,7 +198,7 @@ void
 usage() {
   puts (
 	"Usage:\n"
-	"    find_tags [OPTIONS] TAGFILE.CSV [PULSES.CSV]\n"
+	"    find_tags [OPTIONS] TAGFILE.CSV [UNIFIED.CSV]\n"
 	"where:\n\n"
 
 	"TAGFILE.CSV is a file holding a table of registered tags\n"
@@ -218,14 +218,25 @@ usage() {
 	"        FILENAME: quoted string giving name of raw .WAV file (if any) recorded\n"
 	"            at tag registration\n\n"
 
-	"PULSES.CSV is a file holding pulses output\n"
-	"    where each line is TS,DFREQ,SIG,NOISE\n"
+	"UNIFIED.CSV is a file holding raw sensorgnome output records, including parameter\n"
+        "    settings and GPS fixes.\n"
+	"    Relvant lines are pANT,TS,DFREQ,SIG,NOISE\n"
 	"    with:\n"
+        "        ANT: port code 'pX'\n"
 	"        TS: real timestamp (seconds since 1 Jan, 1970 00:00:00 GMT)\n"
 	"        DFREQ: (kHz) estimated pulse offset frequency\n"
 	"        SIG: (dB) estimated relative pulse signal strength\n"
 	"        NOISE: (dB) estimated relative noise level near pulse\n"
-	"    If unspecified, pulse data are read from stdin\n\n"
+        "    or S,TS,PORT,-m,FREQ,RC,ERR\n"
+        "    with:\n"
+        "        TS: real timestamp\n"
+        "        PORT: port number\n"
+        "        -m: indicates frequency setting in megahertz\n"
+        "        FREQ: frequency in MHz to which port is being set\n"
+        "        RC: zero if frequency setting succeeded, else non-zero error code\n"
+        "        ERR: blank on success, else error message\n"
+
+	"    If UNIFIED.CSV is unspecified, unified data are read from stdin\n\n"
 
 	"and OPTIONS can be any of:\n\n"
 
