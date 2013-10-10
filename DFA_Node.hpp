@@ -20,7 +20,9 @@ private:
   unsigned int	phase;		// number of gaps seen before this node
   Tag_ID_Set	ids;		// ids of tags in this node
   Edges		edges;		// interval map from gap to other nodes
+public:
   Gap	        max_age;	// maximum time a DFA can remain in
+private:
                                 // this state.  If a DFA in this state
                                 // goes longer than this without
                                 // adding a pulse, then it is

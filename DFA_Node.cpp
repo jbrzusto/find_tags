@@ -21,6 +21,8 @@ DFA_Node * DFA_Node::next (Gap gap) {
   // those tag IDs which are compatible with the current set of pulses and with
   // the specified gap to the next pulse.
 
+  if (gap < lower(edges.begin()->first) || gap > upper(edges.rbegin()->first))
+    return 0;
   Const_Edge_iterator it = edges.find(gap);
   if (it == edges.end())
     return 0;

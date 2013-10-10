@@ -48,7 +48,7 @@ DFA_Node * Tag_Candidate::advance_by_pulse(const Pulse &p) {
     return 0;
   
   Gap gap = p.ts - last_ts;
-	  
+
   // try walk the DFA with this gap
   return state->next(gap);
 }

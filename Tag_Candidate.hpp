@@ -30,9 +30,13 @@ private:
   // fundamental structure
 
   Tag_Finder    *owner;
+public:
   DFA_Node	*state;		 // where in the appropriate DFA I am
+private:
   Pulse_Buffer	 pulses;	 // pulses in the path so far
+public:
   Timestamp	 last_ts;        // timestamp of last pulse in last burst
+private:
   Timestamp	 last_dumped_ts; // timestamp of last pulse in last dumped burst (used to calculate burst slop when dumping)
   Tag_ID	 tag_id;         // current unique tag ID, or BOGUS_TAG_ID when more than one is compatible
   Tag_ID_Level   tag_id_level;   // how well-resolved is the current tag ID?
@@ -43,8 +47,10 @@ private:
 
   Gap * true_gaps;              // once tag has been identified, this points to the sequence of PULSES_PER_BURST gaps in the tag database
 
+public:
   Bounded_Range < Frequency_MHz > freq_range; // range of pulse frequency offsets
   Bounded_Range < float > sig_range;  // range of pulse signal strengths, in dB
+private:
 
   static const float BOGUS_BURST_SLOP; // burst slop reported for first burst of run (where we don't have a previous burst)  Doesn't really matter, since we can distinguish this situation in the data by "pos.in.run==1"
 

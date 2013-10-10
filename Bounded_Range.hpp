@@ -62,6 +62,14 @@ public:
     return (! have_bounds) || (high - p <= width && p - low <= width);
   };
 
+  bool is_incompatible (VALTYPE p) {
+    return have_bounds && (high - p > width || p - low > width);
+  };
+
+  bool fast_is_incompatible (VALTYPE p) {
+    return high - p > width || p - low > width;
+  };
+
   void clear_bounds() {
     have_bounds = false;
   };
