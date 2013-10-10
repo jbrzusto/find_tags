@@ -123,6 +123,10 @@ Tag_Finder::process(Pulse &p) {
   /* 
      Process one pulse from the input stream.  
 
+     - check pulses against all tag candidates, in order form
+       most to least confirmed; this gives confirmed candidates
+       priority in accepting pulses
+
      - destroy existing Tag_Candidates which are too old, given the 
      "now" represented by this pulse's timestamp
     
@@ -132,7 +136,9 @@ Tag_Finder::process(Pulse &p) {
 
      - if so, check whether the pulse confirms the Tag_Candidate:
 
-     - if so, kill any other Tag_Candidates with the same ID
+     - if so, kill any other Tag_Candidates with the same ID (note, this
+       means the same Lotek ID, frequency, *and* burst interval) or which
+       share any pulses with this one
 
      - otherwise, if the pulse was added to the candidate, but the candidate
      was in the MULTIPLE tag_id_level before the addition, clone the original
@@ -150,7 +156,8 @@ Tag_Finder::process(Pulse &p) {
 
   bool confirmed_acceptance = false; // has hit been accepted by a confirmed candidate?
  
-  for (int i = 0; i < NUM_CAND_LISTS && ! confirmed_acceptance; ++i) {
+  // check lists of candidates to
+  for (int i = 0; i < 3 && ! confirmed_acceptance; ++i) {
 
     Cand_List & cs = cands[i];
 
