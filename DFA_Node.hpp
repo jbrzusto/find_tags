@@ -17,6 +17,10 @@ private:
 
   // fundamental structure
 
+  ##FIXME: a possibly different phase will have to be associated with each member of 'ids',
+  ## since we might have missed pulses in a burst
+    ## Probably need a new class giving a tag ID and phase, then make 'ids' be a set of that class.
+
   unsigned int	phase;		// number of gaps seen before this node
   Tag_ID_Set	ids;		// ids of tags in this node
   Edges		edges;		// interval map from gap to other nodes
