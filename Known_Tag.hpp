@@ -13,7 +13,7 @@ struct Known_Tag {
 
 public:
 
-  Lotek_Tag_ID		lid;				// lotek ID
+  Mfr_Tag_ID		lid;				// Manufacturer ID
   string		proj;				// project name
   Frequency_MHz		freq;				// nominal transmit frequency (MHz)
   Frequency_MHz		fcd_freq;			// frequency of funcubedongle at which tag was registered (MHz)
@@ -36,7 +36,7 @@ public:
   // Note: in the following, gaps points to an array of PULSES_PER_BURST gaps;
   // the first PULSES_PER_BURST-1 gaps are intra burst gaps, but the last gap is the burst interval
 
-  Known_Tag(Lotek_Tag_ID lid, string proj, Frequency_MHz freq, Frequency_MHz fcd_freq, Frequency_Offset_kHz dfreq, float *gaps);
+  Known_Tag(Mfr_Tag_ID lid, string proj, Frequency_MHz freq, Frequency_MHz fcd_freq, Frequency_Offset_kHz dfreq, float *gaps);
 
 };
 

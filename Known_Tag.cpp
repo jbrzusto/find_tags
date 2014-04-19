@@ -5,7 +5,7 @@
 // Note: in the following, gaps points to an array of PULSES_PER_BURST gaps;
 // the first PULSES_PER_BURST-1 gaps are intra burst gaps, but the last gap is the burst interval
 
-Known_Tag::Known_Tag(Lotek_Tag_ID lid, string proj, Frequency_MHz freq, Frequency_MHz fcd_freq, Frequency_Offset_kHz dfreq, float *gaps):
+Known_Tag::Known_Tag(Mfr_Tag_ID lid, string proj, Frequency_MHz freq, Frequency_MHz fcd_freq, Frequency_Offset_kHz dfreq, float *gaps):
   lid(lid),
   proj(proj),
   freq(freq),
@@ -30,7 +30,7 @@ Known_Tag::Known_Tag(Lotek_Tag_ID lid, string proj, Frequency_MHz freq, Frequenc
   fid << proj << '#' << lid << '@' << std::setprecision(6) << freq << ':' << round(10 * gaps[PULSES_PER_BURST - 1]) / 10;
   fullID = fid.str();
   if (all_fullIDs.count(fullID)) {
-    std::cerr << "Warning - two very similar tags in project " << proj << ":\nLotek ID: " << lid << "; frequency: " << freq << " MHz; burst interval: " << round(10 * gaps[PULSES_PER_BURST - 1]) / 10 << " sec\nAppending '!' to fullID of second one.\n";
+    std::cerr << "Warning - two very similar tags in project " << proj << ":\nMfr ID: " << lid << "; frequency: " << freq << " MHz; burst interval: " << round(10 * gaps[PULSES_PER_BURST - 1]) / 10 << " sec\nAppending '!' to fullID of second one.\n";
     while (all_fullIDs.count(fullID)) {
       fullID += '!';
     };

@@ -137,7 +137,7 @@ Tag_Finder::process(Pulse &p) {
      - if so, check whether the pulse confirms the Tag_Candidate:
 
      - if so, kill any other Tag_Candidates with the same ID (note, this
-       means the same Lotek ID, frequency, *and* burst interval) or which
+       means the same Mfr ID, frequency, *and* burst interval) or which
        share any pulses with this one
 
      - otherwise, if the pulse was added to the candidate, but the candidate

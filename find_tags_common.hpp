@@ -24,12 +24,11 @@ typedef float Frequency_Offset_kHz;
 
 typedef int Nominal_Frequency_kHz;
 
-// Tag IDs: so far, Lotek tags have 3 digit IDs.  But we want to be
-// able to distinguish among tags with the same Lotek ID but
+// Tag IDs: so far, Mfr tags have 3 digit IDs.  But we want to be
+// able to distinguish among tags with the same Mfr ID but
 // (sufficiently) different burst intervals. 
 
-typedef int Lotek_Tag_ID;  // only 3 digits
-static const Lotek_Tag_ID BOGUS_LOTEK_TAG_ID = -1;
+typedef int Mfr_Tag_ID;  // only 3 digits
 
 // type representing an internal tag ID; each entry in the database
 // receives its own internal tag ID
