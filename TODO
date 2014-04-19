@@ -1,0 +1,25 @@
+Bursts are being put in multiple runs - why!?
+
+The following code finds some tag records where the same burst
+appears in multiple runs on the same antenna and receiver.  Why???
+
+t=tags("tagProj=='Taylr' and sp=='COTE' and site=='CTRYI' and id==480
+   and ant=='1 '")
+tt=subset(t, id==480 & ts >= ymd_hms("2013-06-27 19:23:06") & ts <= ymd_hms("2013-06-27 19:39:43"))
+
+This was also true in the previous version of the merged database.
+
+Looking at country island's alltags.rds, there are 1596 duplicated
+records out of 1.5 million records (ignoring the runID, posInRun,
+burstslop fields)
+
+  x=readRDS("2013_taylor_country_island_alltags.rds")
+  sum(duplicated(x[,-c(9, 10, 12)]))
+
+
+Is this a bug in the tagfinder, or was this due to the faulty RAM, or
+something else?  
+Re ran tagfinder today (Mar 31, 2014) and got identical results, so
+there's something wonky in the tag finder.
+
+

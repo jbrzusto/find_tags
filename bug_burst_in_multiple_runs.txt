@@ -1,0 +1,512 @@
+xyplot(dfreq~ts, p,
+col=rainbow(90)[p$sig+85],
+pch="+",
+main="Sackville March 2014 Noise Test - All Pulses - Frequency offset vs Time",
+xlab="Time (2014 March 05 GMT)",
+ylab="Freq. Offset (kHz)",
+key=simpleKey(
+title="Sig (dB)",
+x=0.95,
+y=0.9,
+text=as.character(10*(-1:-8)),
+col=rainbow(90)[(-1:-8)*10+85],
+points=FALSE)
+)
+source("analyze.R")
+q()
+setwd("/SG/contrib/2013/taylor/keji")
+x=readRDS("./2013_taylor_keji_alltags.rds")
+subset(x, id==481)
+setwd("/SG/contrib/2013/taylor/panuke_sea")
+x=readRDS("2013_taylor_panuke_sea_alltags.rds")
+subset(x, id==444)
+subset(x, id==519)
+library(lattice);xyplot(sig~ts, groups=ant, subset(x, id==519))
+library(lattice);xyplot(sig~lon, groups=ant, subset(x, id==519))
+library(lattice);xyplot(sig~ts, groups=ant, subset(x, id==519))
+library(lattice);xyplot(sig~ts, groups=ant, subset(x, id==519)[-(1:2),])
+library(lattice);xyplot(sig~lat, groups=ant, subset(x, id==519)[-(1:2),])
+library(lattice);xyplot(sig~lon, groups=ant, subset(x, id==519)[-(1:2),])
+library(lattice);xyplot(sig~ts, groups=ant, subset(x, id==519)[-(1:2),])
+library(lubridate);library(lattice);
+xyplot(sig~ts, groups=ant, subset(x, id==519 & ts >= ymd("2014-01-01") & ts <= ymd("2014-01-19")))
+xyplot(sig~ts, groups=id, subset(x, ts >= ymd("2014-01-01") & ts <= ymd("2014-01-19")))
+xyplot(sig~ts, groups=id, subset(x, ts >= ymd("2014-01-01") & ts <= ymd("2014-01-19" & freqsd < 0.1)))
+xyplot(sig~ts, groups=id, subset(x, ts >= ymd("2014-01-01") & ts <= ymd("2014-01-19") & freqsd < 0.1))
+xyplot(sig~ts, groups=id, subset(x, ts >= ymd("2014-01-01") & ts <= ymd("2014-01-19") & freqsd < 0.01))
+xyplot(sig~ts, groups=id, subset(x, ts >= ymd("2014-01-01") & ts <= ymd("2014-01-19") & freqsd < 0.1))
+xyplot(sig~ts, groups=id, subset(x, ts >= ymd("2014-01-01") & ts <= ymd("2014-01-19") & freqsd < 0.1 & runLen > 4))
+xyplot(sig~ts, groups=id, subset(x, ts >= ymd("2014-01-01") & ts <= ymd("2014-01-19") & freqsd < 0.1 & runLen > 3))
+xyplot(sig~ts, groups=id, subset(x, ts >= ymd("2014-01-01") & ts <= ymd("2014-01-19") & freqsd < 0.1 & runLen > 2))
+xyplot(sig~ts, groups=id, subset(x, ts >= ymd("2013-12-01") & freqsd < 0.1 & runLen > 3))
+xyplot(fullID~ts, groups=id, subset(x, ts >= ymd("2013-12-01") & freqsd < 0.1 & runLen > 3))
+xyplot(fullID~ts, groups=id, subset(x, ts >= ymd("2013-12-01") & freqsd < 0.1 & runLen > 4))
+subset(x, id==369)
+dim(subset(x, id==369 & freqsd<0.1))
+dim(subset(x, id==369 & freqsd<0.01))
+dim(subset(x, id==369 & freqsd<0.03))
+dim(subset(x, id==369 & freqsd<0.1 & runLen > 2))
+dim(subset(x, id==369 & freqsd<0.1 & runLen > 3))
+subset(x, id==444)
+with(subset(x, ts>=ymd("2014-01-01")), table(fullID))
+with(subset(x, ts>=ymd("2014-01-01")), tapply(ts, fullID, range))
+with(subset(x, ts>=ymd("2014-01-01") & slop < 0.001), tapply(ts, fullID, range))
+with(subset(x, ts>=ymd("2014-01-01") & slop < 0.001), table(fullID))
+with(subset(x, ts>=ymd("2014-01-01") & slop < 0.001 & burstSlop < 0.001), table(fullID))
+with(subset(x, ts>=ymd("2014-01-01") & slop < 0.001 & burstSlop < 0.001 < freqsd<0.1), table(fullID))
+with(subset(x, ts>=ymd("2014-01-01") & slop < 0.001 & burstSlop < 0.001 & freqsd<0.1), table(fullID))
+subset(x, ts>=ymd("2014-01-01") & slop < 0.001 & burstSlop < 0.001 & freqsd<0.1 & id==369)
+t163=tags('id==163')
+library(sensorgnome)
+t163=tags('id==163')
+table(t163, site)
+names(t163)
+table(t163$site)
+xyplot(lon~ts, t163)
+xyplot(lon~ts, subset(t163, ts>=ymd("2013-01-01"))
+)
+t165=tags('id==165')
+table(t165$site)
+xyplot(lon~ts, subset(t165, ts>=ymd("2013-01-01")))
+subset(t165, site=="HPWLR")
+subset(t163, site=="HPWLR")
+xyplot(lon~lat, subset(t165, ts>=ymd("2013-01-01")), type="l")
+xyplot(lat~lon, subset(t165, ts>=ymd("2013-01-01")), type="l")
+tt=tags('site=="HPWLR"')
+dim(tt)
+xyplot(id~ts, tt)
+xyplot(id~ts, subset(tt, tagFreq==166.300))
+xyplot(id~ts, subset(tt, nomFreq==166.300))
+xyplot(freq~ts, groups=site, t163)
+xyplot(freq~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")))
+xyplot(freq~ts, groups=site, subset(t165, ts>=ymd("2013-01-01")))
+xyplot(slop~ts, groups=site, subset(t165, ts>=ymd("2013-01-01")))
+xyplot(bslop~ts, groups=site, subset(t165, ts>=ymd("2013-01-01")))
+xyplot(burstSlop~ts, groups=site, subset(t165, ts>=ymd("2013-01-01")))
+xyplot(burstSlop~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")))
+xyplot(slop~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")))
+xyplot(freq~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")))
+xyplot(freq~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=0))
+xyplot(freq~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")), auto.key=list(title="site", x="topleft"))
+?auto.key
+?xyplot
+xyplot(freq~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")), auto.key=list(title="site", location="topleft"))
+xyplot(freq~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+xyplot(freq~ts, groups=site, subset(t165, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+xyplot(freqsd~ts, groups=site, subset(t165, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+xyplot(freqsd~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+xyplot(sig~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+xyplot(dbm~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+xyplot(id~ts, subset(tt, ts>=ymd("2013-08-28") & ts<=ymd("2013-08-29")))
+xyplot(id~ts, subset(tt, ts>=ymd("2013-09-01") & ts<=ymd("2013-09-02")))
+subset(t163, site=="HPWLR")
+subset(t165, site=="HPWLR")
+tt=tags('site=="HPWLR"', filter="")
+dim(tt)
+xyplot(id~ts, subset(tt, ts>=ymd("2013-09-01") & ts<=ymd("2013-09-02")))
+xyplot(id~ts, subset(tt, ts>=ymd("2013-08-28") & ts<=ymd("2013-08-29")))
+t165=tags('id==165', filter="")
+t163=tags('id==163', filter="")
+xyplot(sig~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+xyplot(freq~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+xyplot(freq.sd~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+xyplot(freqsd~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+tags
+xyplot(freqsd~ts, groups=site, subset(t165, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+xyplot(freqsd~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+xyplot(freq~ts, groups=site, subset(t163, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+xyplot(freq~ts, groups=site, subset(t165, ts>=ymd("2013-01-01")), auto.key=list(title="site", x=0, y=1))
+subset(t165, site=="HPWLR")
+subset(t163, site=="HPWLR")
+t=tags('tagProj=="Hamil" and (id >=89 and id <= 122) or (id >=19 and id <= 25)', filter="")
+dim(t)
+xyplot(id~ts, groups=site, subset(t, ts>=ymd("2013-01-01")))
+xyplot(lat~ts|id, groups=site, subset(t, ts>=ymd("2013-01-01")))
+xyplot(lat~ts|fullID, groups=site, subset(t, ts>=ymd("2013-01-01")))
+t=tags('tagProj=="Hamil" and ((id >=89 and id <= 122) or (id >=19 and id <= 25))', filter="")
+xyplot(lat~ts|fullID, groups=site, subset(t, ts>=ymd("2013-01-01")))
+t=tags('tagProj=="Hamil" and ((id >=83 and id <= 122) or (id >=19 and id <= 25))', filter="")
+xyplot(lat~ts|fullID, groups=site, subset(t, ts>=ymd("2013-01-01")))
+xyplot(lat~ts|id, groups=site, subset(t, ts>=ymd("2013-01-01")))
+xyplot(lat~ts|as.factor(id), groups=site, subset(t, ts>=ymd("2013-01-01")))
+t=tags('tagProj=="Hamil" and ((id >=83 and id <= 122) or (id >=19 and id <= 25))')
+xyplot(lat~ts|as.factor(id), groups=site, subset(t, ts>=ymd("2013-01-01")))
+subset(t, id==84)
+t=tags('tagProj=="Hamil" and ((id >=83 and id <= 122) or (id >=19 and id <= 25))', filter="")
+subset(t, id==84)
+setwd("/SG/contrib/2013/taylor/sackville_noise_test")
+x=readRDS("2013_taylor_sackville_noise_test_alltags.rds")
+table(x)
+dim(x)
+range(x$ts)
+xyplot(id~ts, x)
+x
+setwd("/SG/contrib/2013/taylor/sackville_noise_test")
+x=read.csv("allpulses.csv", as.is=TRUE)
+names(x)
+class(x$ts)=c("POSIXt", "POSIXct")
+libray(lubridate)
+library(lubridate)
+mean(subset(x, ts>=ymd_hms("2014-03-05 18:00:00") & ts <= ymd_hms("2014-03-05 18:45:00"))$sig)
+mean(subset(x, ts>=ymd_hms("2014-03-05 21:20:00") & ts <= ymd_hms("2014-03-05 21:30:00"))$sig)
+hist(subset(x, ts>=ymd_hms("2014-03-05 18:00:00") & ts <= ymd_hms("2014-03-05 18:45:00"))$sig)
+hist(subset(x, ts>=ymd_hms("2014-03-05 21:20:00") & ts <= ymd_hms("2014-03-05 21:30:00"))$sig)
+hist(subset(x, ts>=ymd_hms("2014-03-05 18:00:00") & ts <= ymd_hms("2014-03-05 18:45:00"))$sig, 200)
+hist(subset(x, ts>=ymd_hms("2014-03-05 21:20:00") & ts <= ymd_hms("2014-03-05 21:30:00"))$sig, 200)
+mean(subset(x, ts>=ymd_hms("2014-03-05 18:00:00") & ts <= ymd_hms("2014-03-05 18:45:00"))$noise)
+mean(subset(x, ts>=ymd_hms("2014-03-05 21:20:00") & ts <= ymd_hms("2014-03-05 21:30:00"))$noise)
+-68.648+79.1823
+-61.638+72.225
+10^(10.55/10)
+sqrt(10^(10.55/10))
+sqrt(10^(10.6/10))
+sd(subset(x, ts>=ymd_hms("2014-03-05 21:20:00") & ts <= ymd_hms("2014-03-05 21:30:00"))$sig)
+sd(subset(x, ts>=ymd_hms("2014-03-05 18:00:00") & ts <= ymd_hms("2014-03-05 18:45:00"))$sig)
+sd(subset(x, ts>=ymd_hms("2014-03-05 18:00:00") & ts <= ymd_hms("2014-03-05 18:45:00"))$noise)
+sd(subset(x, ts>=ymd_hms("2014-03-05 18:00:00") & ts <= ymd_hms("2014-03-05 18:45:00"))$noise)
+sd(subset(x, ts>=ymd_hms("2014-03-05 21:20:00") & ts <= ymd_hms("2014-03-05 21:30:00"))$noise)
+g=read.csv("gps.csv", as.is=TRUE)
+dim(g)
+class(g$ts)=c("POSIXt", "POSIXct")
+xyplot(lon~ts, g)
+xyplot(lon~ts, g, type="b
+")
+xyplot(lon~ts, g, type="b")
+source("/BD/code/get.db.hits.R")
+get.hits
+blpw.12 <- get.hits(proj = "taylor", year = 2012, ant.freq < 166.310, filtered = TRUE)
+names(blpw.12)
+table(blpw.12$site)
+get.hits
+hist(subset(blpw.12,site=="sable_island_east")$freq.sd)
+hist(subset(blpw.12,site=="sable_island_east")$freq)
+hist(subset(blpw.12,site=="sable_island_east")$run.len)
+table(subset(blpw.12, freq.sd < 0.1 & run.len > 2)$site)
+table(subset(blpw.12, freq.sd < 0.1 & run.len > 3)$site)
+table(subset(blpw.12, freq.sd < 0.1 & run.len > 3 & abs(freq) < 5)$site)
+table(subset(blpw.12, freq.sd < 0.1 & run.len > 3 & slop < 0.001)$site)
+table(subset(blpw.12, freq.sd < 0.1 & run.len > 3 & slop < 0.002)$site)
+table(subset(blpw.12, freq.sd < 0.1 & run.len > 3 & slop < 0.002 & abs(burst.slop) < 0.005 )$site)
+with(subset(blpw.12, freq.sd < 0.1 & run.len > 3 & slop < 0.002 & abs(burst.slop) < 0.005 ), plot(ts, id, col=site))
+with(subset(blpw.12, freq.sd < 0.1 & run.len > 3 & slop < 0.002 & abs(burst.slop) < 0.005 & site != "ryan_leet"), plot(ts, id, col=site))
+with(subset(blpw.12, freq.sd < 0.1 & run.len > 3 & slop < 0.002 & abs(burst.slop) < 0.005 & site == "sable_island_esat"), plot(ts, id, col=site, pch="+"))
+with(subset(blpw.12, freq.sd < 0.1 & run.len > 3 & slop < 0.002 & abs(burst.slop) < 0.005 & site == "sable_island_east"), plot(ts, id, col=site, pch="+"))
+with(subset(blpw.12, freq.sd < 0.1 & run.len > 3 & slop < 0.002 & abs(burst.slop) < 0.005 & site == "sable_island_wast"), plot(ts, id, col=site, pch="+"))
+with(subset(blpw.12, freq.sd < 0.1 & run.len > 3 & slop < 0.002 & abs(burst.slop) < 0.005 & site == "sable_island_west"), plot(ts, id, col=site, pch="+"))
+with(subset(blpw.12, freq.sd < 0.1 & run.len > 3 & slop < 0.002 & abs(burst.slop) < 0.005 & site == "PMW"), plot(ts, id, col=site, pch="+"))
+gps=read.csv("2013_stantial-avis_main1_gps.csv", as.is=TRUE)
+setwd("/SG/contrib/2013/stantial_avis/maine1")
+gps=read.csv("2013_stantial-avis_main1_gps.csv", as.is=TRUE)
+dir()
+gps=read.csv("2013_stantial-avis_maine1_gps.csv", as.is=TRUE)
+names(gps)
+class(gps$ts)<-c("POSIXt", "POSIXct")
+range(gps$ts)
+any(is.na(gps$lat))
+any(is.na(gps$lon))
+library(lubridate)
+subset(gps, ts >= ymd("2013-07-07") & ts <= ymd_hms("2013-07-07 00:25:35"))
+sum(diff(gps$ts) > 400)
+sum(diff(gps$ts) > 500)
+sum(diff(gps$ts) > 600)
+sum(diff(gps$ts) > 700)
+sum(diff(gps$ts) > 800)
+sum(diff(gps$ts) > 900)
+sum(diff(gps$ts) > 2000)
+sum(diff(gps$ts) > 400)
+sum(diff(gps$ts) > 300)
+sum(diff(gps$ts) > 600)
+breaks=which(diff(gps$ts)>600)
+source("analyze2.R")
+source("analyze2.R")
+source("analyze2.R")
+dim(on)
+on
+source("analyze2.R")
+on
+source("analyze2.R")
+source("analyze2.R")
+on
+options(digits=4)
+on
+options(digits=5)
+on
+library(sensorgnome)
+setwd("..")
+source("analyze.R")
+search()
+detach(2)
+library(sensorgnome)
+source("analyze.R")
+q()
+setwd("/SG/contrib/2013/stantial_avis")
+source("analyze.R")
+source("analyze.R")
+option(digits=5)
+options(digits=5)
+option(digits=5)
+source("analyze.R")
+source("analyze.R")
+readRDS("./2013_stantial-avis_operating_periods.rds")
+x=readRDS("./2013_stantial-avis_operating_periods.rds")
+x
+setwd("/SG/contrib/2013/taylor/port_felix")
+library(sensorgnome)
+tt=tags('site=="PTFE"')
+dim(tt)
+unique(tt$id)
+unique(tt$fullid)
+library(lattice)
+xyplot(fullID~ts, tt)
+names(tt)
+dim(tt)
+xyplot(fullID~ts, tt, pch="+")
+xyplot(label~ts, tt)
+setwd("/SG/contrib/2013/taylor/venture_sea")
+x=readRDS("2013_taylor_venture_sea_alltags.rds")
+subset(x, id==369)
+subset(x, id==369 & ts >= ymd("2013-12-12"))
+library(lubridate)
+subset(x, id==369 & ts >= ymd("2013-12-12"))
+options(digits.secs=4)
+subset(x, id==369 & ts >= ymd("2013-12-12"))[,c("ts", "ant")]
+xyplot(label~ts, x)
+subset(x, id==444 & ts >= ymd("2013-12-12"))[,c("ts", "ant")]
+subset(x, id==444 & ts >= ymd("2013-12-12"))[,c("ts", "ant", "slop", "freqsd")]
+q()
+setwd("/SG/contrib/2013/taylor/sackville_noise_test")
+source("analyze.R")
+source("analyze.R")
+source("analyze.R")
+search()
+sql
+source("analyze.R")
+warnings()
+dim(recvgps)
+dim(gps)
+dim(taggps)
+names(taggps)
+dim(t23)
+names(t23)
+xyplot(sig~ts, t23)
+points(taggps$ts,taggps$lat)
+table(t23$id)
+library(scatterplot3d)
+??scatterplot3d
+??3d
+??'3d'
+?cloud
+aa = data.frame(x=taggps$lon, y=taggps$lat, t=taggps$ts)
+lapply(aa, class)
+aa$z = approx(t23$ts, t23$sig)$y
+aa$z = approx(t23$ts, t23$sig, aa$ts)$y
+aa$z = approx(t23$ts, t23$sig, aa$t)$y
+cloud(aa)
+cloud(z~x*y, aa)
+xyplot(z~lon, aa)
+names(aa)
+names(aa)=c("lon", "lat", "t", "sig")
+xyplot(sig~lat, aa)
+xyplot(sig~lon, aa)
+xyplot(lat~lon, col=rainbow(81)[sig+81], aa)
+names(aa)
+xyplot(lat~lon, col=rainbow(81)[aa$sig+81], aa)
+plot(lon, lat, col=rainbow(81)[aa$sig+81])
+with(aa, plot(lon, lat, col=rainbow(81)[sig+81]))
+points(gps$lon, gps$lat, pch="+", col="black")
+unique(taggps$lab)
+latLonDist
+aa$recvlat = approx(gps$ts, gps$lat, aa$ts)$y
+approx(gps$ts, gps$lat, aa$ts)$y
+approx(gps$ts, gps$lat, aa$t)$y
+aa$recvlat = approx(gps$ts, gps$lat, aa$t)$y
+aa$recvlon = approx(gps$ts, gps$lon, aa$t)$y
+aa$dist = latLonDist(aa$lat,aa$lon,aa$recvlat,aa$recvlon)
+range(aa$dist)
+xyplot(sig~dist,aa)
+xyplot(sig~dist,aa, type="b")
+which.max(aa$dist)
+aa[5,]
+plot(taggps$lon, taggps$lat)
+xyplot(sig~dist,groups=ant, aa, type="b")
+names(aa)
+aa$ant=t23$ant
+png(sprintf("signal_vs_location_%s.png", d), 1366, 768)
+with(t23,{
+plot(taglat, taglon,
+col=rainbow(81)[sig+81],
+type="b",
+pch = ant,
+main=c(sprintf("Sackville 2014 %s Noise Test - Tag Detection at Location by antenna", d),
+"Receiver locations (+)"),
+xlab="Longitude (deg E)",
+ylab="Latitude (deg N)",
+key=simpleKey(
+title="Sig (dB)",
+x=0.5,
+y=0.9,
+text=as.character(10*(-1:-8)),
+col=rainbow(81)[(-1:-8)*10+81],
+points=FALSE)
+)
+points(lat, lon, pch="+", col="black")
+)
+dev.off()
+with(t23,{
+plot(taglat, taglon,
+col=rainbow(81)[sig+81],
+type="b",
+pch = ant,
+main=c(sprintf("Sackville 2014 %s Noise Test - Tag Detection at Location by antenna", d),
+"Receiver locations (+)"),
+xlab="Longitude (deg E)",
+ylab="Latitude (deg N)",
+key=simpleKey(
+title="Sig (dB)",
+x=0.5,
+y=0.9,
+text=as.character(10*(-1:-8)),
+col=rainbow(81)[(-1:-8)*10+81],
+points=FALSE)
+);
+points(lat, lon, pch="+", col="black")
+}
+)
+t23$taglat = approx(taggps$ts, taggps$lat, t23$ts)$y
+t23$taglon = approx(taggps$ts, taggps$lon, t23$ts)$y
+## distance between tag and receiver
+t23$dist = latLonDist(t23$lat, t23$lon, t23$taglat, t23$taglon)
+names(t23)
+any(is.na(t23$lat))
+any(is.na(t23$taglat))
+sum(is.na(t23$taglat))
+dim(t23)
+tt23=subset(t23, !is.na(taglat))
+with(tt23,{
+plot(taglat, taglon,
+col=rainbow(81)[sig+81],
+type="b",
+pch = ant,
+main=c(sprintf("Sackville 2014 %s Noise Test - Tag Detection at Location by antenna", d),
+"Receiver locations (+)"),
+xlab="Longitude (deg E)",
+ylab="Latitude (deg N)",
+key=simpleKey(
+title="Sig (dB)",
+x=0.5,
+y=0.9,
+text=as.character(10*(-1:-8)),
+col=rainbow(81)[(-1:-8)*10+81],
+points=FALSE)
+);
+points(lat, lon, pch="+", col="black")
+}
+)
+class(tt23$ant)
+with(tt23,{
+plot(taglat, taglon,
+col=rainbow(81)[sig+81],
+type="b",
+pch = as.character(ant),
+main=c(sprintf("Sackville 2014 %s Noise Test - Tag Detection at Location by antenna", d),
+"Receiver locations (+)"),
+xlab="Longitude (deg E)",
+ylab="Latitude (deg N)",
+key=simpleKey(
+title="Sig (dB)",
+x=0.5,
+y=0.9,
+text=as.character(10*(-1:-8)),
+col=rainbow(81)[(-1:-8)*10+81],
+points=FALSE)
+);
+points(lat, lon, pch="+", col="black")
+}
+)
+dev.off()
+d="23 March"
+png(sprintf("signal_vs_location_%s.png", d), 1366, 768)
+with(tt23,{
+plot(taglat, taglon,
+col=rainbow(81)[sig+81],
+type="b",
+pch = as.character(ant),
+main=c(sprintf("Sackville 2014 %s Noise Test - Tag Detection at Location by antenna", d),
+"Receiver locations (+)"),
+xlab="Longitude (deg E)",
+ylab="Latitude (deg N)",
+key=simpleKey(
+title="Sig (dB)",
+x=0.5,
+y=0.9,
+text=as.character(10*(-1:-8)),
+col=rainbow(81)[(-1:-8)*10+81],
+points=FALSE)
+);
+points(lat, lon, pch="+", col="black")
+}
+)
+dev.off()
+png(sprintf("signal_vs_location_%s.png", d), 1366, 768)
+with(tt23,{
+plot(taglat, taglon,
+col=rainbow(81)[sig+81],
+type="b",
+pch = as.character(ant),
+main=c(sprintf("Sackville 2014 %s Noise Test - Tag Detection at Location by antenna", d),
+"Receiver locations (+)"),
+xlab="Longitude (deg E)",
+ylab="Latitude (deg N)",
+## key=simpleKey(
+##   title="Sig (dB)",
+##   x=0.5,
+##   y=0.9,
+##   text=as.character(10*(-1:-8)),
+##   col=rainbow(81)[(-1:-8)*10+81],
+##   points=FALSE)
+);
+points(lat, lon, pch="+", col="black")
+}
+)
+dev.off()
+plot(!)
+plot(1)
+xyplot(sig~ts,t23)
+xyplot(sig~ts,groups=ant,t23)
+names(t23)
+t23$dist = latLonDist(t23$lat, t23$lon, t23$taglat, t23$taglon)
+xyplot(sig~dist,tt23)
+dim(tt23)
+names(tt23)
+tt23$dist = latLonDist(t23$lat, t23$lon, t23$taglat, t23$taglon)
+tt23$dist = latLonDist(tt23$lat, tt23$lon, tt23$taglat, tt23$taglon)
+xyplot(sig~dist,tt23)
+t=tags("tagProj=='Taylr' and sp=='COTE'")
+dim(t)
+dim(subset(t, tagID==480))
+dim(subset(t, id==480))
+dim(subset(t, id==480 & runID==544603))
+dim(subset(t, id==480 & ts >= ymd_hms("2013-06-27 19:23:06") & ts <= ymd("2013-06-27 19:39:43"))
+)
+t=subset(t, site=='CTRYI')
+dim(t)
+tt=subset(t, id==480 & ts >= ymd_hms("2013-06-27 19:23:06") & ts <= ymd_hms("2013-06-27 19:39:43"))
+dim(tt)
+tt[,1:10]
+tt[,1:10]
+dim(tt)
+tt[1:10,]
+tt=subset(tt, ant==1)
+dim(tt)
+tt=subset(t, id==480 & ts >= ymd_hms("2013-06-27 19:23:06") & ts <= ymd_hms("2013-06-27 19:39:43"))
+tt=subset(tt, ant=="1")
+dim(tt)
+tt=subset(t, id==480 & ts >= ymd_hms("2013-06-27 19:23:06") & ts <= ymd_hms("2013-06-27 19:39:43"))
+dim(tt)
+range(tt$ant)
+tt=subset(tt, ant=="1 ")
+dim(tt)
+tt[1:10,]
+options(digits.secs=4)
+tt[1:10,]
+savehistory("/raid3tb/john/proj/find_tags/bug_burst_in_multiple_runs.txt")
