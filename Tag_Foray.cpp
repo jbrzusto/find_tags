@@ -93,6 +93,9 @@ Tag_Foray::start() {
             newtf->set_out_stream(out);
             newtf->init();
             tag_finders[key] = newtf;
+#ifdef FIND_TAGS_DEBUG
+            newtf->graph.get_root()->dump(std::cerr);
+#endif
           };
 
           Pulse p = Pulse::make(ts, dfreq, sig, noise, port_freq[port_num].f_MHz);

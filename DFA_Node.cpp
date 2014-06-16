@@ -1,4 +1,5 @@
 #include "DFA_Node.hpp"
+#include "Known_Tag.hpp"
 
 DFA_Node::DFA_Node(unsigned int phase) :
   phase(phase),
@@ -64,15 +65,24 @@ void DFA_Node::dump(ostream & os, string indent, string indent_change) {
   // output the tree rooted at this node, appropriately indented,
   // to a stream
 
-  os << indent <<  "NODE @ Phase " << phase << "; max age: " << max_age << "\n"
-     << indent << ids << "\n" << indent << "Edges:" << "\n";
+  os << indent <<  "NODE ";
+  if (is_unique())
+    os << get_id()->lid;
+  os << " @ Phase " << phase << "; max age: " << max_age << "\n"
+     << indent;
+  for (auto i = ids.begin(); i != ids.end(); ++i)
+    os << ' ' << *i;
+  os << "\n" << indent << "Edges:" << "\n";
   for (Edge_iterator it = edges.begin(); it != edges.end(); ++it) {
     os << indent << it->first << "->";
     if (it->second->phase > phase) {
       os << endl;
       it->second->dump(os, indent + indent_change);
     } else {
-      os << " Back to NODE @ Phase " << it->second->phase << ":" << it->second->ids << endl;
+      os << " Back to NODE @ Phase " << it->second->phase << ":" ;
+      for (auto i = ids.begin(); i != ids.end(); ++i)
+        os << ' ' << *i;
+      os << endl;
     }
   }
 };
