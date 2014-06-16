@@ -1,0 +1,5 @@
+* mark or discard runs where no consecutive bursts occur (likely indicates aliasing against a different physical tag with compatible BI)
+* deal correctly with skipped bursts where tags with the same ID but different BI might be aliased at a given combination of skipped
+bursts;  We want to connect all sensible runs on a given tag ID (i.e. those whose BI are compatible with a given tag, but this might
+not be unique; when not unique, indicate the aliasing somehow).  This will require changing how the DFA_Graph is grown: nodes at the end
+of skipped bursts should be added at a correct phase, not wrapped back to the first or second burst. etc.
