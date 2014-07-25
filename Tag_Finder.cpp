@@ -10,7 +10,8 @@ Tag_Finder::Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, Tag_S
   burst_slop(default_burst_slop),
   burst_slop_expansion(default_burst_slop_expansion),
   max_skipped_bursts(default_max_skipped_bursts),
-  prefix(prefix)
+  prefix(prefix),
+  last_ts(0)
 {
 };
 
@@ -152,6 +153,12 @@ Tag_Finder::process(Pulse &p) {
      - if this pulse didn't confirm any candidate, then start a new
      Tag_Candidate at this pulse.
   */
+
+  if (p.ts < last_ts) {
+    throw std::runtime_error("Time reversal found in input!");
+  }
+  
+  last_ts = p.ts;
 
   // the clone list 
   Cand_List & cloned_candidates = cands[3];

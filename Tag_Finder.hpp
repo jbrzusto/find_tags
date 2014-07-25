@@ -117,6 +117,10 @@ public:
 
   void dump_bogus_burst(Pulse &p);
 
+protected:
+  
+  double last_ts; // timestamp of previously read pulse; used to detect time reversals in input, which is an error
+
 };
 
 
