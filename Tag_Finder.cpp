@@ -34,7 +34,7 @@ Tag_Finder::setup_graph() {
   // pulse gaps for the current phase (including slop) to subsets of these
   // Tag_IDs.
       
-  for (unsigned int phase = 1; phase <= 2 * PULSES_PER_BURST - 1; ++phase) {
+  for (unsigned int phase = 1; phase <= 2 * PULSES_PER_BURST; ++phase) {
     // loop over all Tag_ID_Sets at this level
     for (DFA_Graph::Node_For_IDs::iterator it = graph.get_node_for_set_at_phase()[phase-1].begin(); 
 	 it != graph.get_node_for_set_at_phase()[phase-1].end(); ++it) {
@@ -81,10 +81,13 @@ Tag_Finder::setup_graph() {
       // PULSES_PER_BURST-1 are linked back to pulses at phase
       // PULSES_PER_BURST-1, so that we can keep track of runs of
       // consecutive bursts from a tag
-	  
-      graph.grow(it->second, m, (phase != 2 * PULSES_PER_BURST - 1) ? phase : PULSES_PER_BURST-1);
+
+      graph.grow(it->second, m, (phase != 2 * PULSES_PER_BURST) ? phase : PULSES_PER_BURST);
     }
   }
+#ifdef FIND_TAGS_DEBUG
+  graph.get_root()->dump(std::cerr);
+#endif
 };
 
 
@@ -234,10 +237,6 @@ Tag_Finder::process(Pulse &p) {
   if (! confirmed_acceptance) {
     cands[2].push_back(Tag_Candidate(this, graph.get_root(), p));
   }
-
-#ifdef FIND_TAGS_DEBUG
-    std::cerr << "started candidate " << &cands.back() << " with run id = " << cands.back().unique_id << std::endl;
-#endif
 
 };
 

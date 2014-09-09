@@ -64,15 +64,24 @@ void DFA_Node::dump(ostream & os, string indent, string indent_change) {
   // output the tree rooted at this node, appropriately indented,
   // to a stream
 
-  os << indent <<  "NODE @ Phase " << phase << "; max age: " << max_age << "\n"
-     << indent << ids << "\n" << indent << "Edges:" << "\n";
+  os << indent <<  "NODE " << (void *) this << " @ Phase " << phase << "; max age: " << max_age << "\n"
+     << indent;
+  auto id = ids.begin();
+  for (int j=0; id != ids.end() && j < 10; ++id, ++j) {
+    if (j > 0)
+      os << ",";
+    os << (*id)->proj << ":" << (*id)->lid;
+  }
+  if (id != ids.end())
+    os << ",...";
+  os << "\n" << indent << "Edges:" << "\n";
   for (Edge_iterator it = edges.begin(); it != edges.end(); ++it) {
     os << indent << it->first << "->";
     if (it->second->phase > phase) {
       os << endl;
       it->second->dump(os, indent + indent_change);
     } else {
-      os << " Back to NODE @ Phase " << it->second->phase << ":" << it->second->ids << endl;
+      os << " Back to NODE @ Phase " << it->second->phase << ":" << (void *) it->second << endl;
     }
   }
 };

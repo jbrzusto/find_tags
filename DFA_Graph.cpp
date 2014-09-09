@@ -6,7 +6,7 @@ DFA_Graph::DFA_Graph() :
   // NB: preallocate the vector of maps so that iterators to particular
   // maps are not invalidated by reallocation of the vector as it grows.
 
-  node_for_set_at_phase(2 * PULSES_PER_BURST) 
+  node_for_set_at_phase(2 * PULSES_PER_BURST + 1) 
 {};
 
 void DFA_Graph::set_all_ids (Tag_ID_Set &s) {

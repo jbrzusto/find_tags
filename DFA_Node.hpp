@@ -2,7 +2,7 @@
 #define DFA_NODE_HPP
 
 #include "find_tags_common.hpp"
-
+#include "Known_Tag.hpp"
 #include <boost/icl/interval_map.hpp>
 using namespace boost::icl;
 
