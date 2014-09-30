@@ -93,6 +93,11 @@ Tag_Foray::start() {
             newtf->set_out_stream(out);
             newtf->init();
             tag_finders[key] = newtf;
+#ifdef FIND_TAGS_DEBUG
+            std::cerr << "Interval Tree for " << prefix.str() << std::endl;
+            newtf->graph.get_root()->dump(std::cerr);
+            std::cerr << "Burst slop expansion is " << Tag_Finder::default_burst_slop_expansion << std::endl;
+#endif
           };
 
           Pulse p = Pulse::make(ts, dfreq, sig, noise, port_freq[port_num].f_MHz);

@@ -1,4 +1,5 @@
 #include "DFA_Node.hpp"
+#include "Known_Tag.hpp"
 
 DFA_Node::DFA_Node(unsigned int phase) :
   phase(phase),

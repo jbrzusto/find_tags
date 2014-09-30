@@ -47,9 +47,13 @@ Tag_Finder::setup_graph() {
       if (phase == 2 * PULSES_PER_BURST && it->first.size() > 1) {
 	std::ostringstream ids;
 	for (Tag_ID_Iter i = it->first.begin(); i != it->first.end(); ++i) {
-	  ids << (*i) << "\n";
+	  ids << (*i)->fullID << "\n";
 	}
-	throw std::runtime_error(string("Error: after 2 bursts, the following tag IDs are not distinguishable with current parameters:\n") + ids.str());
+        std::cerr << "ERROR!" << std::endl;
+#ifdef FIND_TAGS_DEBUG        
+        graph.get_root()->dump(std::cerr);
+#endif
+	throw std::runtime_error(string("Error: the following tag IDs are not distinguishable with current parameters:\n") + ids.str());
       }
   
       // for each tag, add its (gap range, ID) pair to the interval_map
@@ -62,34 +66,33 @@ Tag_Finder::setup_graph() {
 	m.add(make_pair(interval < Gap > :: closed(g - slop, g + slop), id));
       }
 
-      if (phase == PULSES_PER_BURST) {
+      if (phase == 2 * PULSES_PER_BURST) {
 	// add multiples of the burst interval to this interval map,
-	// so we can detect non-conseuctive pulses
-	Tag_ID_Iter i = it->first.begin();
-	Tag_ID_Set id;
-	id.insert(*i);
-	Gap bi = (*i)->gaps[PULSES_PER_BURST];
-	Gap g4 = (*i)->gaps[PULSES_PER_BURST - 1];
-	for (unsigned int j=2; j <= max_skipped_bursts + 1; ++j) {
-	  Gap base = (j - 1) * bi + g4;
-	  Gap slop = burst_slop + (j - 1) * burst_slop_expansion;
-	  m.add(make_pair(interval < Gap > :: closed(base - slop, base + slop), id));
-	}
+	// so we can detect non-consecutive pulses
+	for (Tag_ID_Iter i = it->first.begin(); i != it->first.end(); ++i) {
+          Tag_ID_Set id;
+          id.insert(*i);
+          Gap bi = (*i)->gaps[PULSES_PER_BURST];
+          Gap g4 = (*i)->gaps[PULSES_PER_BURST - 1];
+          for (unsigned int j=2; j <= max_skipped_bursts + 1; ++j) {
+            Gap base = (j - 1) * bi + g4;
+            Gap slop = burst_slop + (j - 1) * burst_slop_expansion;
+            m.add(make_pair(interval < Gap > :: closed(base - slop, base + slop), id));
+          }
+        }
       }
 
       // grow the node by this interval_map; Pulses at phase 2 *
-      // PULSES_PER_BURST-1 are linked back to pulses at phase
-      // PULSES_PER_BURST-1, so that we can keep track of runs of
+      // PULSES_PER_BURST are linked back to pulses at phase
+      // PULSES_PER_BURST, so that we can keep track of runs of
       // consecutive bursts from a tag
-
       graph.grow(it->second, m, (phase != 2 * PULSES_PER_BURST) ? phase : PULSES_PER_BURST);
     }
   }
 #ifdef FIND_TAGS_DEBUG
-  graph.get_root()->dump(std::cerr);
+  //  graph.get_root()->dump(std::cerr);
 #endif
 };
-
 
 void
 Tag_Finder::set_default_pulse_slop_ms(float pulse_slop_ms) {
@@ -237,7 +240,6 @@ Tag_Finder::process(Pulse &p) {
   if (! confirmed_acceptance) {
     cands[2].push_back(Tag_Candidate(this, graph.get_root(), p));
   }
-
 };
 
 void

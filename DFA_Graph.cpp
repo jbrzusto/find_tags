@@ -5,7 +5,10 @@ DFA_Graph::DFA_Graph() :
 
   // NB: preallocate the vector of maps so that iterators to particular
   // maps are not invalidated by reallocation of the vector as it grows.
-
+  // To allow for multiple tags with the same ID but different burst
+  // intervals, we need 3 bursts in the path for that tag, so that we
+  // can link the 3rd burst back to the start of itself, for recognizing
+  // runs of tags
   node_for_set_at_phase(2 * PULSES_PER_BURST + 1) 
 {};
 
