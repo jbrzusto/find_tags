@@ -20,6 +20,10 @@ class Tag_Database {
 public:
   Tag_Database (string filename);
 
+  void populate_from_csv_file(string filename);
+
+  void populate_from_sqlite_file(string filename);
+
   Freq_Set & get_nominal_freqs();
 
   Tag_Set * get_tags_at_freq(Nominal_Frequency_kHz freq);
