@@ -1,5 +1,6 @@
 #include "Tag_Database.hpp"
 #include <sqlite3.h>
+#include <math.h>
 
 Tag_Database::Tag_Database(string filename) {
   if (filename.substr(filename.length() - 4) == ".csv")
@@ -23,7 +24,7 @@ Tag_Database::populate_from_sqlite_file(string filename) {
 
   sqlite3_stmt * st; //!< pre-compiled statement for recording raw pulses
 
-  if (SQLITE_OK != sqlite3_prepare_v2(db, "select proj, id, tagFreq, fcdFreq, dfreq, g1/1000.0, g2/1000.0, g3/1000.0, bi from tags order by tagFreq, id",
+  if (SQLITE_OK != sqlite3_prepare_v2(db, "select proj, id, tagFreq, fcdFreq, dfreq, round(4*g1)/4000.0, round(4*g2)/4000.0, round(4*g3)/4000.0, round(4000*bi)/4000.0 from tags order by tagFreq, id",
                                       -1, &st, 0)) 
     throw std::runtime_error("Sqlite tag database does not have the required columns: proj, id, tagFreq, fcdFreq, dfreq, g1, g2, g3, bi");
 
@@ -80,7 +81,9 @@ Tag_Database::populate_from_csv_file(string filename) {
     Nominal_Frequency_kHz nom_freq = Freq_Setting::as_Nominal_Frequency_kHz(freq_MHz);
     // convert gaps to seconds
     for (int i=0; i < 3; ++i)
-      gaps[i] /= 1000.0;
+      gaps[i] = round(gaps[i] * 4) / 4000.0;
+
+    gaps[3] = round(gaps[3] * 4000) / 4000.0;
 
     if (nominal_freqs.count(nom_freq) == 0) {
       // we haven't seen this nominal frequency before
