@@ -89,7 +89,7 @@ Tag_Finder::setup_graph() {
     }
   }
 #ifdef FIND_TAGS_DEBUG
-  //  graph.get_root()->dump(std::cerr);
+  graph.get_root()->dump(std::cerr);
 #endif
 };
 
