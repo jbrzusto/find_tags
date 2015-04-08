@@ -198,43 +198,45 @@ void
 usage() {
   puts (
 	"Usage:\n"
-	"    find_tags [OPTIONS] TAGFILE.CSV [UNIFIED.CSV]\n"
+	"    find_tags [OPTIONS] TAGFILE.[csv|sqlite] [UNIFIED.CSV]\n"
 	"where:\n\n"
 
-	"TAGFILE.CSV is a file holding a table of registered tags\n"
-	"    where each line is:\n"
-        "        PROJ,ID,TAGFREQ,FCDFREQ,G1,G2,G3,BI,DFREQ,G1.SD,G2.SD,G3.SD,BI.SD,DFREQ.SD,FILENAME\n"
+	"TAGFILE.csv or TAGFILE.sqlite  is a file holding a table of registered tags\n"
+	"    where TAGFILE.csv is a Comma-Separated Values file with this header:\n"
+        "        proj,id,tagFreq,fcdFreq,g1,g2,g3,bi,dfreq,g1.sd,g2.sd,g3.sd,bi.sd,dfreq.sd,filename\n"
+        "    or TAGFILE.sqlite has (at least) these columns:\n"
+        "        proj, id, tagFreq, fcdFreq, dfreq, g1, g2, g3, bi\n"
 	"    with:\n"
-	"        PROJ: quoted string identifying project these tags belong to\n"
-	"        ID: integer giving manufacturer tag ID\n"
-	"        TAGFREQ: (MHz) nominal tag frequency\n"
-	"        FCDFREQ: (MHz) tuner frequency at which tag was registered\n"
-	"        GN: (ms) time (gap) between pulses (N, N+1) in burst\n"
-	"        BI: (s) time between consecutive bursts\n"
-	"        DFREQ: (kHz) apparent offset of tag from tuner frequency\n"
-	"        GN.SD: (ms) standard deviation of time between pulses (N, N+1)\n"
-	"        BI.SD: (s) standard deviation of time between bursts\n"
-	"        DFREQ.SD: (kHz) standard deviation of offset frequency\n"
-	"        FILENAME: quoted string giving name of raw .WAV file (if any) recorded\n"
+	"        proj:     quoted string identifying project these tags belong to\n"
+	"        id:       integer giving manufacturer tag ID\n"
+	"        tagFreq:  (MHz) nominal tag frequency\n"
+	"        fcdFreq:  (MHz) tuner frequency at which tag was registered\n"
+	"        gN:       (ms) time (gap) between pulses (N, N+1) in burst\n"
+	"        bi:       (s) time between consecutive bursts\n"
+	"        dfreq:    (kHz) apparent offset of tag from tuner frequency\n"
+	"        gN.sd:    (ms) standard deviation of time between pulses (N, N+1)\n"
+	"        bi.sd:    (s) standard deviation of time between bursts\n"
+	"        dfreq.sd: (kHz) standard deviation of offset frequency\n"
+	"        filename: quoted string giving name of raw .WAV file (if any) recorded\n"
 	"            at tag registration\n\n"
 
 	"UNIFIED.CSV is a file holding raw sensorgnome output records, including parameter\n"
         "    settings and GPS fixes.\n"
 	"    Relvant lines are pANT,TS,DFREQ,SIG,NOISE\n"
 	"    with:\n"
-        "        ANT: port code 'pX'\n"
-	"        TS: real timestamp (seconds since 1 Jan, 1970 00:00:00 GMT)\n"
-	"        DFREQ: (kHz) estimated pulse offset frequency\n"
-	"        SIG: (dB) estimated relative pulse signal strength\n"
-	"        NOISE: (dB) estimated relative noise level near pulse\n"
+        "        ANT:    port code 'pX'\n"
+	"        TS:     real timestamp (seconds since 1 Jan, 1970 00:00:00 GMT)\n"
+	"        DFREQ:  (kHz) estimated pulse offset frequency\n"
+	"        SIG:    (dB) estimated relative pulse signal strength\n"
+	"        NOISE:  (dB) estimated relative noise level near pulse\n"
         "    or S,TS,PORT,-m,FREQ,RC,ERR\n"
         "    with:\n"
-        "        TS: real timestamp\n"
+        "        TS:   real timestamp\n"
         "        PORT: port number\n"
-        "        -m: indicates frequency setting in megahertz\n"
+        "        -m:   indicates frequency setting in megahertz\n"
         "        FREQ: frequency in MHz to which port is being set\n"
-        "        RC: zero if frequency setting succeeded, else non-zero error code\n"
-        "        ERR: blank on success, else error message\n"
+        "        RC:   zero if frequency setting succeeded, else non-zero error code\n"
+        "        ERR:  blank on success, else error message\n"
 
 	"    If UNIFIED.CSV is unspecified, unified data are read from stdin\n\n"
 
@@ -312,6 +314,13 @@ usage() {
 	"    between them.\n"
 	"    default: 60\n\n"
 
+	"-t, --test\n"
+	"    verify that the tag database is valid and that all tags in it can be\n"
+	"    distinguished with the specified algorithm parameters.\n"
+	"    If the database is valid and all tags are distinguishable, the program\n"
+        "    prints 'Okay\\n' to stderr and the exist code is 0.  Otherwise, the exist\n"
+        "    code is -1 and an error message is printed to stderr.\n\n"
+
 	"-w, --pulse-rate-window=PULSERATEWIN\n"
 	"    the time window (seconds) over which pulse-rate is measured.  When pulse\n"
 	"    rate exceeds the value specified by --max-pulse-rate during a period of\n"
@@ -338,11 +347,12 @@ main (int argc, char **argv) {
 	OPT_MAX_PULSE_RATE       = 'R',
 	OPT_FREQ_SLOP	         = 's',
 	OPT_MAX_SKIPPED_BURSTS   = 'S',
+        OPT_TEST                 = 't',
 	OPT_PULSE_RATE_WINDOW    = 'w'
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:f:FhHl:m:np:R:s:S:w:";
+    static const char short_options[] = "b:B:c:f:FhHl:m:np:R:s:S:tw:";
     static const struct option long_options[] = {
         {"burst-slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst-slop-expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
@@ -359,6 +369,7 @@ main (int argc, char **argv) {
         {"frequency-slop"	   , 1, 0, OPT_FREQ_SLOP},
 	{"max-skipped-bursts"      , 1, 0, OPT_MAX_SKIPPED_BURSTS},
 	{"pulse-rate-window"       , 1, 0, OPT_PULSE_RATE_WINDOW},
+        {"test"                    , 0, 0, OPT_TEST},
         {0, 0, 0, 0}
     };
 
@@ -373,7 +384,7 @@ main (int argc, char **argv) {
 
     float max_dfreq = 0.0;
     bool force_default_freq = false;
-
+    bool test_only = false;
     // rate-limiting buffer parameters
 
     float max_pulse_rate = 0;    // no rate-limiting
@@ -427,6 +438,9 @@ main (int argc, char **argv) {
 	case OPT_PULSE_RATE_WINDOW:
 	  pulse_rate_window = atof(optarg);
 	  break;
+        case OPT_TEST:
+          test_only = true;
+          break;
         default:
             usage();
             exit(1);
@@ -446,28 +460,40 @@ main (int argc, char **argv) {
 
     // set options and parameters
 
-    Tag_Database tag_db (tag_filename);
+    try {
+      Tag_Database tag_db (tag_filename);
 
-    // Freq_Setting needs to know the set of nominal frequencies
-    Freq_Setting::set_nominal_freqs(tag_db.get_nominal_freqs());
+      // Freq_Setting needs to know the set of nominal frequencies
+      Freq_Setting::set_nominal_freqs(tag_db.get_nominal_freqs());
 
-    // open the input stream 
+      // open the input stream 
 
-    std::istream * pulses;
-    if (pulse_filename.length() > 0) {
-      pulses = new ifstream(pulse_filename.c_str());
-    } else {
-      pulses = & std::cin;
+      std::istream * pulses;
+      if (pulse_filename.length() > 0) {
+        pulses = new ifstream(pulse_filename.c_str());
+      } else {
+        pulses = & std::cin;
+      }
+
+      if (pulses->fail())
+        throw std::runtime_error(string("Couldn't open input file ") + pulse_filename);
+
+      if (header_desired)
+        Tag_Candidate::output_header(&std::cout);
+
+      Tag_Foray foray(tag_db, pulses, & std::cout, default_freq, force_default_freq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
+
+      if (test_only) {
+        foray.test(); // throws if there's a problem
+        std::cerr << "Ok\n";
+        exit(0);
+      }
+
+      foray.start();
+    } 
+    catch (std::runtime_error e) {
+      std::cerr << e.what() << std::endl;
+      exit(-1);
     }
-
-    if (pulses->fail())
-      throw std::runtime_error(string("Couldn't open input file ") + pulse_filename);
-
-    if (header_desired)
-      Tag_Candidate::output_header(&std::cout);
-
-    Tag_Foray foray(tag_db, pulses, & std::cout, default_freq, force_default_freq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
-
-    foray.start();
 }
 

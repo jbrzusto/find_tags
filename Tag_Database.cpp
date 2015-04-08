@@ -23,8 +23,9 @@ Tag_Database::populate_from_sqlite_file(string filename) {
 
   sqlite3_stmt * st; //!< pre-compiled statement for recording raw pulses
 
-  sqlite3_prepare_v2(db, "select proj, id, tagFreq, fcdFreq, dfreq, g1/1000.0, g2/1000.0, g3/1000.0, bi from tags order by tagFreq, id",
-                     -1, &st, 0);
+  if (SQLITE_OK != sqlite3_prepare_v2(db, "select proj, id, tagFreq, fcdFreq, dfreq, g1/1000.0, g2/1000.0, g3/1000.0, bi from tags order by tagFreq, id",
+                                      -1, &st, 0)) 
+    throw std::runtime_error("Sqlite tag database does not have the required columns: proj, id, tagFreq, fcdFreq, dfreq, g1, g2, g3, bi");
 
   while (SQLITE_DONE != sqlite3_step(st)) {
     int id;
@@ -59,7 +60,7 @@ Tag_Database::populate_from_csv_file(string filename) {
 
   inf.getline(buf, MAX_LINE_SIZE);
   if (string(buf) != "\"proj\",\"id\",\"tagFreq\",\"fcdFreq\",\"g1\",\"g2\",\"g3\",\"bi\",\"dfreq\",\"g1.sd\",\"g2.sd\",\"g3.sd\",\"bi.sd\",\"dfreq.sd\",\"filename\"")
-    throw std::runtime_error("Tag file header missing or incorrect\n");
+    throw std::runtime_error("Tag database file does not have required header with these columns: proj,id,tagFreq,fcdFreq,g1,g2,g3,bi,dfreq,g1.sd,g2.sd,g3.sd,bi.sd,dfreq.sd,filename");
 
   int num_lines = 1;
   while (! inf.eof()) {

@@ -49,7 +49,6 @@ Tag_Finder::setup_graph() {
 	for (Tag_ID_Iter i = it->first.begin(); i != it->first.end(); ++i) {
 	  ids << (*i)->fullID << "\n";
 	}
-        std::cerr << "ERROR!" << std::endl;
 #ifdef FIND_TAGS_DEBUG        
         graph.get_root()->dump(std::cerr);
 #endif

@@ -24,6 +24,7 @@ public:
   //  ~Tag_Foray ();
 
   void start();
+  void test(); // throws an exception if there are indistinguishable tags
   Tag_Database tags; // registered tags on all known nominal frequencies
 
 protected:

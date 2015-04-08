@@ -116,5 +116,26 @@ Tag_Foray::start() {
 };
 
 
+void
+Tag_Foray::test() {
+  // create a tagfinder for each nominal frequency, to verify that tags in the database
+  // are distinguishable with the current parameters
+
+  Freq_Set fs = tags.get_nominal_freqs();
+  for (Freq_Set :: iterator it = fs.begin(); it != fs.end(); ++it) {
+    Tag_Finder_Key key(0, *it);
+    std::string prefix="p";
+    Tag_Finder *newtf;
+    port_freq[0] = Freq_Setting(*it / 1000.0);
+    if (max_pulse_rate > 0)
+      newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags.get_tags_at_freq(key.second), pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix);
+    else
+      newtf = new Tag_Finder(this, key.second, tags.get_tags_at_freq(key.second), prefix);
+    newtf->set_out_stream(out);
+    newtf->init();
+  }
+}
+    
+
 
 
