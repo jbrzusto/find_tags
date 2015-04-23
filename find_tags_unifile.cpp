@@ -440,6 +440,7 @@ main (int argc, char **argv) {
 	  break;
         case OPT_TEST:
           test_only = true;
+          header_desired = false;
           break;
         default:
             usage();
