@@ -29,10 +29,10 @@ Tag_Database::populate_from_sqlite_file(string filename) {
     throw std::runtime_error("Sqlite tag database does not have the required columns: proj, id, tagFreq, fcdFreq, dfreq, g1, g2, g3, bi");
 
   while (SQLITE_DONE != sqlite3_step(st)) {
-    int id;
+    Lotek_Tag_ID id;
     float freq_MHz, fcd_freq, gaps[4], dfreq;
     const char * proj = (const char *) sqlite3_column_text(st, 0);
-    id = sqlite3_column_int(st, 1);
+    id = (Lotek_Tag_ID) sqlite3_column_double(st, 1);
     freq_MHz = sqlite3_column_double(st, 2);
     fcd_freq = sqlite3_column_double(st, 3);
     dfreq = sqlite3_column_double(st, 4);
@@ -71,9 +71,9 @@ Tag_Database::populate_from_csv_file(string filename) {
     ++num_lines;
 
     char proj[MAX_LINE_SIZE+1], filename[MAX_LINE_SIZE];
-    int id;
+    Lotek_Tag_ID id;
     float freq_MHz, fcd_freq, gaps[4], dfreq, g1sd, g2sd, g3sd, bisd, dfreqsd;
-    int num_par = sscanf(buf, "\"%[^\"]\",%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,\"%[^\"]\"", proj, &id, &freq_MHz, &fcd_freq, &gaps[0], &gaps[1], &gaps[2], &gaps[3], &dfreq, &g1sd, &g2sd, &g3sd, &bisd, &dfreqsd, filename);
+    int num_par = sscanf(buf, "\"%[^\"]\",%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,\"%[^\"]\"", proj, &id, &freq_MHz, &fcd_freq, &gaps[0], &gaps[1], &gaps[2], &gaps[3], &dfreq, &g1sd, &g2sd, &g3sd, &bisd, &dfreqsd, filename);
     if (num_par < 15) {
       std::cerr << "Ignoring faulty line " << num_lines << " of tag database file:\n   " << buf << std::endl;
       continue;
