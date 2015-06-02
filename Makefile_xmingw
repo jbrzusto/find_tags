@@ -42,7 +42,7 @@ Tag_Foray.o: Tag_Foray.hpp Tag_Foray.cpp find_tags_common.hpp
 Rate_Limiting_Tag_Finder.o: Rate_Limiting_Tag_Finder.hpp find_tags_common.hpp
 
 sqlite3.o: sqlite3.c sqlite3.h
-	$(CC) $(SQLITECCFLAGS) -o $@ $<
+	$(CC) -c $(SQLITECCFLAGS) -o $@ $<
 
 find_tags_unifile.o: find_tags_unifile.cpp find_tags_common.hpp Freq_History.hpp Freq_Setting.hpp DFA_Node.hpp DFA_Graph.hpp Known_Tag.hpp Tag_Database.hpp Pulse.hpp Burst_Params.hpp Bounded_Range.hpp Tag_Candidate.hpp Tag_Finder.hpp Rate_Limiting_Tag_Finder.hpp Tag_Foray.hpp
 
