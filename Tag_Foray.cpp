@@ -2,12 +2,13 @@
 
 #include <string.h>
 
-Tag_Foray::Tag_Foray (Tag_Database &tags, std::istream *data, std::ostream *out, Frequency_MHz default_freq, bool force_default_freq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing) :
+Tag_Foray::Tag_Foray (Tag_Database &tags, std::istream *data, std::ostream *out, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing) :
   tags(tags),
   data(data),
   out(out),
   default_freq(default_freq),
   force_default_freq(force_default_freq),
+  min_dfreq(min_dfreq),
   max_dfreq(max_dfreq),
   max_pulse_rate(max_pulse_rate),
   pulse_rate_window(pulse_rate_window),
@@ -74,7 +75,7 @@ Tag_Foray::start() {
             continue;
           }
 
-          if (max_dfreq > 0.0 && fabs(dfreq) > max_dfreq)
+          if (dfreq > max_dfreq || dfreq < min_dfreq)
             continue;
 
           if (! port_freq.count(port_num))

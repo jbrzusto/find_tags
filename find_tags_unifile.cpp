@@ -176,6 +176,7 @@
 #include <stdexcept>
 #include <getopt.h>
 #include <cmath>
+#include <limits>
 #include <list>
 #include <map>
 #include <set>
@@ -279,10 +280,15 @@ usage() {
 	"    is within SSLOP.  This limit applies within each burst of a sequence\n"
 	"    default: 10 dB\n\n"
 
-	"-m, --max-dfreq=MAXDFREQ\n"
-	"    maximum offset frequency, in kHz.  Pulses with larger absolute offset frequency\n"
+	"-m, --min-dfreq=MINDFREQ\n"
+	"    minimum offset frequency, in kHz.  Pulses with smaller offset frequency\n"
 	"    are dropped.\n"
-	"    default: 0 (i.e. no maximum)\n\n"
+	"    default: -Inf (i.e. no minimum)\n\n"
+
+	"-M, --max-dfreq=MAXDFREQ\n"
+	"    maximum offset frequency, in kHz.  Pulses with larger offset frequency\n"
+	"    are dropped.\n"
+	"    default: Inf (i.e. no minimum)\n\n"
 
 	"-n, --no-header\n"
 	"    don't output the column names header; useful when output\n"
@@ -341,7 +347,8 @@ main (int argc, char **argv) {
         COMMAND_HELP	         = 'h',
 	OPT_HEADER_ONLY	         = 'H',
 	OPT_SIG_SLOP	         = 'l',
-	OPT_MAX_DFREQ            = 'm',
+	OPT_MIN_DFREQ            = 'm',
+	OPT_MAX_DFREQ            = 'M',
 	OPT_NO_HEADER	         = 'n',
         OPT_PULSE_SLOP	         = 'p',
 	OPT_MAX_PULSE_RATE       = 'R',
@@ -352,7 +359,7 @@ main (int argc, char **argv) {
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:f:FhHl:m:np:R:s:S:tw:";
+    static const char short_options[] = "b:B:c:f:FhHl:m:M:np:R:s:S:tw:";
     static const struct option long_options[] = {
         {"burst-slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst-slop-expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
@@ -362,6 +369,7 @@ main (int argc, char **argv) {
         {"help"			   , 0, 0, COMMAND_HELP},
 	{"header-only"		   , 0, 0, OPT_HEADER_ONLY},
 	{"signal-slop"             , 1, 0, OPT_SIG_SLOP},
+	{"min-dfreq"               , 1, 0, OPT_MIN_DFREQ},
 	{"max-dfreq"               , 1, 0, OPT_MAX_DFREQ},
 	{"no-header"		   , 0, 0, OPT_NO_HEADER},
         {"pulse-slop"		   , 1, 0, OPT_PULSE_SLOP},
@@ -382,7 +390,9 @@ main (int argc, char **argv) {
 
     bool header_desired = true;
 
-    float max_dfreq = 0.0;
+    float min_dfreq = -std::numeric_limits<float>::infinity();
+    float max_dfreq = std::numeric_limits<float>::infinity();
+
     bool force_default_freq = false;
     bool test_only = false;
     // rate-limiting buffer parameters
@@ -416,6 +426,9 @@ main (int argc, char **argv) {
 	  exit(0);
         case OPT_SIG_SLOP:
 	  Tag_Candidate::set_sig_slop_dB(atof(optarg));
+	  break;
+	case OPT_MIN_DFREQ:
+	  min_dfreq = atof(optarg);
 	  break;
 	case OPT_MAX_DFREQ:
 	  max_dfreq = atof(optarg);
@@ -482,7 +495,7 @@ main (int argc, char **argv) {
       if (header_desired)
         Tag_Candidate::output_header(&std::cout);
 
-      Tag_Foray foray(tag_db, pulses, & std::cout, default_freq, force_default_freq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
+      Tag_Foray foray(tag_db, pulses, & std::cout, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
 
       if (test_only) {
         foray.test(); // throws if there's a problem
