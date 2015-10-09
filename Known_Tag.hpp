@@ -13,8 +13,7 @@ struct Known_Tag {
 
 public:
 
-  Lotek_Tag_ID		lid;				// lotek ID
-  string		proj;				// project name
+  Motus_Tag_ID		motusID;			// motus tag ID
   Frequency_MHz		freq;				// nominal transmit frequency (MHz)
   Frequency_MHz		fcd_freq;			// frequency of funcubedongle at which tag was registered (MHz)
   Frequency_Offset_kHz	dfreq;				// offset from nominal frequency observed by funcube at registration (kHz)
@@ -25,18 +24,13 @@ public:
 
   static float	        max_burst_length;		// maximum across known tags of gap between first and last pulses in a burst
 
-  std::string           fullID;                         // full ID, used when printing tags
-
-private:
-  static std::unordered_set < std::string > all_fullIDs;       // full ID list
-
 public:
   Known_Tag(){};
 
   // Note: in the following, gaps points to an array of PULSES_PER_BURST gaps;
   // the first PULSES_PER_BURST-1 gaps are intra burst gaps, but the last gap is the burst interval
 
-  Known_Tag(Lotek_Tag_ID lid, string proj, Frequency_MHz freq, Frequency_MHz fcd_freq, Frequency_Offset_kHz dfreq, float *gaps);
+  Known_Tag(Motus_Tag_ID motusID, Frequency_MHz freq, Frequency_MHz fcd_freq, Frequency_Offset_kHz dfreq, float *gaps);
 
 };
 

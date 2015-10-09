@@ -71,7 +71,7 @@ void DFA_Node::dump(ostream & os, string indent, string indent_change) {
   for (int j=0; id != ids.end() && j < 10; ++id, ++j) {
     if (j > 0)
       os << ",";
-    os << (*id)->proj << ":" << (*id)->lid;
+    os << (*id)->motusID;
   }
   if (id != ids.end())
     os << ",...";

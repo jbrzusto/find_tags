@@ -217,7 +217,7 @@ Burst_Params * Tag_Candidate::calculate_burst_params() {
 
 void
 Tag_Candidate::output_header(ostream * out) {
-  (*out) << "\"ant\",\"ts\",\"fullID\",\"freq\",\"freq.sd\",\"sig\",\"sig.sd\",\"noise\",\"run.id\",\"pos.in.run\",\"slop\",\"burst.slop\",\"ant.freq\"" 
+  (*out) << "\"ant\",\"ts\",\"motusID\",\"freq\",\"freq.sd\",\"sig\",\"sig.sd\",\"noise\",\"run.id\",\"pos.in.run\",\"slop\",\"burst.slop\",\"ant.freq\"" 
       
 #ifdef FIND_TAGS_DEBUG
 		<< " ,\"p1\",\"p2\",\"p3\",\"p4\",\"ptr\""
@@ -244,7 +244,7 @@ void Tag_Candidate::dump_bursts(ostream *os, string prefix) {
     Burst_Params *bp = calculate_burst_params();
     ts = pulses.begin()->second.ts;
     (*os) << prefix << std::setprecision(14) << ts << std::setprecision(4)
-          << ',' << conf_tag->fullID
+          << ',' << conf_tag->motusID
 	  << ',' << bp->freq << ','  << std::setprecision(3) << bp->freq_sd
 	  << ',' << bp->sig << ',' << bp->sig_sd
 	  << ',' << bp->noise

@@ -24,25 +24,12 @@ typedef float Frequency_Offset_kHz;
 
 typedef int Nominal_Frequency_kHz;
 
-// Tag IDs: so far, Lotek tags have 3 digit IDs.  But we want to be
-// able to distinguish among tags with the same Lotek ID but
-// (sufficiently) different burst intervals.   Also, we 
-// want to be able to give those tags a simple ID which a user in
-// the field can use to distinguish among tags.  Using the BI
-// is not helpful as it is hard to label a tag with that.
-// Instead, tags can be given additional indelible marks, and
-// the count of such marks distinguishes between tags with the
-// same freq and ID label in the hand.
-//
-// So normally, there are no marks and the tag ID is an integer.
-// e.g. 123 which can be thought of as 123.0
-// When a project has a second tag with ID 123, it is given an
-// indelible mark, and that tag ID is given as 123.1
-// If a third tag has ID 123, it is given two marks and called
-// 123.2, and so on.
+// Tag IDs: we use integer primary keys into the Motus master tag database
+// These are obtained by the harness code when it queries that database
+// for tags to be sought.
 
-typedef float Lotek_Tag_ID;
-static const Lotek_Tag_ID BOGUS_LOTEK_TAG_ID = -1;
+typedef int Motus_Tag_ID;
+static const Motus_Tag_ID BOGUS_MOTUS_TAG_ID = -1;
 
 // type representing an internal tag ID; each entry in the database
 // receives its own internal tag ID

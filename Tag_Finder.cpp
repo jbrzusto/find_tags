@@ -47,12 +47,12 @@ Tag_Finder::setup_graph() {
       if (phase == 2 * PULSES_PER_BURST && it->first.size() > 1) {
 	std::ostringstream ids;
 	for (Tag_ID_Iter i = it->first.begin(); i != it->first.end(); ++i) {
-	  ids << (*i)->fullID << "\n";
+	  ids << (*i)->motusID << "\n";
 	}
 #ifdef FIND_TAGS_DEBUG        
         graph.get_root()->dump(std::cerr);
 #endif
-	throw std::runtime_error(string("Error: the following tag IDs are not distinguishable with current parameters:\n") + ids.str());
+	throw std::runtime_error(string("Error: the following motus tag IDs are not distinguishable with current parameters:\n") + ids.str());
       }
   
       // for each tag, add its (gap range, ID) pair to the interval_map
