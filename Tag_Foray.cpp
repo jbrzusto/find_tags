@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-Tag_Foray::Tag_Foray (Tag_Database &tags, std::istream *data, std::ostream *out, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing) :
+Tag_Foray::Tag_Foray (Tag_Database &tags, std::istream *data, std::ostream *out, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq) :
   tags(tags),
   data(data),
   out(out),
@@ -13,6 +13,7 @@ Tag_Foray::Tag_Foray (Tag_Database &tags, std::istream *data, std::ostream *out,
   max_pulse_rate(max_pulse_rate),
   pulse_rate_window(pulse_rate_window),
   min_bogus_spacing(min_bogus_spacing),
+  unsigned_dfreq(unsigned_dfreq),
   line_no(0)
 {
   
@@ -94,12 +95,16 @@ Tag_Foray::start() {
             newtf->set_out_stream(out);
             newtf->init();
             tag_finders[key] = newtf;
-#ifdef FIND_TAGS_DEBUG
+#if 0
+            //#ifdef FIND_TAGS_DEBUG
             std::cerr << "Interval Tree for " << prefix.str() << std::endl;
             newtf->graph.get_root()->dump(std::cerr);
             std::cerr << "Burst slop expansion is " << Tag_Finder::default_burst_slop_expansion << std::endl;
 #endif
           };
+
+          if (dfreq < 0 && unsigned_dfreq)
+            dfreq = - dfreq;
 
           Pulse p = Pulse::make(ts, dfreq, sig, noise, port_freq[port_num].f_MHz);
 							       

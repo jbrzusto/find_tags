@@ -4,8 +4,8 @@
 ## PROFILING=-g -pg
 
 ## DEBUG FLAGS:
-##CPPFLAGS=-Wall -g3 -std=c++0x $(PROFILING) -DFIND_TAGS_DEBUG
-##LDFLAGS=-lsqlite3
+## CPPFLAGS=-Wall -g3 -std=c++0x $(PROFILING) -DFIND_TAGS_DEBUG
+## LDFLAGS=-lsqlite3
 
 ## PRODUCTION FLAGS:
 CPPFLAGS=-Wall  -O3 -std=c++0x $(PROFILING)
