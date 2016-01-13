@@ -128,7 +128,7 @@ Tag_Finder::process(Pulse &p) {
   /* 
      Process one pulse from the input stream.  
 
-     - check pulses against all tag candidates, in order form
+     - check pulses against all tag candidates, in order from
        most to least confirmed; this gives confirmed candidates
        priority in accepting pulses
 
