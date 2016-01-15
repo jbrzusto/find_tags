@@ -479,16 +479,25 @@ main (int argc, char **argv) {
     Gap pulse_rate_window = 60;  // 1 minute window
     Gap min_bogus_spacing = 600; // emit bogus tag ID at most once every 10 minutes
 
+    Gap pulse_slop = 0.0015; // 1.5 ms
+    Gap burst_slop = 0.010; // 10 ms
+    Gap burst_slop_expansion = 0.001; // 1ms = 1 part in 10000 for 10s BI
+    int max_skipped_bursts = 60;
+
+    int pulses_to_confirm = PULSES_PER_BURST;
+    float sig_slop_dB = 10;
+    Frequency_Offset_kHz freq_slop_kHz = 2.0;       // (kHz) maximum allowed frequency bandwidth of a burst
+
     while ((c = getopt_long(argc, argv, short_options, long_options, &option_index)) != -1) {
         switch (c) {
         case OPT_BURST_SLOP:
-	  Tag_Finder::set_default_burst_slop_ms(atof(optarg));
+          burst_slop = atof(optarg);
 	  break;
         case OPT_BURST_SLOP_EXPANSION:
-	  Tag_Finder::set_default_burst_slop_expansion_ms(atof(optarg));
+          burst_slop_expansion = atof(optarg);
 	  break;
 	case OPT_PULSES_TO_CONFIRM:
-	  Tag_Candidate::set_pulses_to_confirm_id(atoi(optarg));
+          pulses_to_confirm = atoi(optarg);
 	  break;
 	case OPT_DEFAULT_FREQ:
 	  default_freq = atof(optarg);
@@ -500,7 +509,7 @@ main (int argc, char **argv) {
             usage();
             exit(0);
         case OPT_SIG_SLOP:
-	  Tag_Candidate::set_sig_slop_dB(atof(optarg));
+          sig_slop_dB = atof(optarg);
 	  break;
 	case OPT_MIN_DFREQ:
 	  min_dfreq = atof(optarg);
@@ -509,16 +518,16 @@ main (int argc, char **argv) {
 	  max_dfreq = atof(optarg);
 	  break;
         case OPT_PULSE_SLOP:
-	  Tag_Finder::set_default_pulse_slop_ms(atof(optarg));
+          pulse_slop = atof(optarg);
 	  break;
 	case OPT_MAX_PULSE_RATE:
 	  max_pulse_rate = atof(optarg);
 	  break;
         case OPT_FREQ_SLOP:
-	  Tag_Candidate::set_freq_slop_kHz(atof(optarg));
+          freq_slop_kHz = atof(optarg);
 	  break;
 	case OPT_MAX_SKIPPED_BURSTS:
-	  Tag_Finder::set_default_max_skipped_bursts(atoi(optarg));
+          max_skipped_bursts = atoi(optarg);
 	  break;
 	case OPT_PULSE_RATE_WINDOW:
 	  pulse_rate_window = atof(optarg);
@@ -531,12 +540,17 @@ main (int argc, char **argv) {
             exit(1);
         }
     }
-
-
     if (optind == argc) {
       usage();
       exit(1);
     }
+    Tag_Finder::set_default_pulse_slop_ms(pulse_slop);
+    Tag_Finder::set_default_burst_slop_ms(burst_slop);
+    Tag_Finder::set_default_burst_slop_expansion_ms(burst_slop_expansion);
+    Tag_Finder::set_default_max_skipped_bursts(max_skipped_bursts);
+    Tag_Candidate::set_pulses_to_confirm_id(pulses_to_confirm);
+    Tag_Candidate::set_sig_slop_dB(sig_slop_dB);
+    Tag_Candidate::set_freq_slop_kHz(freq_slop_kHz);
 
     string tag_filename = string(argv[optind++]);
 
@@ -555,9 +569,27 @@ main (int argc, char **argv) {
 
     // set options and parameters
 
+    string program_name("find_tags_motus");
+    string program_version(PROGRAM_VERSION); // defined in Makefile
+    double program_build_ts = PROGRAM_BUILD_TS; // defined in Makefile
     try {
       Tag_Database tag_db (tag_filename);
-      DB_Filer dbf (output_filename);
+      DB_Filer dbf (output_filename, program_name, program_version, program_build_ts);
+      dbf.add_param("default-freq", default_freq);
+      dbf.add_param("force-default-freq", min_dfreq);
+      dbf.add_param("burst-slop", max_dfreq);
+      dbf.add_param("burst-slop-expansion", burst_slop_expansion );
+      dbf.add_param("pulses-to-confirm", pulses_to_confirm);
+      dbf.add_param("signal-slop", sig_slop_dB);
+      dbf.add_param("min-dfreq", min_dfreq);
+      dbf.add_param("max-dfreq", max_dfreq);
+      dbf.add_param("pulse-slop", pulse_slop);
+      dbf.add_param("max-pulse-rate", max_pulse_rate );
+      dbf.add_param("frequency-slop", freq_slop_kHz);
+      dbf.add_param("max-skipped-bursts", max_skipped_bursts);
+      dbf.add_param("pulse-rate-window", pulse_rate_window);
+      dbf.add_param("min-bogus-spacing", min_bogus_spacing);
+
       Tag_Candidate::set_filer(& dbf);
 
       // Freq_Setting needs to know the set of nominal frequencies
