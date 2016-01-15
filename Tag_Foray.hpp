@@ -7,21 +7,22 @@
 
 #include "Tag_Finder.hpp"
 #include "Rate_Limiting_Tag_Finder.hpp"
+#include <sqlite3.h>
 
 
 /*
-  Tag_Foray - manager a collection of tag finders searching the same data stream.
-  The data stream has pulses from multiple ports, as well as frequency settings
-  for those ports.
+  Tag_Foray - manager a collection of tag finders searching the same
+  data stream.  The data stream has pulses from multiple ports, as
+  well as frequency settings for those ports.
 */
 
 class Tag_Foray {
 
 public:
   
-  Tag_Foray (Tag_Database &tags, std::istream * data, std::ostream * out, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq=false);
+  Tag_Foray (Tag_Database &tags, std::istream * data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq=false);
 
-  //  ~Tag_Foray ();
+  ~Tag_Foray ();
 
   void start();
   void test(); // throws an exception if there are indistinguishable tags
@@ -31,7 +32,6 @@ protected:
   // settings
 
   std::istream * data; // stream from which data records are read
-  std::ostream * out;  // stream to which tag ID hits are output 
   Frequency_MHz default_freq; // default listening frequency on a port where no frequency setting has been seen
   bool force_default_freq; // ignore in-line frequency settings and always use default?
   float min_dfreq; // minimum allowed pulse offset frequency; pulses with smaller offset frequency are discarded

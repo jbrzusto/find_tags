@@ -2,10 +2,9 @@
 
 #include <string.h>
 
-Tag_Foray::Tag_Foray (Tag_Database &tags, std::istream *data, std::ostream *out, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq) :
+Tag_Foray::Tag_Foray (Tag_Database &tags, std::istream *data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq) :
   tags(tags),
   data(data),
-  out(out),
   default_freq(default_freq),
   force_default_freq(force_default_freq),
   min_dfreq(min_dfreq),
@@ -16,7 +15,6 @@ Tag_Foray::Tag_Foray (Tag_Database &tags, std::istream *data, std::ostream *out,
   unsigned_dfreq(unsigned_dfreq),
   line_no(0)
 {
-  
 };
 
 
@@ -92,7 +90,6 @@ Tag_Foray::start() {
               newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags.get_tags_at_freq(key.second), pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix.str());
             else
               newtf = new Tag_Finder(this, key.second, tags.get_tags_at_freq(key.second), prefix.str());
-            newtf->set_out_stream(out);
             newtf->init();
             tag_finders[key] = newtf;
 #if 0
@@ -115,10 +112,6 @@ Tag_Foray::start() {
         break;
       }
     }
-
-    // dump any remaining candidates (FIXME: option this once we have resume capability)
-    for (auto tfi = tag_finders.begin(); tfi != tag_finders.end(); ++tfi)
-      (tfi->second)->end_processing();
 };
 
 
@@ -137,11 +130,15 @@ Tag_Foray::test() {
       newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags.get_tags_at_freq(key.second), pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix);
     else
       newtf = new Tag_Finder(this, key.second, tags.get_tags_at_freq(key.second), prefix);
-    newtf->set_out_stream(out);
     newtf->init();
   }
 }
     
+Tag_Foray::~Tag_Foray () {
+  for (auto tfi = tag_finders.begin(); tfi != tag_finders.end(); ++tfi)
+    delete (tfi->second);
+}
+  
 
 
 

@@ -114,11 +114,6 @@ Tag_Finder::set_default_max_skipped_bursts(unsigned int skip) {
 };
 
 void
-Tag_Finder::set_out_stream(ostream *os) {
-  out_stream = os;
-};
-
-void
 Tag_Finder::init() {
   setup_graph();
 };
@@ -221,7 +216,7 @@ Tag_Finder::process(Pulse &p) {
       if (ci->is_confirmed()) {
 	
         // dump all complete bursts from this confirmed tag
-        ci->dump_bursts(out_stream, prefix);
+        ci->dump_bursts(prefix);
 	
         // don't start a new candidate with this pulse
         confirmed_acceptance = true;
@@ -241,40 +236,17 @@ Tag_Finder::process(Pulse &p) {
   }
 };
 
-void
-Tag_Finder::end_processing() {
-  // dump any confirmed candidates which have bursts
 
-#if 0
-  for (Cand_Set::iterator ci = cands.begin(); ci != cands.end(); ++ci ) {
+Tag_Finder::~Tag_Finder() {
+  // dump any confirmed candidates which have bursts
+  // delete them even if not
+  for (Cand_List::iterator ci = cands[0].begin(); ci != cands[0].end(); ++ci ) {
       
     if (ci->get_tag_id_level() == Tag_Candidate::CONFIRMED && ci->has_burst()) {
-      // we're about to dump bursts from a particular tag candidate
-      // kill any others which have the same ID or share any pulses
-	  
-      for (Cand_Set::iterator cci = cands.begin(); cci != cands.end(); /**/ ) {
-	if (cci != ci
-	    && (cci->has_same_id_as(*ci)
-		|| cci->shares_any_pulses(*ci)))
-	  { 
-	    Cand_Set::iterator di = cci;
-	    ++cci;
-		
-#ifdef FIND_TAGS_DEBUG
-	    std::cerr << "Killing id-matching too old candidate " << &(*di) << " with unique_id = " << di->unique_id << std::endl;
-#endif
-	    cands.erase(di);
-	    continue;
-	  } else {
-	  ++cci;
-	}
-      }
-      // dump the bursts
-      ci->dump_bursts(out_stream, prefix);
+      // dump remaining bursts
+      ci->dump_bursts(prefix);
     }
   }
-
-#endif 
 };
 
 float *
@@ -286,11 +258,10 @@ Tag_Finder::get_true_gaps(Tag_ID tid) {
 
 void
 Tag_Finder::dump_bogus_burst(Pulse &p) {
-  Tag_Candidate::dump_bogus_burst(p.ts, prefix, p.ant_freq, out_stream);
+  Tag_Candidate::dump_bogus_burst(p.ts, prefix, p.ant_freq);
 };
 
 Gap Tag_Finder::default_pulse_slop = 0.0015; // 1.5 ms
 Gap Tag_Finder::default_burst_slop = 0.010; // 10 ms
 Gap Tag_Finder::default_burst_slop_expansion = 0.001; // 1ms = 1 part in 10000 for 10s BI
 unsigned int Tag_Finder::default_max_skipped_bursts = 60;
-

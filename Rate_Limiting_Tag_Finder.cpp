@@ -47,9 +47,8 @@ void Rate_Limiting_Tag_Finder::process(Pulse &p) {
   }
 };
 
-void Rate_Limiting_Tag_Finder::end_processing() {
+Rate_Limiting_Tag_Finder::~Rate_Limiting_Tag_Finder() {
   Pulse p;
   at_end = true;
   process(p);
-  Tag_Finder::end_processing();
 };

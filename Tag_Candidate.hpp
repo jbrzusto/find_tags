@@ -8,6 +8,7 @@
 #include "Bounded_Range.hpp"
 #include "Freq_Setting.hpp"
 #include "Burst_Params.hpp"
+#include "DB_Filer.hpp"
 
 #include <map>
 #include <list>
@@ -26,7 +27,7 @@ public:
 
   typedef enum {CONFIRMED=0, SINGLE=1, MULTIPLE=2} Tag_ID_Level;	// how well-resolved is the tag ID?  Note the order.
 
-private: 
+protected: 
   // fundamental structure
 
   Tag_Finder    *owner;
@@ -38,8 +39,8 @@ private:
   Tag_ID_Level   tag_id_level;   // how well-resolved is the current tag ID?
   Known_Tag     *conf_tag;       // when confirmed, a pointer to the tag. else 0
 
-  unsigned long long	unique_id;	// unique ID for bursts output by this candidate (i.e. consecutive in-phase hits on a tag)
-  unsigned int		in_a_row;	// counter of bursts output by this tag
+  DB_Filer::Run_ID	run_id;	// ID for the run formed by bursts from this candidate (i.e. consecutive in-phase hits on a tag)
+  unsigned int		hit_count;	// counter of bursts output by this tag
 
   Gap * true_gaps;              // once tag has been identified, this points to the sequence of PULSES_PER_BURST gaps in the tag database
 
@@ -53,10 +54,13 @@ private:
 
   static unsigned int	pulses_to_confirm_id;	// how many pulses must be seen before an ID level moves to confirmed?
   
+  static DB_Filer * filer;
 
 public:
   
   Tag_Candidate(Tag_Finder *owner, DFA_Node *state, const Pulse &pulse);
+
+  ~Tag_Candidate();
 
   bool has_same_id_as(Tag_Candidate &tc);
 
@@ -86,9 +90,7 @@ public:
 
   Burst_Params * calculate_burst_params();
  
-  static void output_header(ostream *out);
-    
-  void dump_bursts(ostream *os, string prefix="");
+  void dump_bursts(string prefix="");
 
   static void set_freq_slop_kHz(float slop);
 
@@ -96,7 +98,10 @@ public:
 
   static void set_pulses_to_confirm_id(unsigned int n);
 
-  static void dump_bogus_burst(Timestamp ts, std::string & prefix, Frequency_MHz antfreq, ostream *os);
+  static void dump_bogus_burst(Timestamp ts, std::string & prefix, Frequency_MHz antfreq);
+
+  static void set_filer(DB_Filer *dbf);
+
 };
 
 #endif // TAG_CANDIDATE_HPP

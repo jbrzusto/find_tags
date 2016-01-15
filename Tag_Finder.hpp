@@ -85,13 +85,13 @@ public:
 
   // output parameters
 
-  ostream * out_stream;
-
   string prefix;   // prefix before each tag record (e.g. port number then comma)
 
   Tag_Finder(Tag_Foray * owner){};
 
   Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, Tag_Set * tags, string prefix="");
+
+  virtual ~Tag_Finder();
 
   void setup_graph();
 
@@ -103,20 +103,15 @@ public:
 
   static void set_default_max_skipped_bursts(unsigned int skip);
 
-  void set_out_stream(ostream *os);
-
   void init();
 
   virtual void process (Pulse &p);
-
-  virtual void end_processing();
 
   void initialize_tag_buffers();
 
   float *get_true_gaps(Tag_ID tid);
 
   void dump_bogus_burst(Pulse &p);
-
 };
 
 

@@ -9,8 +9,101 @@
   - database identifies tags by motusTagID integer, and that's what
     is output for each detection.
 
-  - TODO: output is appended directly to a specified table in a specified
-    sqlite database.  This must have the following schema:
+  - output is appended directly to specified tables in a specified
+    sqlite database.  These must have the following schema:
+
+CREATE TABLE params (
+    ts      FLOAT(53) PRIMARY KEY NOT NULL,      -- timestamp for this record
+    port    INTEGER,                             -- hub port -- for which device setting applies
+    param   TEXT,                                -- parameter name
+    val     DOUBLE,                              -- parameter setting
+    error   INTEGER,                             -- 0 if parameter setting succeeded; error code otherwise
+    errinfo CHARACTER                            -- non-empty if error code non-zero
+);
+
+CREATE TABLE batches (
+    ID INTEGER PRIMARY KEY UNIQUE NOT NULL,                  -- unique identifier for this batch
+    monoBN INT,                                              -- boot number for this receiver; (NULL
+                                                             -- okay; e.g. Lotek)
+    tsBegin FLOAT(53) NOT NULL,                              -- timestamp for start of period
+                                                             -- covered by batch; unix-style:
+                                                             -- seconds since 1 Jan 1970 GMT
+    tsEnd FLOAT(53) NOT NULL,                                -- timestamp for end of period
+                                                             -- covered by batch; unix-style:
+                                                             -- seconds since 1 Jan 1970 GMT
+    numRec INT,                                              -- count of records in this batch
+    ts FLOAT(53) NOT NULL,                                   -- timestamp when this batch record was
+                                                             -- added; unix-style: seconds since 1
+                                                             -- Jan 1970 GMT
+    swInfoSet INT NOT NULL REFERENCES SWInfoSet (ID),   -- software versions used to generate
+                                                             -- this batch
+    swParamSet INT NOT NULL REFERENCES SWParamSet (ID)  -- parameter set for software used to
+);
+                                                             -- generate this batch
+CREATE TABLE runInfo (
+    runID INTEGER NOT NULL PRIMARY KEY,          -- identifier of run; unique for this receiver
+    batchID INTEGER NOT NULL REFERENCES batches, -- unique identifier of batch for this run
+    motusTagID INT NOT NULL,                    -- ID for the tag detected; foreign key to Motus DB
+                                                -- table
+    len INT,                                    -- length of run within batch
+    tsMotus FLOAT(53)                           -- timestamp when this record transferred to motus;
+                                                -- unix-style: seconds since 1 Jan 1970 GMT; NULL means
+                                                -- not transferred; if this timestamp is set, it means
+                                                -- all the hits for the run have also been transferred
+);
+
+CREATE TABLE hits (
+    hitID INTEGER NOT NULL PRIMARY KEY,             -- unique ID of this hit
+    runID INTEGER NOT NULL REFERENCES runInfo,      -- ID of batch this hit belongs to
+    ant TINYINT NOT NULL,                          -- antenna number (USB Hub port # for SG; antenna port
+                                                   -- # for Lotek)
+    ts FLOAT(53) NOT NULL,                         -- timestamp (centre of first pulse in detection);
+                                                   -- unix-style: seconds since 1 Jan 1970 GMT
+    sig FLOAT(24) NOT NULL,                        -- signal strength, in units appropriate to device;
+                                                   -- e.g.; for SG/funcube; dB (max); for Lotek: raw
+                                                   -- integer in range 0..255
+    sigSD FLOAT(24),                               -- standard deviation of signal strength, in device
+                                                   -- units (NULL okay; e.g. Lotek)
+    noise FLOAT(24),                               -- noise level, in device units (NULL okay; e.g. Lotek)
+    freq FLOAT(24),                                -- frequency offset, in kHz (NULL okay; e.g. Lotek)
+    freqSD FLOAT(24),                              -- standard deviation of freq, in kHz (NULL okay;
+                                                   -- e.g. Lotek)
+    slop FLOAT(24),                                -- discrepancy of pulse timing, in msec (NULL okay;
+                                                   -- e.g. Lotek)
+    burstSlop FLOAT (24)                           -- discrepancy of burst timing, in msec (NULL okay;
+                                                   -- e.g. Lotek)
+);
+
+CREATE TABLE SWinfoSet (
+    ID INT NOT NULL,                         -- identifier of a set of software versions
+    progName VARCHAR(16) NOT NULL,           -- identifier of program; e.g. 'find_tags',
+                                             -- 'lotek-plugins.so'
+    progVersion CHAR(40) NOT NULL,           -- git commit hash for version of code used
+    progBuildTS FLOAT(53) NOT NULL,          -- timestamp of binary for this program; unix-style:
+                                             -- seconds since 1 Jan 1970 GMT; NULL means not
+                                             -- transferred
+    tsMotus FLOAT(53),                       -- timestamp when this record transferred to motus;
+                                             -- unix-style: seconds since 1 Jan 1970 GMT; NULL means
+                                             -- not transferred
+    PRIMARY KEY (ID, progName)               -- only one version of a given program per infoSet
+);
+
+CREATE TABLE SWparamSet (
+    ID INT NOT NULL,                         -- identifier of a set of parameters
+    progName VARCHAR(16) NOT NULL,           -- identifier of program; e.g. 'find_tags',
+                                             -- 'lotek-plugins.so'
+    parName varchar(16) NOT NULL,            -- name of parameter (e.g. '--minFreq')
+    parVal FLOAT(53) NOT NULL,               -- value of parameter
+    tsMotus FLOAT(53),                       -- timestamp when this record transferred to motus;
+                                             -- unix-style: seconds since 1 Jan 1970 GMT; NULL means
+                                             -- not transferred
+    PRIMARY KEY (ID, progName, parName)      -- only one value of a given parameter per program per
+                                             -- param set
+);
+
+
+All output from a run of this program forms a new batch.
+================================================================================
 
   Optionally pre-filter pulse stream with a rate-limiting buffer.
 
@@ -207,8 +300,26 @@ void
 usage() {
   puts (
 	"Usage:\n"
-	"    find_tags_motus [OPTIONS] TAGFILE.sqlite [UNIFIED.CSV]\n"
+	"    find_tags_motus [OPTIONS] TAGFILE.sqlite OUTFILE.sqlite [INFILE.CSV]\n"
 	"where:\n\n"
+
+	"Data are read from stdin. Only lines of the following types are used:\n"
+        "    Pulse records: pANT,TS,DFREQ,SIG,NOISE\n"
+	"    with:\n"
+        "        ANT:    port code 'pX'\n"
+	"        TS:     real timestamp (seconds since 1 Jan, 1970 00:00:00 GMT)\n"
+	"        DFREQ:  (kHz) estimated pulse offset frequency\n"
+	"        SIG:    (dB) estimated relative pulse signal strength\n"
+	"        NOISE:  (dB) estimated relative noise level near pulse\n\n"
+        
+        "    Frequency setting records: S,TS,PORT,-m,FREQ,RC,ERR\n"
+        "    with:\n"
+        "        TS:   real timestamp\n"
+        "        PORT: port number\n"
+        "        -m:   indicates frequency setting in megahertz\n"
+        "        FREQ: frequency in MHz to which port is being set\n"
+        "        RC:   zero if frequency setting succeeded, else non-zero error code\n"
+        "        ERR:  blank on success, else error message\n\n"
 
 	"TAGFILE.sqlite  is a database holding a table of registered tags\n"
         "    having (at least) these columns:\n"
@@ -219,25 +330,10 @@ usage() {
 	"        gN:       (ms) time (gap) between pulses (N, N+1) in burst\n"
 	"        bi:       (s) time between consecutive bursts\n\n"
 
-	"UNIFIED.CSV is a file holding raw sensorgnome output records, including parameter\n"
-        "    settings and GPS fixes.\n"
-	"    Relvant lines are pANT,TS,DFREQ,SIG,NOISE\n"
-	"    with:\n"
-        "        ANT:    port code 'pX'\n"
-	"        TS:     real timestamp (seconds since 1 Jan, 1970 00:00:00 GMT)\n"
-	"        DFREQ:  (kHz) estimated pulse offset frequency\n"
-	"        SIG:    (dB) estimated relative pulse signal strength\n"
-	"        NOISE:  (dB) estimated relative noise level near pulse\n"
-        "    or S,TS,PORT,-m,FREQ,RC,ERR\n"
-        "    with:\n"
-        "        TS:   real timestamp\n"
-        "        PORT: port number\n"
-        "        -m:   indicates frequency setting in megahertz\n"
-        "        FREQ: frequency in MHz to which port is being set\n"
-        "        RC:   zero if frequency setting succeeded, else non-zero error code\n"
-        "        ERR:  blank on success, else error message\n"
+	"OUTFILE.sqlite is a database with various required tables; see the\n"
+         "   source file find_tags_motus.cpp for details\n\n"
 
-	"    If UNIFIED.CSV is unspecified, unified data are read from stdin\n\n"
+        "INFILE.CSV is a raw input file; stdin is used if not specified.\n\n"
 
 	"and OPTIONS can be any of:\n\n"
 
@@ -269,9 +365,6 @@ usage() {
 	"    before a hit is reported.\n"
 	"    default: PULSES_PER_BURST (i.e. 4)\n\n"
 	
-	"-H, --header-only\n"
-	"    output the header ONLY; does no processing.\n\n"
-
 	"-l, --signal-slop=SSLOP\n"
 	"    tag signal strength slop, in dB.  A tag burst will only be recognized\n"
 	"    if its dynamic range (i.e. range of signal strengths of its component pulses)\n"
@@ -287,10 +380,6 @@ usage() {
 	"    maximum offset frequency, in kHz.  Pulses with larger offset frequency\n"
 	"    are dropped.\n"
 	"    default: Inf (i.e. no minimum)\n\n"
-
-	"-n, --no-header\n"
-	"    don't output the column names header; useful when output\n"
-	"    is to be appended to an existing .CSV file.\n\n"
 
 	"-p, --pulse-slop=PSLOP\n"
 	"    how much to allow time between consecutive pulses\n"
@@ -343,11 +432,9 @@ main (int argc, char **argv) {
 	OPT_DEFAULT_FREQ         = 'f',
 	OPT_FORCE_DEFAULT_FREQ   = 'F',
         COMMAND_HELP	         = 'h',
-	OPT_HEADER_ONLY	         = 'H',
 	OPT_SIG_SLOP	         = 'l',
 	OPT_MIN_DFREQ            = 'm',
 	OPT_MAX_DFREQ            = 'M',
-	OPT_NO_HEADER	         = 'n',
         OPT_PULSE_SLOP	         = 'p',
 	OPT_MAX_PULSE_RATE       = 'R',
 	OPT_FREQ_SLOP	         = 's',
@@ -357,7 +444,7 @@ main (int argc, char **argv) {
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:f:FhHl:m:M:np:R:s:S:tw:";
+    static const char short_options[] = "b:B:c:f:Fhl:m:M:p:R:s:S:tw:";
     static const struct option long_options[] = {
         {"burst-slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst-slop-expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
@@ -365,11 +452,9 @@ main (int argc, char **argv) {
         {"default-freq"		   , 1, 0, OPT_DEFAULT_FREQ},
         {"force-default-freq"      , 0, 0, OPT_FORCE_DEFAULT_FREQ},
         {"help"			   , 0, 0, COMMAND_HELP},
-	{"header-only"		   , 0, 0, OPT_HEADER_ONLY},
 	{"signal-slop"             , 1, 0, OPT_SIG_SLOP},
 	{"min-dfreq"               , 1, 0, OPT_MIN_DFREQ},
 	{"max-dfreq"               , 1, 0, OPT_MAX_DFREQ},
-	{"no-header"		   , 0, 0, OPT_NO_HEADER},
         {"pulse-slop"		   , 1, 0, OPT_PULSE_SLOP},
 	{"max-pulse-rate"          , 1, 0, OPT_MAX_PULSE_RATE},
         {"frequency-slop"	   , 1, 0, OPT_FREQ_SLOP},
@@ -382,11 +467,6 @@ main (int argc, char **argv) {
     int c;
 
     Frequency_MHz default_freq = 0;
-
-    string tag_filename;
-    string pulse_filename = "";
-
-    bool header_desired = true;
 
     float min_dfreq = -std::numeric_limits<float>::infinity();
     float max_dfreq = std::numeric_limits<float>::infinity();
@@ -419,9 +499,6 @@ main (int argc, char **argv) {
         case COMMAND_HELP:
             usage();
             exit(0);
-	case OPT_HEADER_ONLY:
-	  Tag_Candidate::output_header(&std::cout);
-	  exit(0);
         case OPT_SIG_SLOP:
 	  Tag_Candidate::set_sig_slop_dB(atof(optarg));
 	  break;
@@ -430,9 +507,6 @@ main (int argc, char **argv) {
 	  break;
 	case OPT_MAX_DFREQ:
 	  max_dfreq = atof(optarg);
-	  break;
-	case OPT_NO_HEADER:
-	  header_desired = false;
 	  break;
         case OPT_PULSE_SLOP:
 	  Tag_Finder::set_default_pulse_slop_ms(atof(optarg));
@@ -451,7 +525,6 @@ main (int argc, char **argv) {
 	  break;
         case OPT_TEST:
           test_only = true;
-          header_desired = false;
           break;
         default:
             usage();
@@ -465,35 +538,32 @@ main (int argc, char **argv) {
       exit(1);
     }
 
-    tag_filename = string(argv[optind++]);
+    string tag_filename = string(argv[optind++]);
+
+    if (optind == argc) {
+      usage();
+      exit(1);
+    }
+    string output_filename = string(argv[optind++]);
+
+    std::istream * pulses;
     if (optind < argc) {
-      pulse_filename = string(argv[optind++]);
+      pulses = new ifstream(argv[optind++]);
+    } else {
+      pulses = & std::cin;
     }
 
     // set options and parameters
 
     try {
       Tag_Database tag_db (tag_filename);
+      DB_Filer dbf (output_filename);
+      Tag_Candidate::set_filer(& dbf);
 
       // Freq_Setting needs to know the set of nominal frequencies
       Freq_Setting::set_nominal_freqs(tag_db.get_nominal_freqs());
 
-      // open the input stream 
-
-      std::istream * pulses;
-      if (pulse_filename.length() > 0) {
-        pulses = new ifstream(pulse_filename.c_str());
-      } else {
-        pulses = & std::cin;
-      }
-
-      if (pulses->fail())
-        throw std::runtime_error(string("Couldn't open input file ") + pulse_filename);
-
-      if (header_desired)
-        Tag_Candidate::output_header(&std::cout);
-
-      Tag_Foray foray(tag_db, pulses, & std::cout, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
+      Tag_Foray foray(tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
 
       if (test_only) {
         foray.test(); // throws if there's a problem

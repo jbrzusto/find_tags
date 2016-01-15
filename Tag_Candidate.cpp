@@ -10,15 +10,18 @@ Tag_Candidate::Tag_Candidate(Tag_Finder *owner, DFA_Node *state, const Pulse &pu
   last_dumped_ts(BOGUS_TIMESTAMP),
   tag_id(BOGUS_TAG_ID),
   tag_id_level(MULTIPLE),
-  in_a_row(0),
+  hit_count(0),
   true_gaps(0),
   freq_range(freq_slop_kHz, pulse.dfreq),
   sig_range(sig_slop_dB, pulse.sig)
 {
-  static unsigned long long unique_id_counter = 0;
-
-  unique_id = ++unique_id_counter;
   pulses[pulse.seq_no] = pulse;
+};
+
+Tag_Candidate::~Tag_Candidate() {
+  if (hit_count > 0) {
+    filer -> end_run(run_id, hit_count);
+  }
 };
 
 bool Tag_Candidate::has_same_id_as(Tag_Candidate &tc) {
@@ -211,22 +214,11 @@ Burst_Params * Tag_Candidate::calculate_burst_params() {
   double freq_radicand = n * freqsumsq - freqsum * freqsum;
   burst_par.freq_sd  = freq_radicand >= 0.0 ? sqrtf((n * freqsumsq - freqsum * freqsum) / (n * (n - 1))) : 0.0;
   burst_par.slop     = slop;
-  burst_par.num_pred = in_a_row;
+  burst_par.num_pred = hit_count;
   return &burst_par;
 };
-
-void
-Tag_Candidate::output_header(ostream * out) {
-  (*out) << "\"ant\",\"ts\",\"motusID\",\"freq\",\"freq.sd\",\"sig\",\"sig.sd\",\"noise\",\"run.id\",\"pos.in.run\",\"slop\",\"burst.slop\",\"ant.freq\"" 
-      
-#ifdef FIND_TAGS_DEBUG
-		<< " ,\"p1\",\"p2\",\"p3\",\"p4\",\"ptr\""
-#endif
-      
-		<< std::endl;
-}; 
  
-void Tag_Candidate::dump_bursts(ostream *os, string prefix) {
+void Tag_Candidate::dump_bursts(string prefix) {
   // dump as many bursts as we have data for
 
   if (pulses.size() < PULSES_PER_BURST)
@@ -240,50 +232,31 @@ void Tag_Candidate::dump_bursts(ostream *os, string prefix) {
   Timestamp ts = pulses.rbegin()->second.ts;
 
   while (pulses.size() >= PULSES_PER_BURST) {
-    ++in_a_row;
+    if (++hit_count == 1) {
+      // first hit, so start a run
+      run_id = filer->begin_run(conf_tag->motusID);
+    }
     Burst_Params *bp = calculate_burst_params();
     ts = pulses.begin()->second.ts;
-    (*os) << prefix << std::setprecision(14) << ts << std::setprecision(4)
-          << ',' << conf_tag->motusID
-	  << ',' << bp->freq << ','  << std::setprecision(3) << bp->freq_sd
-	  << ',' << bp->sig << ',' << bp->sig_sd
-	  << ',' << bp->noise
-	  << ',' << unique_id
-	  << ',' << in_a_row
-	  << ',' << bp->slop
-	  << ',' << bp->burst_slop
-	  << ',' << std::setprecision(6) << pulses.begin()->second.ant_freq 
-          << std::setprecision(4);
-
-#ifdef FIND_TAGS_DEBUG
-    Pulses_Iter	p = pulses.begin();
-    for (unsigned int i = 0; i < PULSES_PER_BURST; ++i, ++p)
-      (*os) << ',' << p->second.seq_no;
-
-    (*os) << ',' << this;
-#endif
-
-    (*os) << std::endl;
+    filer->add_hit(
+                   run_id,
+                   prefix.c_str()[0],
+                   ts,
+                   bp->sig,
+                   bp->sig_sd,
+                   bp->noise,
+                   bp->freq,
+                   bp->freq_sd,
+                   bp->slop,
+                   bp->burst_slop
+                   );
     clear_pulses();
   }
 };
 
 void
-Tag_Candidate::dump_bogus_burst(Timestamp ts, std::string &prefix, Frequency_MHz antfreq, ostream *os) {
-  (*os) << prefix 
-        << std::setprecision(14) << ts << std::setprecision(4)
-        << ",BOGUS_TAG"
-	<< ',' << 0 
-        << ',' << std::setprecision(3) << 0 << std::setprecision(4)
-	<< ',' << 0 
-        << ',' << 0
-	<< ',' << 0
-	<< ',' << 0
-	<< ',' << 0
-	<< ',' << 0
-	<< ',' << 0
-	<< ',' << std::setprecision(6) << antfreq << std::setprecision(4)
-	<< std::endl;
+Tag_Candidate::dump_bogus_burst(Timestamp ts, std::string &prefix, Frequency_MHz antfreq) {
+  // FIXME: what, if anything, should we do here?
 }
 
 void Tag_Candidate::set_freq_slop_kHz(float slop) {
@@ -298,6 +271,12 @@ void Tag_Candidate::set_pulses_to_confirm_id(unsigned int n) {
   pulses_to_confirm_id = n;
 };
 
+void
+Tag_Candidate::set_filer(DB_Filer *dbf) {
+  filer = dbf;
+};
+
+
 Frequency_Offset_kHz Tag_Candidate::freq_slop_kHz = 2.0;       // (kHz) maximum allowed frequency bandwidth of a burst
 
 float Tag_Candidate::sig_slop_dB = 10;         // (dB) maximum allowed range of signal strengths within a burst
@@ -305,3 +284,5 @@ float Tag_Candidate::sig_slop_dB = 10;         // (dB) maximum allowed range of 
 unsigned int Tag_Candidate::pulses_to_confirm_id = PULSES_PER_BURST; // default number of pulses before a hit is confirmed
 
 const float Tag_Candidate::BOGUS_BURST_SLOP = 0.0; // burst slop reported for first burst of ru
+
+DB_Filer * Tag_Candidate::filer = 0; // handle to output filer
