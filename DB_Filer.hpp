@@ -52,6 +52,8 @@ protected:
   int num_steps; //!< counter for steps since last BEGIN statement
 
   void step_commit(sqlite3_stmt *st); //!< step statement, and if number of steps has reached steps_per_tx, commit and start new tx
+
+  void Check(int code, const std::string & err, int wants=SQLITE_OK); //!< check that sqlite3 result is specified value, otherwise throuw runtime error with given text
 };
 
 
