@@ -18,10 +18,11 @@ Tag_Foray::Tag_Foray (Tag_Database &tags, std::istream *data, Frequency_MHz defa
 };
 
 
-void
+long long
 Tag_Foray::start() {
+  long long bn = 0;
   double ts;
-  for (;;) {
+  while (! bn) {
       // read and parse a line from a SensorGnome file
 
       char buf[MAX_LINE_SIZE + 1];
@@ -108,10 +109,20 @@ Tag_Foray::start() {
           tag_finders[key]->process(p);
         }
         break;
+      case '!':
+        {
+          std::cerr << string(buf) << std::endl;
+          if (1 != sscanf(buf+1, "NEWBN,%lld", & bn)) {
+            std::cerr << "Warning: malformed line in input\n  at line " << line_no << ":\n" << (string("") + buf) << std::endl;
+            continue;
+          }
+        }
+        break;
       default:
         break;
       }
-    }
+  }
+  return bn;
 };
 
 

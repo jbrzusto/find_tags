@@ -275,7 +275,12 @@ usage() {
 	"    or larger, so that more gaps must match those registered for a given tag\n"
 	"    before a hit is reported.\n"
 	"    default: PULSES_PER_BURST (i.e. 4)\n\n"
-	
+
+        "-n, --bootNum=BN\n"
+        "    bootnum for first batch records sent to output db table 'batches'.\n"
+        "    Each time the line '!NEWBN,XXX' is encountered in the input, a new batch is\n"
+        "    begun and 'XXX' becomes its boot number.\n\n"
+
 	"-l, --signal-slop=SSLOP\n"
 	"    tag signal strength slop, in dB.  A tag burst will only be recognized\n"
 	"    if its dynamic range (i.e. range of signal strengths of its component pulses)\n"
@@ -346,6 +351,7 @@ main (int argc, char **argv) {
 	OPT_SIG_SLOP	         = 'l',
 	OPT_MIN_DFREQ            = 'm',
 	OPT_MAX_DFREQ            = 'M',
+        OPT_BOOT_NUM             = 'n',
         OPT_PULSE_SLOP	         = 'p',
 	OPT_MAX_PULSE_RATE       = 'R',
 	OPT_FREQ_SLOP	         = 's',
@@ -355,7 +361,7 @@ main (int argc, char **argv) {
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:f:Fhl:m:M:p:R:s:S:tw:";
+    static const char short_options[] = "b:B:c:f:Fhi:l:m:M:p:R:s:S:tw:";
     static const struct option long_options[] = {
         {"burst-slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst-slop-expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
@@ -363,6 +369,7 @@ main (int argc, char **argv) {
         {"default-freq"		   , 1, 0, OPT_DEFAULT_FREQ},
         {"force-default-freq"      , 0, 0, OPT_FORCE_DEFAULT_FREQ},
         {"help"			   , 0, 0, COMMAND_HELP},
+        {"bootnum"                 , 1, 0, OPT_BOOT_NUM},
 	{"signal-slop"             , 1, 0, OPT_SIG_SLOP},
 	{"min-dfreq"               , 1, 0, OPT_MIN_DFREQ},
 	{"max-dfreq"               , 1, 0, OPT_MAX_DFREQ},
@@ -398,6 +405,7 @@ main (int argc, char **argv) {
     int pulses_to_confirm = PULSES_PER_BURST;
     float sig_slop_dB = 10;
     Frequency_Offset_kHz freq_slop_kHz = 2.0;       // (kHz) maximum allowed frequency bandwidth of a burst
+    long long bootNum = 1; // default boot number
 
     while ((c = getopt_long(argc, argv, short_options, long_options, &option_index)) != -1) {
         switch (c) {
@@ -419,6 +427,9 @@ main (int argc, char **argv) {
         case COMMAND_HELP:
             usage();
             exit(0);
+        case OPT_BOOT_NUM:
+          bootNum = atoll(optarg);
+          break;
         case OPT_SIG_SLOP:
           sig_slop_dB = atof(optarg);
 	  break;
@@ -485,7 +496,7 @@ main (int argc, char **argv) {
     double program_build_ts = PROGRAM_BUILD_TS; // defined in Makefile
     try {
       Tag_Database tag_db (tag_filename);
-      DB_Filer dbf (output_filename, program_name, program_version, program_build_ts);
+      DB_Filer dbf (output_filename, program_name, program_version, program_build_ts, bootNum);
       dbf.add_param("default-freq", default_freq);
       dbf.add_param("force-default-freq", min_dfreq);
       dbf.add_param("burst-slop", max_dfreq);
@@ -506,15 +517,20 @@ main (int argc, char **argv) {
       // Freq_Setting needs to know the set of nominal frequencies
       Freq_Setting::set_nominal_freqs(tag_db.get_nominal_freqs());
 
-      Tag_Foray foray(tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
+      for (;;) {
+        Tag_Foray foray(tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
 
-      if (test_only) {
-        foray.test(); // throws if there's a problem
-        std::cerr << "Ok\n";
-        exit(0);
+        if (test_only) {
+          foray.test(); // throws if there's a problem
+          std::cerr << "Ok\n";
+          exit(0);
+        }
+        long long newbn = foray.start();
+        if (newbn == 0)
+          break;
+        dbf.end_batch();
+        dbf.begin_batch(newbn);
       }
-
-      foray.start();
     } 
     catch (std::runtime_error e) {
       std::cerr << e.what() << std::endl;
