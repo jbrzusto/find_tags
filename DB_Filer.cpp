@@ -51,20 +51,42 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
                            -1, &st_add_hit, 0),
         "output DB does not have valid 'hits' table.");
 
-  sprintf(qbuf, 
+  sqlite3_stmt * st_check_batchprog;
+  msg = "output DB does not have valid 'batchProgs' table.";
+
+  Check(sqlite3_prepare_v2(outdb,
+                           "select progVersion from batchProgs where progName=? order by batchID desc limit 1",
+                           -1, &st_check_batchprog, 0),
+        msg);
+  sqlite3_bind_text(st_check_batchprog, 1, prog_name.c_str(), -1, SQLITE_TRANSIENT);
+
+  Check(sqlite3_step(st_check_batchprog), msg, SQLITE_ROW);
+
+  if (string((const char *) sqlite3_column_text(st_check_batchprog, 0)) != prog_version) {
+    // program version has changed since latest batchID for which it was recorded,
+    // so record new value
+    sprintf(qbuf, 
           "insert into batchProgs (batchID, progName, progVersion, progBuildTS, tsMotus) \
                            values (%lld,    '%s',     '%s',        %f,          0)",
           bid,
           prog_name.c_str(),
           prog_version.c_str(),
           prog_ts);
+  
+    Check( sqlite3_exec(outdb,
+                        qbuf,
+                        0,
+                        0,
+                        0),
+           msg);
+  }
 
-  Check( sqlite3_exec(outdb,
-                      qbuf,
-                      0,
-                      0,
-                      0),
-    "output DB does not have valid 'batchProgs' table.");
+  msg = "output DB does not have valid 'batchParams' table.";
+  Check( sqlite3_prepare_v2(outdb, 
+                            "select paramVal from batchParams where progName = ? and paramName = ? order by batchID desc limit 1",
+                            -1, &st_check_param, 0),
+         msg);
+  sqlite3_bind_text(st_check_param, 1, prog_name.c_str(), -1, SQLITE_TRANSIENT);
 
   Check( sqlite3_prepare_v2(outdb, 
                             "insert into batchParams (batchID, progName, paramName, paramVal, tsMotus) \
@@ -148,13 +170,20 @@ DB_Filer::qbuf[256];
 
 void
 DB_Filer::add_param(const string &name, double value) {
-  sqlite3_bind_int64(st_add_param, 1, bid);
-  // we use SQLITE_TRANSIENT in the following to make a copy, otherwise
-  // the caller's copy might be destroyed before this transaction is committed
-  sqlite3_bind_text(st_add_param, 2, prog_name.c_str(), -1, SQLITE_TRANSIENT); 
-  sqlite3_bind_text(st_add_param, 3, name.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_double(st_add_param, 4, value);
-  step_commit(st_add_param);
+  sqlite3_reset(st_check_param);
+  sqlite3_bind_text(st_check_param, 2, name.c_str(), -1, SQLITE_TRANSIENT);
+  int rv = sqlite3_step(st_check_param);
+  if (rv == SQLITE_DONE || (rv == SQLITE_ROW && sqlite3_column_double(st_check_param, 0) != value)) {
+    // parameter value has changed since last batchID where it was set,
+    // so record new value
+    sqlite3_bind_int64(st_add_param, 1, bid);
+    // we use SQLITE_TRANSIENT in the following to make a copy, otherwise
+    // the caller's copy might be destroyed before this transaction is committed
+    sqlite3_bind_text(st_add_param, 2, prog_name.c_str(), -1, SQLITE_TRANSIENT); 
+    sqlite3_bind_text(st_add_param, 3, name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_double(st_add_param, 4, value);
+    step_commit(st_add_param);
+  }
 };
 
 void

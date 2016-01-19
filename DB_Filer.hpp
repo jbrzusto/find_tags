@@ -42,6 +42,7 @@ protected:
   sqlite3_stmt * st_end_run; //!< end a run
   sqlite3_stmt * st_add_hit; //!< add a hit to a run
   sqlite3_stmt * st_add_prog; //!< add batch program entry
+  sqlite3_stmt * st_check_param; //!< check whether parameter value has changed
   sqlite3_stmt * st_add_param; //!< add batch parameter entry
 
   string prog_name; //!< name of program, for recording in DB

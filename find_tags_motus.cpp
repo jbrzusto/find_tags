@@ -64,7 +64,7 @@ All output from a run of this program forms a new batch.
   As soon as a candidate is confirmed, it kills off any TCs with
   the same ID or sharing any pulses.
 
-  Copyright 2012-2015 John Brzustowski
+  Copyright 2012-2016 John Brzustowski
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -248,27 +248,27 @@ usage() {
 
 	"and OPTIONS can be any of:\n\n"
 
-	"-f, --default-freq=FREQ\n"
+	"-f, --default_freq=FREQ\n"
 	"    the default antenna frequency, in MHz\n"
         "    Although input data files contain frequency setting records, this option can\n"
         "    be used to set the frequency when processing a fragment of an input file that\n"
         "    doesn't contain an initial frequency setting\n\n"
         
-        "-F --force-default-freq\n"
+        "-F --force_default_freq\n"
         "    Ignore frequency settings in the input dataset; always assume\n"
         "    all receivers are tuned to the default frequency\n\n"
 
-	"-b, --burst-slop=BSLOP\n"
+	"-b, --burst_slop=BSLOP\n"
 	"    how much to allow time between consecutive bursts\n"
 	"    to differ from measured tag values, in millseconds.\n"
 	"    default: 20 ms\n\n"
 
-	"-B, --burst-slop-expansion=BSLOPEXP\n"
+	"-B, --burst_slop_expansion=BSLOPEXP\n"
 	"    how much to increase burst slop for each missed burst\n"
 	"    in milliseconds; meant to allow for clock drift\n"
 	"    default: 1 ms / burst\n\n"
 
-	"-c, --pulses-to-confirm=CONFIRM\n"
+	"-c, --pulses_to_confirm=CONFIRM\n"
 	"    how many pulses must be detected before a hit is confirmed.\n"
 	"    By default, CONFIRM = PULSES_PER_BURST, but for more stringent\n"
 	"    filtering when BSLOP is large, CONFIRM should be set to PULSES_PER_BURST + 2\n"
@@ -281,42 +281,42 @@ usage() {
         "    Each time the line '!NEWBN,XXX' is encountered in the input, a new batch is\n"
         "    begun and 'XXX' becomes its boot number.\n\n"
 
-	"-l, --signal-slop=SSLOP\n"
+	"-l, --signal_slop=SSLOP\n"
 	"    tag signal strength slop, in dB.  A tag burst will only be recognized\n"
 	"    if its dynamic range (i.e. range of signal strengths of its component pulses)\n"
 	"    is within SSLOP.  This limit applies within each burst of a sequence\n"
 	"    default: 10 dB\n\n"
 
-	"-m, --min-dfreq=MINDFREQ\n"
+	"-m, --min_dfreq=MINDFREQ\n"
 	"    minimum offset frequency, in kHz.  Pulses with smaller offset frequency\n"
 	"    are dropped.\n"
 	"    default: -Inf (i.e. no minimum)\n\n"
 
-	"-M, --max-dfreq=MAXDFREQ\n"
+	"-M, --max_dfreq=MAXDFREQ\n"
 	"    maximum offset frequency, in kHz.  Pulses with larger offset frequency\n"
 	"    are dropped.\n"
 	"    default: Inf (i.e. no minimum)\n\n"
 
-	"-p, --pulse-slop=PSLOP\n"
+	"-p, --pulse_slop=PSLOP\n"
 	"    how much to allow time between consecutive pulses\n"
 	"    in a burst to differ from measured tag values, in milliseconds\n"
 	"    default: 1.5 ms\n\n"
 
-	"-R, --max-pulse-rate=MAXPULSERATE\n"
+	"-R, --max_pulse_rate=MAXPULSERATE\n"
 	"    maximum pulse rate (pulses per second) during pulse rate time window;\n"
 	"    Used to prevent exorbitant memory usage and execution time when noise-\n"
 	"    or bug-induced pulse bursts are present.  Pulses from periods of length\n"
-	"    PULSERATEWIN (specified by --pulse-rate-window) where \n"
+	"    PULSERATEWIN (specified by --pulse_rate_window) where \n"
 	"    the pulse rate exceeds MAXPULSERATE are simply discarded.\n\n"
 	"    default: 0 pulses per second, meaning no rate limiting is done.\n\n"
 
-	"-s, --frequency-slop=FSLOP\n"
+	"-s, --frequency_slop=FSLOP\n"
 	"    tag frequency slop, in KHz.  A tag burst will only be recognized\n"
 	"    if its bandwidth (i.e. range of frequencies of its component pulses)\n"
 	"    is within FSLOP.  This limit applies to all bursts within a sequence\n"
 	"    default: 2 kHz\n\n"
 
-	"-S, --max-skipped-bursts=SKIPS\n"
+	"-S, --max_skipped_bursts=SKIPS\n"
 	"    maximum number of consecutive bursts that can be missing (skipped)\n"
 	"    without terminating a run.  When using the pulses_to_confirm criterion\n"
 	"    that number of pulses must occur with no gaps larger than SKIPS bursts\n"
@@ -330,9 +330,9 @@ usage() {
         "    prints 'Okay\\n' to stderr and the exist code is 0.  Otherwise, the exist\n"
         "    code is -1 and an error message is printed to stderr.\n\n"
 
-	"-w, --pulse-rate-window=PULSERATEWIN\n"
-	"    the time window (seconds) over which pulse-rate is measured.  When pulse\n"
-	"    rate exceeds the value specified by --max-pulse-rate during a period of\n"
+	"-w, --pulse_rate_window=PULSERATEWIN\n"
+	"    the time window (seconds) over which pulse_rate is measured.  When pulse\n"
+	"    rate exceeds the value specified by --max_pulse_rate during a period of\n"
 	"    PULSERATEWIN seconds, all pulses in that period are discarded.\n"
 	"    default: 60 seconds (but this only takes effect if -R is specified)\n\n"
 
@@ -363,21 +363,21 @@ main (int argc, char **argv) {
     int option_index;
     static const char short_options[] = "b:B:c:f:Fhi:l:m:M:p:R:s:S:tw:";
     static const struct option long_options[] = {
-        {"burst-slop"		   , 1, 0, OPT_BURST_SLOP},
-        {"burst-slop-expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
-	{"pulses-to-confirm"	   , 1, 0, OPT_PULSES_TO_CONFIRM},
-        {"default-freq"		   , 1, 0, OPT_DEFAULT_FREQ},
-        {"force-default-freq"      , 0, 0, OPT_FORCE_DEFAULT_FREQ},
+        {"burst_slop"		   , 1, 0, OPT_BURST_SLOP},
+        {"burst_slop_expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
+	{"pulses_to_confirm"	   , 1, 0, OPT_PULSES_TO_CONFIRM},
+        {"default_freq"		   , 1, 0, OPT_DEFAULT_FREQ},
+        {"force_default_freq"      , 0, 0, OPT_FORCE_DEFAULT_FREQ},
         {"help"			   , 0, 0, COMMAND_HELP},
         {"bootnum"                 , 1, 0, OPT_BOOT_NUM},
-	{"signal-slop"             , 1, 0, OPT_SIG_SLOP},
-	{"min-dfreq"               , 1, 0, OPT_MIN_DFREQ},
-	{"max-dfreq"               , 1, 0, OPT_MAX_DFREQ},
-        {"pulse-slop"		   , 1, 0, OPT_PULSE_SLOP},
-	{"max-pulse-rate"          , 1, 0, OPT_MAX_PULSE_RATE},
-        {"frequency-slop"	   , 1, 0, OPT_FREQ_SLOP},
-	{"max-skipped-bursts"      , 1, 0, OPT_MAX_SKIPPED_BURSTS},
-	{"pulse-rate-window"       , 1, 0, OPT_PULSE_RATE_WINDOW},
+	{"signal_slop"             , 1, 0, OPT_SIG_SLOP},
+	{"min_dfreq"               , 1, 0, OPT_MIN_DFREQ},
+	{"max_dfreq"               , 1, 0, OPT_MAX_DFREQ},
+        {"pulse_slop"		   , 1, 0, OPT_PULSE_SLOP},
+	{"max_pulse_rate"          , 1, 0, OPT_MAX_PULSE_RATE},
+        {"frequency_slop"	   , 1, 0, OPT_FREQ_SLOP},
+	{"max_skipped_bursts"      , 1, 0, OPT_MAX_SKIPPED_BURSTS},
+	{"pulse_rate_window"       , 1, 0, OPT_PULSE_RATE_WINDOW},
         {"test"                    , 0, 0, OPT_TEST},
         {0, 0, 0, 0}
     };
@@ -497,20 +497,20 @@ main (int argc, char **argv) {
     try {
       Tag_Database tag_db (tag_filename);
       DB_Filer dbf (output_filename, program_name, program_version, program_build_ts, bootNum);
-      dbf.add_param("default-freq", default_freq);
-      dbf.add_param("force-default-freq", min_dfreq);
-      dbf.add_param("burst-slop", max_dfreq);
-      dbf.add_param("burst-slop-expansion", burst_slop_expansion );
-      dbf.add_param("pulses-to-confirm", pulses_to_confirm);
-      dbf.add_param("signal-slop", sig_slop_dB);
-      dbf.add_param("min-dfreq", min_dfreq);
-      dbf.add_param("max-dfreq", max_dfreq);
-      dbf.add_param("pulse-slop", pulse_slop);
-      dbf.add_param("max-pulse-rate", max_pulse_rate );
-      dbf.add_param("frequency-slop", freq_slop_kHz);
-      dbf.add_param("max-skipped-bursts", max_skipped_bursts);
-      dbf.add_param("pulse-rate-window", pulse_rate_window);
-      dbf.add_param("min-bogus-spacing", min_bogus_spacing);
+      dbf.add_param("default_freq", default_freq);
+      dbf.add_param("force_default_freq", force_default_freq);
+      dbf.add_param("burst_slop", burst_slop);
+      dbf.add_param("burst_slop_expansion", burst_slop_expansion );
+      dbf.add_param("pulses_to_confirm", pulses_to_confirm);
+      dbf.add_param("signal_slop", sig_slop_dB);
+      dbf.add_param("min_dfreq", min_dfreq);
+      dbf.add_param("max_dfreq", max_dfreq);
+      dbf.add_param("pulse_slop", pulse_slop);
+      dbf.add_param("max_pulse_rate", max_pulse_rate );
+      dbf.add_param("frequency_slop", freq_slop_kHz);
+      dbf.add_param("max_skipped_bursts", max_skipped_bursts);
+      dbf.add_param("pulse_rate_window", pulse_rate_window);
+      dbf.add_param("min_bogus_spacing", min_bogus_spacing);
 
       Tag_Candidate::set_filer(& dbf);
 

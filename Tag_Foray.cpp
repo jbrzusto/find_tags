@@ -111,7 +111,6 @@ Tag_Foray::start() {
         break;
       case '!':
         {
-          std::cerr << string(buf) << std::endl;
           if (1 != sscanf(buf+1, "NEWBN,%lld", & bn)) {
             std::cerr << "Warning: malformed line in input\n  at line " << line_no << ":\n" << (string("") + buf) << std::endl;
             continue;
