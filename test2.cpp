@@ -1,9 +1,15 @@
+// FIXME: use of unphased tagphase sentinel element in sets
+// doesn't work: sets proliferate on subsequent adds.
+// Need fastish way to determine whether a given tag ID is
+// present in a set.
+
 #include <iostream>
 #include <boost/icl/interval_set.hpp>
 #include <boost/icl/separate_interval_set.hpp>
 #include <boost/icl/split_interval_set.hpp>
 #include <boost/icl/split_interval_map.hpp>
 #include <stdexcept>
+#include <fstream>
 
 using namespace std;
 using namespace boost::icl;
@@ -31,7 +37,9 @@ template<class CharType, class CharTraits>
 std::basic_ostream<CharType, CharTraits> &operator<<
   (std::basic_ostream<CharType, CharTraits> &stream, TagPhase const& value)
 {
-  return stream << "TagPhase: " << value.tagID << "," << value.phase;
+  if (value.phase >= 0)
+    return stream << "# " << value.tagID << " (" << value.phase << ") ";
+  return stream;
 }
 
 typedef interval_map < double, TagPhaseSet > Edges;
@@ -122,14 +130,14 @@ public:
     s.insert(tag);
   };
 
-  void add(TagPhase tag, double t1, double t2) {
+  void add(TagPhase tag, double t, double dt) {
     TagPhaseSet tmp;
     tmp.insert(tag);
     tmp.insert(onlyID(tag));
 #ifdef DEBUG    
-    cout << "At add for DFA (" << this << ") before add of " << tag << " with [" << t1 << "," << t2 << "] E is " << this->e << endl;
+    cout << "At add for DFA (" << this << ") before add of " << tag << " with [" << t-dt << "," << t+dt << "] E is " << this->e << endl;
 #endif
-    e.add(make_pair( interval < double > :: closed(t1, t2), tmp));
+    e.add(make_pair( interval < double > :: closed(t-dt, t+dt), tmp));
     // iterate over segments, looking for those having the
     // just-added TagPhase; for each of these, build a new node.
 #ifdef DEBUG
@@ -150,10 +158,10 @@ public:
     }
   };
 
-  void add_rec(TagPhase tag, TagPhase newtag, double t1, double t2) {
+  void add_rec(TagPhase tag, TagPhase newtag, double t , double dt) {
     // recursively search for nodes containing tag, and 
     // add add an edge to tag' where tag'.tagID = tag.tagID
-    // and tag.phase = newphase, with interval [t1, t2]
+    // and tag.phase = newphase, with interval [t-dt, t+dt]
     // Tag to a DFA.
     
     // iterate over edges, adding to each child that has some phase
@@ -162,16 +170,16 @@ public:
     for(auto i = e.begin(); i != e.end(); ++i) {
       if (i->second.count(id)) {
         auto n = nodeForSet.find(i->second);
-        nodeForSet.find(i->second)->second.add_rec(tag, newtag, t1, t2);
+        nodeForSet.find(i->second)->second.add_rec(tag, newtag, t, dt);
       }
     }
     // possibly add edge to current node
     if (s.count(tag))
-      add(newtag, t1, t2);
+      add(newtag, t, dt);
   };
 
-  void del_rec(TagPhase tag) {
-  };
+void del_rec(TagPhase tag) {
+};
 
   static void del (TagPhaseSet t) {
     // delete the node associated with the given TagPhaseSet
@@ -179,11 +187,37 @@ public:
     if (i != nodeForSet.end())
       nodeForSet.erase(i);
   };
+  
+  int nnum;
+  static std::map < TagPhaseSet, string > labForSet;
 
+  void viz(std::ostream &out) {
+  // visualize
+    out << "digraph TEST {\n";
+    nnum = 1;
+    // generate node symbols and labels
+    for (auto i = nodeForSet.begin(); i != nodeForSet.end(); ++i) {
+      string nname = string("a") + std::to_string(nnum++);
+      labForSet.insert(make_pair(i->first, nname));
+      out << nname << "[label=\"" << i->first << "\"];\n";
+    }
+    viz_worker(out);
+    out << "}\n";
+  };
+
+  void viz_worker(std::ostream & out) {
+    if (e.size() == 0)
+      return;
+    for(auto i = e.begin(); i != e.end(); ++i) {
+      out << (labForSet.find(s)->second) << " -> " << (labForSet.find(i->second)->second) << "[label = \""
+          << i->first << "\"];\n";
+      nodeForSet.find(i->second)->second.viz_worker(out);
+    }
+  };
 };
 
 DFA::SetToNode DFA::nodeForSet = DFA::SetToNode();
-
+std::map < TagPhaseSet, string > DFA::labForSet = std::map < TagPhaseSet, string > ();
 template<class CharType, class CharTraits>
 std::basic_ostream<CharType, CharTraits> &operator<<
 (std::basic_ostream<CharType, CharTraits> &stream, DFA const& value)
@@ -203,6 +237,7 @@ std::basic_ostream<CharType, CharTraits> &operator<<
 }
 
 
+
 void dfa_test()
 {
   
@@ -214,6 +249,10 @@ void dfa_test()
   TagPhase tB1(2, 1);
   TagPhase tB2(2, 2);
   TagPhase tB3(2, 3);
+  TagPhase tC0(3, 0);
+  TagPhase tC1(3, 1);
+  TagPhase tC2(3, 2);
+  TagPhase tC3(3, 3);
 
   DFA & G = DFA::make_DFA();
 #ifdef DEBUG
@@ -221,22 +260,31 @@ void dfa_test()
 #endif
 
   // add tag A with gaps 3, 5, 7, using del 0.5
-
+  // add tag B with gaps 2.75, 4.75, 8.1
+  // add tag C with gaps 3.3, 5.1, 7.8
   double d = 0.5;
-  G.add(tA1, 3.0 - d, 3.0 + d);
+  G.add(tA1, 3.0, d);
   cout << "After add\n" << G.nodeForSet << endl;
-  G.add_rec(tA1, tA2, 5.0 - d, 5.0 + d);
+  G.add_rec(tA1, tA2, 5.0, d);
   cout << "After add\n" << G.nodeForSet << endl;
-  G.add_rec(tA2, tA3, 7.0 - d, 7.0 + d);
+  G.add_rec(tA2, tA3, 7.0, d);
   cout << "After add\n" << G.nodeForSet << endl;
-  G.add(tB1, 2.75 - d, 2.75 + d);
+  G.add(tB1, 2.75, d);
   cout << "After add\n" << G.nodeForSet << endl;
-  G.add_rec(tB1, tB2, 4.75 - d, 4.75 + d);
+  G.add_rec(tB1, tB2, 4.75, d);
   cout << "After add\n" << G.nodeForSet << endl;
-  G.add_rec(tB2, tB3, 8.1 - d, 8.1 + d);
+  G.add_rec(tB2, tB3, 8.1, d);
   cout << "After add\n" << G.nodeForSet << endl;
-  
-  
+  G.add(tC1, 3.3, d);
+  cout << "After add\n" << G.nodeForSet << endl;
+  G.add_rec(tC1, tC2, 5.1, d);
+  cout << "After add\n" << G.nodeForSet << endl;
+  G.add_rec(tC2, tC3, 7.8, d);
+  cout << "After add\n" << G.nodeForSet << endl;
+
+  std::ofstream of("/tmp/test2.gv");
+  G.viz(of);
+
 };
 
 int main()
