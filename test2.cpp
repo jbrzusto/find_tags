@@ -87,47 +87,11 @@ public:
   };
 
   static int ncount;
-  static DFA & make_DFA() {
+  static DFA & make_root() {
     // make a root DFA node
     DFA d;
     return (nodeForSet.insert(make_pair(d.s, d)).first) -> second;
   };
-
-  static DFA & make_DFA(TagPhase t) {
-    // make a new DFA node for a single TagPhase
-    DFA d;
-    d.s.insert(t);
-    d.s.insert(onlyID(t));
-    return (nodeForSet.insert(make_pair(d.s, d)).first) -> second;
-  };
-
-  static DFA & make_DFA(TagPhaseSet s, TagPhase t) {
-    // make a new DFA node copying the existing one
-    // for s \ {t}, but keeping t in the set.
-#ifdef DEBUG
-    cout << "make_DFA with set: " << s << "\nand TagPhase " << t << endl;
-#endif
-    auto sm = s;
-    sm.erase(t);
-    sm.erase(onlyID(t));
-    auto nd = nodeForSet.find(sm);
-    if (nd == nodeForSet.end())
-      throw runtime_error("couldn't find node for reduced set");
-    DFA d = nd->second.copy();
-#ifdef DEBUG
-    cout << "original has set " << nd->second.s << " and edges " << nd->second.e << endl;
-    cout << "copy has set " << d.s << " and edges " << d.e << endl;
-#endif
-    if (d.s.count(onlyID(t)))
-      throw std::runtime_error("ID already in set");
-    DFA & rv = (nodeForSet.insert(make_pair(s, d)).first) -> second;
-    rv.s=s;
-#ifdef DEBUG
-    cout << "made node " << &rv << " with set " << rv.s << " and edges " << rv.e << endl;
-#endif
-    return rv;
-  };
-    
 
   static void print(TagPhaseSet s) {
     cout << s;
@@ -147,28 +111,61 @@ public:
   };
 
   void add(TagPhase tag, double t, double dt) {
+    // add an edge from this node to one with tag for the interval [t-dt, t+dt)
     TagPhaseSet tmp;
     tmp.insert(tag);
     tmp.insert(onlyID(tag));
-#ifdef DEBUG    
-    cout << "At add for DFA (" << this << ") before add of " << tag << " with [" << t-dt << "," << t+dt << "] E is " << this->e << endl;
-#endif
     e.add(make_pair( interval < double > :: closed(t-dt, t+dt), tmp));
     // iterate over segments, looking for those having the
     // just-added TagPhase; for each of these, build a new node.
-#ifdef DEBUG
-    cout << "after add, E (" << (&this->e) << ") is " << this->e << endl;
-#endif
-    for(auto i = this->e.begin(); i != e.end(); ++i) {
+    for(auto i = e.begin(); i != e.end(); ++i) {
       auto ss = i->second; // set of nodes
       if (ss.count(tag)) {
         if (ss.size() == 2) {
           // this TagPhase (and its unphased sentinel) just added to set
-          make_DFA(tag);
+          DFA d;
+          d.s.insert(tag);
+          d.s.insert(onlyID(tag));
+          nodeForSet.insert(make_pair(d.s, d));
         } else {
           // we want to copy the node corresponding to the original
           // set, i.e. before this TagPhase was added
-          make_DFA(ss, tag);
+          auto sm = ss;
+          sm.erase(tag);
+          sm.erase(onlyID(tag));
+          // if the original set still exists in the interval map,
+          // then we must copy its node; otherwise, the newly-added
+          // tagphase subsumed the original set, and we can augment
+          // its node.  If the original set is still in the interval
+          // map, it will be the set for either the preceding or the
+          // following interval.
+          auto nd = nodeForSet.find(sm);
+          if (nd == nodeForSet.end()) {
+            return;
+            cout << "reduced set is " << sm << endl;
+            cout << "full set is " << ss << endl;
+            throw runtime_error("couldn't find node for reduced set");
+          }
+          bool keep_old = false;
+          auto j = i;
+          if (i != e.begin() && (--j)->second == sm) {
+            keep_old = true;
+          } else {
+            j = i;
+            ++j;
+            if (j != e.end() && j->second == sm) {
+              keep_old = true;
+            }
+          }
+          DFA d = nd->second.copy();
+          if (d.s.count(onlyID(tag)))
+            throw std::runtime_error("ID already in set");
+          DFA & n = (nodeForSet.insert(make_pair(ss, d)).first) -> second;
+          n.s = ss;
+          if (! keep_old) {
+            cout << "Working on node with set " << this->s << endl << "Erasing node for " << sm << "because overridden by addition of tag " << tag << endl;
+            nodeForSet.erase(sm);
+          }
         }
       }
     }
@@ -189,13 +186,52 @@ public:
         nodeForSet.find(i->second)->second.add_rec(tag, newtag, t, dt);
       }
     }
-    // possibly add edge to current node
+    // possibly add edge from this node
     if (s.count(tag))
       add(newtag, t, dt);
   };
 
-void del_rec(TagPhase tag) {
-};
+  void del_rec(TagPhase tp, double t, double dt) {
+    // delete the entire subgraph for the tag with ID tp.tagID
+    // tp.phase should be -1.
+    // we do this child-first, depth-first recursively.
+    // When processing this node, we first correct the nodeForSet
+    // mapping to reflect removal of tp, then correct the interval_map.
+    if (interval_count(e) > 0) {
+      auto id = onlyID(tp);
+      for(auto i = e.begin(); i != e.end(); ++i) {
+        if (i->second.count(id)) {
+          auto n = nodeForSet.find(i->second);
+          if (n != nodeForSet.end()) {
+            n->second.del_rec(tp, t, dt);
+            if (n->second.s.count(tp)) {
+              // correct the nodeForSet mapping to reflect that
+              // it will be the reduced set now mapping to the 
+              // node.  If there is already a node for the reduced
+              // set, then just delete the node for the current set.
+              auto sm = i->second;
+              sm.erase(tp);
+              sm.erase(onlyID(tp));
+              auto rn = nodeForSet.find(sm);
+              if (rn != nodeForSet.end()) {
+                nodeForSet.erase(n);
+              } else {
+                DFA cp = n->second;
+                nodeForSet.erase(n);
+                nodeForSet.insert(make_pair(sm, cp));
+              }
+            }
+          }
+        }
+      }
+      auto period = interval < double > :: closed(t - dt, t + dt);
+      TagPhaseSet s1;
+      s1.insert(tp);
+      s1.insert(onlyID(tp));
+      e.subtract(make_pair( period, s1));
+    }
+    
+  };
 
   static void del (TagPhaseSet t) {
     // delete the node associated with the given TagPhaseSet
@@ -213,10 +249,13 @@ void del_rec(TagPhase tag) {
     nnum = 1;
     // generate node symbols and labels
     for (auto i = nodeForSet.begin(); i != nodeForSet.end(); ++i) {
-      out << i->second.label << "[label=\"" << i->first<< "\"];\n";
+      out << i->second.label << "[label=\"" << i->second.label << "=" << i->first<< "\"];\n";
       for(auto j = i->second.e.begin(); j != i->second.e.end(); ++j) {
-        out << i->second.label << " -> " << (nodeForSet.find(j->second)->second.label) << "[label = \""
-          << j->first << "\"];\n";
+        auto n = nodeForSet.find(j->second);
+        if (n != nodeForSet.end()) {
+          out << i->second.label << " -> " << (n->second.label) << "[label = \""
+              << j->first << "\"];\n";
+        }
       }
     }
     out << "}\n";
@@ -263,14 +302,19 @@ void dfa_test()
   TagPhase tC2(3, 2);
   TagPhase tC3(3, 3);
 
-  DFA & G = DFA::make_DFA();
-#ifdef DEBUG
+  DFA & G = DFA::make_root();
+#ifdef DEBUG2
   cout << "Before add G(" << &G << ") has nodeForSet:\n" << G.nodeForSet << endl;
 #endif
 
-  // add tag A with gaps 3, 5, 7, using del 0.5
+
+  G.print(G.e);
+  G.print(G.s);
+
+  // Using del = 0.5:
+  // add tag A with gaps 3,    5,    7
   // add tag B with gaps 2.75, 4.75, 8.1
-  // add tag C with gaps 3.3, 5.1, 7.8
+  // add tag C with gaps 3.3,  5.1,  7.8
 
   int n = 0;
 
@@ -295,7 +339,6 @@ void dfa_test()
     std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
     G.viz(of);
   }
-  cout << "After add\n" << G.nodeForSet << endl;
   G.add_rec(tB1, tB2, 4.75, d);
   {
     std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
@@ -321,7 +364,23 @@ void dfa_test()
     std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
     G.viz(of);
   }
-
+  cout << "Before del\n" << G.nodeForSet << endl;
+  G.del_rec(tA3, 7.0, d);
+  {
+    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
+    G.viz(of);
+  }
+  cout << "After del\n" << G.nodeForSet << endl;
+  G.del_rec(tA2, 5.0, d);
+  {
+    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
+    G.viz(of);
+  }
+  G.del_rec(tA1, 3.0, d);
+  {
+    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
+    G.viz(of);
+  }
 };
 
 int main()
