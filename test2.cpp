@@ -51,10 +51,25 @@ public:
   
   TagPhaseSet s;
   Edges e;
-
+  string label;
 
 private:
-  DFA() : e(), s() {};
+  DFA() : e(), s() {
+    label = string("a") + std::to_string(++ncount);
+  };
+
+  // DFA(const DFA & x) : e(x.e), s(x.s) {
+  //   label = string("a") + std::to_string(++ncount);
+  // };
+
+public:
+  DFA copy() {
+    DFA rv = *this;
+    rv.label = string("a") + std::to_string(++ncount);
+    return rv;
+  }
+
+      
 
 public:
   static TagPhase onlyID(const TagPhase &t) {
@@ -71,6 +86,7 @@ public:
     return t2;
   };
 
+  static int ncount;
   static DFA & make_DFA() {
     // make a root DFA node
     DFA d;
@@ -97,7 +113,7 @@ public:
     auto nd = nodeForSet.find(sm);
     if (nd == nodeForSet.end())
       throw runtime_error("couldn't find node for reduced set");
-    DFA d = nd->second;
+    DFA d = nd->second.copy();
 #ifdef DEBUG
     cout << "original has set " << nd->second.s << " and edges " << nd->second.e << endl;
     cout << "copy has set " << d.s << " and edges " << d.e << endl;
@@ -141,7 +157,7 @@ public:
     // iterate over segments, looking for those having the
     // just-added TagPhase; for each of these, build a new node.
 #ifdef DEBUG
-    cout << "after add, E (" << (&this->e) << ") is " << this->e << " and length is " << this->e.size() << endl;
+    cout << "after add, E (" << (&this->e) << ") is " << this->e << endl;
 #endif
     for(auto i = this->e.begin(); i != e.end(); ++i) {
       auto ss = i->second; // set of nodes
@@ -169,7 +185,7 @@ public:
     auto id = onlyID(tag);
     for(auto i = e.begin(); i != e.end(); ++i) {
       if (i->second.count(id)) {
-        auto n = nodeForSet.find(i->second);
+        //        auto n = nodeForSet.find(i->second);
         nodeForSet.find(i->second)->second.add_rec(tag, newtag, t, dt);
       }
     }
@@ -197,24 +213,17 @@ void del_rec(TagPhase tag) {
     nnum = 1;
     // generate node symbols and labels
     for (auto i = nodeForSet.begin(); i != nodeForSet.end(); ++i) {
-      string nname = string("a") + std::to_string(nnum++);
-      labForSet.insert(make_pair(i->first, nname));
-      out << nname << "[label=\"" << i->first << "\"];\n";
+      out << i->second.label << "[label=\"" << i->first<< "\"];\n";
+      for(auto j = i->second.e.begin(); j != i->second.e.end(); ++j) {
+        out << i->second.label << " -> " << (nodeForSet.find(j->second)->second.label) << "[label = \""
+          << j->first << "\"];\n";
+      }
     }
-    viz_worker(out);
     out << "}\n";
   };
-
-  void viz_worker(std::ostream & out) {
-    if (e.size() == 0)
-      return;
-    for(auto i = e.begin(); i != e.end(); ++i) {
-      out << (labForSet.find(s)->second) << " -> " << (labForSet.find(i->second)->second) << "[label = \""
-          << i->first << "\"];\n";
-      nodeForSet.find(i->second)->second.viz_worker(out);
-    }
-  };
 };
+
+int DFA::ncount = 0;
 
 DFA::SetToNode DFA::nodeForSet = DFA::SetToNode();
 std::map < TagPhaseSet, string > DFA::labForSet = std::map < TagPhaseSet, string > ();
@@ -222,7 +231,7 @@ template<class CharType, class CharTraits>
 std::basic_ostream<CharType, CharTraits> &operator<<
 (std::basic_ostream<CharType, CharTraits> &stream, DFA const& value)
 {
-  stream << "Node with address " << (& value) << " and set (" << & (value.s) << "):\n" << value.s << "\nand edges (" << & (value.e) << "):\n" << value.e;
+  stream << "Node with label " << value.label << "(" << (& value) << ") and set (" << & (value.s) << "):\n" << value.s << "\nand edges (" << & (value.e) << "):\n" << value.e;
 };
 
 template<class CharType, class CharTraits>
@@ -262,28 +271,56 @@ void dfa_test()
   // add tag A with gaps 3, 5, 7, using del 0.5
   // add tag B with gaps 2.75, 4.75, 8.1
   // add tag C with gaps 3.3, 5.1, 7.8
+
+  int n = 0;
+
   double d = 0.5;
   G.add(tA1, 3.0, d);
-  cout << "After add\n" << G.nodeForSet << endl;
+  {
+    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
+    G.viz(of);
+  }
   G.add_rec(tA1, tA2, 5.0, d);
-  cout << "After add\n" << G.nodeForSet << endl;
+  {
+    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
+    G.viz(of);
+  }
   G.add_rec(tA2, tA3, 7.0, d);
-  cout << "After add\n" << G.nodeForSet << endl;
+  {
+    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
+    G.viz(of);
+  }
   G.add(tB1, 2.75, d);
+  {
+    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
+    G.viz(of);
+  }
   cout << "After add\n" << G.nodeForSet << endl;
   G.add_rec(tB1, tB2, 4.75, d);
-  cout << "After add\n" << G.nodeForSet << endl;
+  {
+    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
+    G.viz(of);
+  }
   G.add_rec(tB2, tB3, 8.1, d);
-  cout << "After add\n" << G.nodeForSet << endl;
+  {
+    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
+    G.viz(of);
+  }
   G.add(tC1, 3.3, d);
-  cout << "After add\n" << G.nodeForSet << endl;
+  {
+    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
+    G.viz(of);
+  }
   G.add_rec(tC1, tC2, 5.1, d);
-  cout << "After add\n" << G.nodeForSet << endl;
+  {
+    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
+    G.viz(of);
+  }
   G.add_rec(tC2, tC3, 7.8, d);
-  cout << "After add\n" << G.nodeForSet << endl;
-
-  std::ofstream of("/tmp/test2.gv");
-  G.viz(of);
+  {
+    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
+    G.viz(of);
+  }
 
 };
 
