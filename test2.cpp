@@ -1,7 +1,5 @@
-// FIXME: use of unphased tagphase sentinel element in sets
-// doesn't work: sets proliferate on subsequent adds.
-// Need fastish way to determine whether a given tag ID is
-// present in a set.
+// FIXME: use (tlo, thi) instead of (t-dt, t+dt) to allow for
+// multiplicative, rather than additive tolerance.
 
 #include <iostream>
 #include <boost/icl/interval_set.hpp>
@@ -28,15 +26,22 @@ public:
     TagPhase rv = * this;
     rv.phase = -1;
     return(rv);
-  };
+  }
 };
 
 typedef set < TagPhase > TagPhaseSet;
 
-bool operator < (const TagPhase& x1, const TagPhase& x2) { return x1.tagID < x2.tagID || (x1.tagID == x2.tagID && x1.phase < x2.phase);}
-bool operator == (const TagPhase& x1, const TagPhase& x2) { return x1.tagID == x2.tagID && x1.phase == x2.phase; } 
-bool operator <= (const TagPhase& x1, const TagPhase& x2) { return x1.tagID <= x2.tagID ||  (x1.tagID == x2.tagID && x1.phase <= x2.phase);}
+bool operator < (const TagPhase& x1, const TagPhase& x2) { 
+  return x1.tagID < x2.tagID || (x1.tagID == x2.tagID && x1.phase < x2.phase);
+}
 
+bool operator == (const TagPhase& x1, const TagPhase& x2) { 
+  return x1.tagID == x2.tagID && x1.phase == x2.phase; 
+}
+
+bool operator <= (const TagPhase& x1, const TagPhase& x2) { 
+  return x1.tagID <= x2.tagID ||  (x1.tagID == x2.tagID && x1.phase <= x2.phase);
+}
 
 template<class CharType, class CharTraits>
 std::basic_ostream<CharType, CharTraits> &operator<<
@@ -126,10 +131,8 @@ public:
           // following interval.
           auto nd = setToNode.find(sm);
           if (nd == setToNode.end()) {
+            // original set no longer in interval map
             return;
-            cout << "reduced set is " << sm << endl;
-            cout << "full set is " << ss << endl;
-            throw runtime_error("couldn't find node for reduced set");
           }
           bool keep_old = false;
           auto j = i;
@@ -148,9 +151,6 @@ public:
           DFA_Node & n = (setToNode.insert(make_pair(ss, d)).first) -> second;
           n.s = ss;
           if (! keep_old) {
-#ifdef DEBUG
-            cout << "Working on node with set " << n.s << endl << "Erasing node for " << sm << "because overridden by addition of tag " << tag << endl;
-#endif
             setToNode.erase(sm);
           }
         }
@@ -174,7 +174,6 @@ public:
     if (interval_count(n.e) > 0) {
       for(auto i = n.e.begin(); i != n.e.end(); ++i) {
         if (i->second.count(id)) {
-          //        auto n = setToNode.find(i->second);
           add_rec(setToNode.find(i->second)->second, tag, newtag, t, dt);
         }
       }
@@ -218,6 +217,7 @@ public:
                 setToNode.erase(nn);
               } else {
                 DFA_Node cp = nn->second;
+                cp.s = sm;
                 setToNode.erase(nn);
                 setToNode.insert(make_pair(sm, cp));
               }
@@ -263,6 +263,48 @@ public:
     }
   };
 
+  void addTag(TagID id, vector < double > gaps, double tol, double maxTime) {
+    // add the repeated sequence of gaps from a tag, with tolerance
+    // tol, starting at phase 0, until adding the next gap would
+    // exceed a total elapsed time of maxTime.
+
+    int n = gaps.size();
+    int p = 0;
+    double t = 0;
+    TagPhase last(id, p);
+    add(last);
+    for(;;) {
+      t += gaps[p % 4];
+      if (t > maxTime)
+        break;
+      TagPhase next(id, p+1);
+      add_rec(last, next, gaps[p % n], tol);
+      ++p;
+      last = next;
+    };
+  }    
+
+  void delTag(TagID id, vector < double > gaps, double tol, double maxTime) {
+    // remove the tag which was added with given gaps, tol, and maxTime
+
+    int n = gaps.size();
+    int p = 0;
+    double t = 0;
+    for(;;) {
+      t += gaps[p % n];
+      if (t > maxTime)
+        break;
+      ++p;
+    }      
+ 
+    while(p > 0) {
+      del_rec(TagPhase(id, p), gaps[p % n], tol);
+      --p;
+    }
+
+    del(TagPhase(id, 0));
+  }
+
 };
 
 void dfa_test()
@@ -289,94 +331,75 @@ void dfa_test()
   // add tag C with gaps 3.3,  5.1,  7.8
 
   int n = 0;
-
   double d = 0.5;
-  G->add(tA0);
-  cout << "After add\n";
-  G->dumpNodes();
-  G->add_rec(tA0, tA1, 3.0, d);
-  {
-    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
-    G->viz(of);
-  }
-  cout << "After add\n";
-  G->dumpNodes();
-  G->add_rec(tA1, tA2, 5.0, d);
-  {
-    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
-    G->viz(of);
-  }
-  cout << "After add\n";
-  G->dumpNodes();
-  G->add_rec(tA2, tA3, 7.0, d);
-  {
-    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
-    G->viz(of);
+
+#define SHOW \
+  { \
+    std::ofstream of(string("./test") + std::to_string(++n) + ".gv"); \
+    G->viz(of); \
   }
 
-  cout << "After add\n";
-  G->dumpNodes();
+  G->add(tA0);
+  SHOW;
+
+  G->add_rec(tA0, tA1, 3.0, d);
+  SHOW;
+
+  G->add_rec(tA1, tA2, 5.0, d);
+  SHOW;
+
+  G->add_rec(tA2, tA3, 7.0, d);
+  SHOW;
+
   G->add(tB0);
-  cout << "After add\n";
-  G->dumpNodes();
+  SHOW;
+
   G->add_rec(tB0, tB1, 2.75, d);
-  cout << "After add\n";
-  G->dumpNodes();
-  {
-    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
-    G->viz(of);
-  }
+  SHOW;
+
   G->add_rec(tB1, tB2, 4.75, d);
-  {
-    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
-    G->viz(of);
-  }
+  SHOW;
+
   G->add_rec(tB2, tB3, 8.1, d);
-  {
-    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
-    G->viz(of);
-  }
+  SHOW;
 
   G->add(tC0);
+  SHOW;
+
   G->add_rec(tC0, tC1, 3.3, d);
-  {
-    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
-    G->viz(of);
-  }
+  SHOW;
+
   G->add_rec(tC1, tC2, 5.1, d);
-  {
-    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
-    G->viz(of);
-  }
+  SHOW;
+
   G->add_rec(tC2, tC3, 7.8, d);
-  {
-    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
-    G->viz(of);
-  }
-  cout << "Before del\n";
-  G->dumpNodes();
+  SHOW;
+
   G->del_rec(tA3, 7.0, d);
-  {
-    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
-    G->viz(of);
-  }
-  cout << "After del\n";
-  G->dumpNodes();
+  SHOW;
+
   G->del_rec(tA2, 5.0, d);
-  {
-    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
-    G->viz(of);
-  }
+  SHOW;
+
   G->del_rec(tA1, 3.0, d);
-  {
-    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
-    G->viz(of);
-  }
+  SHOW;
+
   G->del(tA0);
-  {
-    std::ofstream of(string("./test") + std::to_string(++n) + ".gv");
-    G->viz(of);
-  }
+  SHOW;
+
+  // New tag with ID 4 and gaps 4.1, 2.1, 9.1, BI=110
+
+  vector < double > T2;
+  T2.push_back(4.1);  
+  T2.push_back(2.1);
+  T2.push_back(9.1);
+  T2.push_back(110);
+
+  G->addTag(4, T2, d, 250);
+
+  SHOW;
+
+  
 };
 
 int main()
