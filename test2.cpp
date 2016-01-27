@@ -69,6 +69,7 @@ private:
 class DFA_Graph {
 protected:
   int ncount;
+  int graphSize;
   DFA_Node * root;
   typedef std::map < TagPhaseSet, DFA_Node> SetToNode;
   SetToNode setToNode; // will own all DFA_Node nodes in this graph
@@ -80,7 +81,7 @@ public:
     return n;
   };
 
-  DFA_Graph()
+  DFA_Graph() : ncount(0)
   {
     root = & setToNode.insert(make_pair(TagPhaseSet(), new_node())).first->second;
   };
@@ -95,17 +96,17 @@ public:
     root->s.insert(tag);
   };
 
-  void add(TagPhase tag, double t, double dt) {
-    add(* root, tag, t, dt);
+  void add(TagPhase tag, double tlo, double thi) {
+    add(* root, tag, tlo, thi);
   };
 
-  void add(DFA_Node &n, TagPhase tag, double t, double dt) {
-    // add an edge from a node to one with tag for the interval [t-dt,
-    // t+dt)
+  void add(DFA_Node &n, TagPhase tag, double tlo, double thi) {
+    // add an edge from a node to one with tag for the interval [tlo,
+    // thi)
     TagPhaseSet tmp;
     tmp.insert(tag);
     tmp.insert(tag.onlyID());
-    n.e.add(make_pair( interval < double > :: closed(t-dt, t+dt), tmp));
+    n.e.add(make_pair( interval < double > :: closed(tlo, thi), tmp));
     // iterate over segments, looking for those having the
     // just-added TagPhase; for each of these, build a new node.
     for(auto i = n.e.begin(); i != n.e.end(); ++i) {
@@ -158,11 +159,11 @@ public:
     }
   };
 
-  void add_rec(TagPhase tag, TagPhase newtag, double t , double dt) {
-    add_rec(* root, tag, newtag, t, dt);
+  void add_rec(TagPhase tag, TagPhase newtag, double tlo , double thi) {
+    add_rec(* root, tag, newtag, tlo, thi);
   };
 
-  void add_rec(DFA_Node & n, TagPhase tag, TagPhase newtag, double t , double dt) {
+  void add_rec(DFA_Node & n, TagPhase tag, TagPhase newtag, double tlo , double thi) {
     // recursively search for nodes containing tag, and 
     // add add an edge to tag' where tag'.tagID = tag.tagID
     // and tag.phase = newphase, with interval [t-dt, t+dt]
@@ -174,24 +175,53 @@ public:
     if (interval_count(n.e) > 0) {
       for(auto i = n.e.begin(); i != n.e.end(); ++i) {
         if (i->second.count(id)) {
-          add_rec(setToNode.find(i->second)->second, tag, newtag, t, dt);
+          auto nn = setToNode.find(i->second);
+          if (nn != setToNode.end())
+            add_rec(nn->second, tag, newtag, tlo, thi);
         }
       }
       // possibly add edge from this node
     }
     if (n.s.count(tag))
-      add(n, newtag, t, dt);
+      add(n, newtag, tlo, thi);
   };
+
+
+  void validate() {
+    graphSize = 0;
+    validate(* root);
+    if (graphSize != setToNode.size())
+      throw std::runtime_error("Node count != size of setToNode.");
+  };
+
+  void validate(DFA_Node & n) {
+    // recursively verify that each edge leads to a node
+    
+    // iterate over edges, adding to each child that has some phase
+    // of the given tag.
+    ++graphSize;
+    if (interval_count(n.e) > 0) {
+      for(auto i = n.e.begin(); i != n.e.end(); ++i) {
+        auto nn = setToNode.find(i->second);
+        if (nn == setToNode.end()) {
+          cout << "No node for set:\n" << i->second;
+          throw std::runtime_error("Edge with no corresponding node.");
+        }
+        validate(nn->second);
+      }
+    }
+  };
+
 
   void del(TagPhase tag) {
     root->s.erase(tag);
   };
 
-  void del_rec(TagPhase tp, double t, double dt) {
-    del_rec(* root, tp, t, dt);
+  void del_rec(TagPhase tp, double tlo, double thi) {
+    del_rec(* root, tp, tlo, thi);
   };
 
-  void del_rec(DFA_Node & n, TagPhase tp, double t, double dt) {
+  void del_rec(DFA_Node & n, TagPhase tp, double tlo, double thi) {
     // delete the entire subgraph for the tag with ID tp.tagID
     // tp.phase should be -1.
     // we do this child-first, depth-first recursively.
@@ -199,12 +229,14 @@ public:
     // mapping to reflect removal of tp, then correct the interval_map.
     if (interval_count(n.e) > 0) {
       auto id = tp.onlyID();
+      bool usedHere = false;
       for(auto i = n.e.begin(); i != n.e.end(); ++i) {
         if (i->second.count(id)) {
           auto nn = setToNode.find(i->second);
           if (nn != setToNode.end()) {
-            del_rec(nn->second, tp, t, dt);
+            del_rec(nn->second, tp, tlo, thi);
             if (nn->second.s.count(tp)) {
+              usedHere = true;
               // correct the setToNode mapping to reflect that
               // it will be the reduced set now mapping to the 
               // node.  If there is already a node for the reduced
@@ -225,11 +257,13 @@ public:
           }
         }
       }
-      auto period = interval < double > :: closed(t - dt, t + dt);
-      TagPhaseSet s1;
-      s1.insert(tp);
-      s1.insert(tp.onlyID());
-      n.e.subtract(make_pair( period, s1));
+      if (usedHere) {
+        auto period = interval < double > :: closed(tlo, thi);
+        TagPhaseSet s1;
+        s1.insert(tp);
+        s1.insert(id);
+        n.e.subtract(make_pair( period, s1));
+      }
     }
     
   };
@@ -264,21 +298,24 @@ public:
   };
 
   void addTag(TagID id, vector < double > gaps, double tol, double maxTime) {
-    // add the repeated sequence of gaps from a tag, with tolerance
-    // tol, starting at phase 0, until adding the next gap would
-    // exceed a total elapsed time of maxTime.
+    // add the repeated sequence of gaps from a tag, with fractional
+    // tolerance tol, starting at phase 0, until adding the next gap
+    // would exceed a total elapsed time of maxTime.  The gap is set
+    // to an interval given by gap * (1-tol), gap * (1 + tol)
 
+    // NB: gap 0 take the tag from phase 0 to phase 1, etc.
     int n = gaps.size();
     int p = 0;
     double t = 0;
     TagPhase last(id, p);
     add(last);
     for(;;) {
-      t += gaps[p % 4];
+      t += gaps[p % n];
       if (t > maxTime)
         break;
       TagPhase next(id, p+1);
-      add_rec(last, next, gaps[p % n], tol);
+      double g = gaps[p % n];
+      add_rec(last, next, g * (1 - tol), g * (1 + tol));
       ++p;
       last = next;
     };
@@ -296,10 +333,13 @@ public:
         break;
       ++p;
     }      
+
+    int N = 20;
  
     while(p > 0) {
-      del_rec(TagPhase(id, p), gaps[p % n], tol);
       --p;
+      double g = gaps[p % n];
+      del_rec(TagPhase(id, p+1), g * (1 - tol), g * (1 + tol));
     }
 
     del(TagPhase(id, 0));
@@ -326,9 +366,9 @@ void dfa_test()
   DFA_Graph * G = new DFA_Graph();
 
   // Using del = 0.5:
-  // add tag A with gaps 3,    5,    7
-  // add tag B with gaps 2.75, 4.75, 8.1
-  // add tag C with gaps 3.3,  5.1,  7.8
+  // add tag A with gaps 5,    7,    3
+  // add tag B with gaps 2.75, 8.1, 4.75
+  // add tag C with gaps 5.1,  7.8,  3.1
 
   int n = 0;
   double d = 0.5;
@@ -342,64 +382,69 @@ void dfa_test()
   G->add(tA0);
   SHOW;
 
-  G->add_rec(tA0, tA1, 3.0, d);
+  G->add_rec(tA0, tA1, 5.0 - d, 5.0 + d);
   SHOW;
 
-  G->add_rec(tA1, tA2, 5.0, d);
+  G->add_rec(tA1, tA2, 7.0 - d, 7.0 + d);
   SHOW;
 
-  G->add_rec(tA2, tA3, 7.0, d);
+  G->add_rec(tA2, tA3, 3.0 - d, 3.0 + d);
   SHOW;
 
   G->add(tB0);
   SHOW;
 
-  G->add_rec(tB0, tB1, 2.75, d);
+  G->add_rec(tB0, tB1, 2.75 - d, 2.75 + d);
   SHOW;
 
-  G->add_rec(tB1, tB2, 4.75, d);
+  G->add_rec(tB1, tB2, 8.1 - d, 8.1 + d);
   SHOW;
 
-  G->add_rec(tB2, tB3, 8.1, d);
+  G->add_rec(tB2, tB3, 4.75 - d, 4.75 + d);
   SHOW;
 
   G->add(tC0);
   SHOW;
 
-  G->add_rec(tC0, tC1, 3.3, d);
+  G->add_rec(tC0, tC1, 5.1 - d, 5.1 + d);
   SHOW;
 
-  G->add_rec(tC1, tC2, 5.1, d);
+  G->add_rec(tC1, tC2, 7.8 - d, 7.8 + d);
   SHOW;
 
-  G->add_rec(tC2, tC3, 7.8, d);
+  G->add_rec(tC2, tC3, 3.1 - d, 3.1 + d);
   SHOW;
 
-  G->del_rec(tA3, 7.0, d);
+  G->del_rec(tA3, 3.0 - d, 3.0 + d);
   SHOW;
 
-  G->del_rec(tA2, 5.0, d);
+  G->del_rec(tA2, 7.0 - d, 7.0 + d);
   SHOW;
 
-  G->del_rec(tA1, 3.0, d);
+  G->del_rec(tA1, 5.0 - d, 5.0 + d);
   SHOW;
 
   G->del(tA0);
   SHOW;
 
-  // New tag with ID 4 and gaps 4.1, 2.1, 9.1, BI=110
+  // New tag with ID 4 and gaps 6.7, 4.1, 4.3, BI=110
 
   vector < double > T2;
   T2.push_back(4.1);  
-  T2.push_back(2.1);
-  T2.push_back(9.1);
+  T2.push_back(4.3);
+  T2.push_back(6.7);
   T2.push_back(110);
 
-  G->addTag(4, T2, d, 250);
+  double tol = 0.25;
+  G->addTag(4, T2, tol, 250);
 
   SHOW;
 
-  
+  G->delTag(4, T2, tol, 250);
+
+  SHOW;
+
+  G->validate();
 };
 
 int main()
