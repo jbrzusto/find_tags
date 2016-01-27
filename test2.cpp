@@ -16,12 +16,15 @@ typedef int TagID;
 
 class TagPhase {
 public:
+  TagID tagID;
+
+  int phase;
+
   TagPhase(TagID tagID, int phase) :
     tagID(tagID),
     phase(phase)
   {};
-  TagID tagID;
-  int phase;
+
   TagPhase onlyID() {
     TagPhase rv = * this;
     rv.phase = -1;
@@ -60,7 +63,7 @@ class DFA_Node {
 public:
   TagPhaseSet s;
   Edges e;
-  string label;
+  int l;
 private:
   DFA_Node() {};
   friend class DFA_Graph;
@@ -68,27 +71,29 @@ private:
 
 class DFA_Graph {
 protected:
-  int ncount;
-  int graphSize;
-  DFA_Node * root;
+  int nodesAlloc;    // number of nodes allocated (and possibly later deleted)
+  int nodesUsed; // number of nodes actually in tree.
+  DFA_Node * root; // root of DFA_Graph
+
   typedef std::map < TagPhaseSet, DFA_Node> SetToNode;
   SetToNode setToNode; // will own all DFA_Node nodes in this graph
 
-public:
   DFA_Node new_node() {
     DFA_Node n;
-    n.label = string("a") + std::to_string(++ncount);
+    n.l = ++nodesAlloc;
     return n;
   };
 
-  DFA_Graph() : ncount(0)
+public:
+
+  DFA_Graph() : nodesAlloc(0)
   {
     root = & setToNode.insert(make_pair(TagPhaseSet(), new_node())).first->second;
   };
 
   DFA_Node copy(DFA_Node &n) {
     DFA_Node rv = n;
-    rv.label = string("a") + std::to_string(++ncount);
+    rv.l = ++nodesAlloc;
     return rv;
   }
 
@@ -188,9 +193,9 @@ public:
 
 
   void validate() {
-    graphSize = 0;
+    nodesUsed = 0;
     validate(* root);
-    if (graphSize != setToNode.size())
+    if (nodesUsed != setToNode.size())
       throw std::runtime_error("Node count != size of setToNode.");
   };
 
@@ -199,7 +204,7 @@ public:
     
     // iterate over edges, adding to each child that has some phase
     // of the given tag.
-    ++graphSize;
+    ++nodesUsed;
     if (interval_count(n.e) > 0) {
       for(auto i = n.e.begin(); i != n.e.end(); ++i) {
         auto nn = setToNode.find(i->second);
@@ -268,19 +273,16 @@ public:
     
   };
   
-  int nnum;
-
   void viz(std::ostream &out) {
     // visualize
     out << "digraph TEST {\n";
-    nnum = 1;
     // generate node symbols and labels
     for (auto i = setToNode.begin(); i != setToNode.end(); ++i) {
-      out << i->second.label << "[label=\"" << i->second.label << "=" << i->second.s<< "\"];\n";
+      out << "a" << i->second.l << "[label=\"a" << i->second.l << "=" << i->second.s<< "\"];\n";
       for(auto j = i->second.e.begin(); j != i->second.e.end(); ++j) {
         auto n = setToNode.find(j->second);
         if (n != setToNode.end()) {
-          out << i->second.label << " -> " << (n->second.label) << "[label = \""
+          out << "a" << i->second.l << " -> a" << (n->second.l) << "[label = \""
               << j->first << "\"];\n";
         }
       }
@@ -290,7 +292,7 @@ public:
 
   void dumpNodes() {
     for (auto i = setToNode.begin(); i != setToNode.end(); ++i) {
-      cout << "   Node (" << i->second.label << ") and set ";
+      cout << "   Node (a" << i->second.l << ") and set ";
       for (auto j = i->first.begin(); j != i->first.end(); ++j) {
         cout << *j << " ";
       }
@@ -310,13 +312,13 @@ public:
     TagPhase last(id, p);
     add(last);
     for(;;) {
-      t += gaps[p % n];
+      double g = gaps[p % n];
+      t += g;
       if (t > maxTime)
         break;
-      TagPhase next(id, p+1);
-      double g = gaps[p % n];
-      add_rec(last, next, g * (1 - tol), g * (1 + tol));
       ++p;
+      TagPhase next(id, p);
+      add_rec(last, next, g * (1 - tol), g * (1 + tol));
       last = next;
     };
   }    
@@ -334,8 +336,6 @@ public:
       ++p;
     }      
 
-    int N = 20;
- 
     while(p > 0) {
       --p;
       double g = gaps[p % n];
