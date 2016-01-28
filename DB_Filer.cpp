@@ -57,12 +57,15 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
   Check(sqlite3_prepare_v2(outdb,
                            "select progVersion from batchProgs where progName=? order by batchID desc limit 1",
                            -1, &st_check_batchprog, 0),
+        SQLITE_OK,
+        SQLITE_ROW,
         msg);
   sqlite3_bind_text(st_check_batchprog, 1, prog_name.c_str(), -1, SQLITE_TRANSIENT);
 
-  Check(sqlite3_step(st_check_batchprog), msg, SQLITE_ROW);
+  int rv = Check(sqlite3_step(st_check_batchprog), SQLITE_DONE, SQLITE_ROW, msg);
 
-  if (string((const char *) sqlite3_column_text(st_check_batchprog, 0)) != prog_version) {
+  if (rv == SQLITE_OK || 
+      (rv == SQLITE_ROW && string((const char *) sqlite3_column_text(st_check_batchprog, 0)) != prog_version)) {
     // program version has changed since latest batchID for which it was recorded,
     // so record new value
     sprintf(qbuf, 
@@ -156,7 +159,7 @@ DB_Filer::add_hit(Run_ID rid, char ant, double ts, float sig, float sigSD, float
 
 void
 DB_Filer::step_commit(sqlite3_stmt * st) {
-  Check(sqlite3_step(st), "unable to step statement", SQLITE_DONE);
+  Check(sqlite3_step(st), SQLITE_DONE, "unable to step statement");
   sqlite3_reset(st);
   if (++num_steps == steps_per_tx) {
     end_tx();
@@ -186,10 +189,13 @@ DB_Filer::add_param(const string &name, double value) {
   }
 };
 
-void
-DB_Filer::Check(int code, const std::string & err, int wants) {
-  if (code != wants)
-    throw std::runtime_error(err + "\nSqlite error: " + sqlite3_errmsg(outdb));
+int
+DB_Filer::Check(int code, int wants, int wants2, int wants3, const std::string & err) {
+  if (code == wants 
+      || (wants2 != -1 && code == wants2) 
+      || (wants3 != -1 && code == wants3))
+    return code;
+  throw std::runtime_error(err + "\nSqlite error: " + sqlite3_errmsg(outdb));
 };
 
 

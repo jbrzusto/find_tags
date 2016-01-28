@@ -62,7 +62,18 @@ protected:
 
   void step_commit(sqlite3_stmt *st); //!< step statement, and if number of steps has reached steps_per_tx, commit and start new tx
 
-  void Check(int code, const std::string & err, int wants=SQLITE_OK); //!< check that sqlite3 result is specified value, otherwise throuw runtime error with given text
+  int Check(int code, int wants, int wants2, int wants3, const std::string & err); //!< check that sqlite3 result is one of specified values, otherwise throuw runtime error with given text; -1 is not a valid SQLITE return code
+  int Check(int code, int wants, int wants2, const std::string & err) {
+    return Check(code, wants, wants2, -1, err);
+  };
+
+  int Check(int code, int wants, const std::string & err) {
+    return Check(code, wants, -1, -1, err);
+  };
+
+  int Check(int code, const std::string & err) {
+    return Check(code, SQLITE_OK, -1, -1, err);
+  };
 
   void begin_tx(); //!< begin transaction, which is just a bunch of insert queries
   void end_tx(); //!< end transaction
