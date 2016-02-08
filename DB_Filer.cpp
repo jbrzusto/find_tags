@@ -64,7 +64,7 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
 
   int rv = Check(sqlite3_step(st_check_batchprog), SQLITE_DONE, SQLITE_ROW, msg);
 
-  if (rv == SQLITE_OK || 
+  if (rv == SQLITE_DONE || 
       (rv == SQLITE_ROW && string((const char *) sqlite3_column_text(st_check_batchprog, 0)) != prog_version)) {
     // program version has changed since latest batchID for which it was recorded,
     // so record new value
@@ -256,9 +256,11 @@ DB_Filer::end_tx() {
   Check( sqlite3_exec(outdb, "commit", 0, 0, 0), "Failed to commit remaining inserts.");
 };
 
-int
+void
 DB_Filer::add_ambiguity(Motus_Tag_ID mid1, Motus_Tag_ID mid2) {
   // indicate that two tags are indistinguishable
+  if (mid1 == mid2)
+    return;  // ignore case of redeployments of a given tag
   int ai;
   sqlite3_reset(st_find_ambig);
   sqlite3_bind_int64(st_find_ambig, 1, bid);
@@ -271,20 +273,19 @@ DB_Filer::add_ambiguity(Motus_Tag_ID mid1, Motus_Tag_ID mid2) {
     if (ai == 0)
       ai = 1;
     sqlite3_reset(st_add_ambig);
-    sqlite3_bind_int64(st_add_ambig, 0, ai);
-    sqlite3_bind_int64(st_add_ambig, 1, bid);
-    sqlite3_bind_int64(st_add_ambig, 2, mid1);
-    sqlite3_step(st_add_ambig);
+    sqlite3_bind_int64(st_add_ambig, 1, ai);
+    sqlite3_bind_int64(st_add_ambig, 2, bid);
+    sqlite3_bind_int64(st_add_ambig, 3, mid1);
+    step_commit(st_add_ambig);
     sqlite3_reset(st_add_ambig);
-    sqlite3_bind_int64(st_add_ambig, 2, mid2);
-    sqlite3_step(st_add_ambig);
+    sqlite3_bind_int64(st_add_ambig, 3, mid2);
+    step_commit(st_add_ambig);
   } else {
     ai = sqlite3_column_int(st_find_ambig, 0);
     sqlite3_reset(st_add_ambig);
-    sqlite3_bind_int64(st_add_ambig, 0, ai);
-    sqlite3_bind_int64(st_add_ambig, 1, bid);
-    sqlite3_bind_int64(st_add_ambig, 2, mid2);
-    sqlite3_reset(st_add_ambig);
+    sqlite3_bind_int64(st_add_ambig, 1, ai);
+    sqlite3_bind_int64(st_add_ambig, 2, bid);
+    sqlite3_bind_int64(st_add_ambig, 3, mid2);
+    step_commit(st_add_ambig);
   }
-  return ai;
 };

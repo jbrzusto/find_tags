@@ -30,7 +30,7 @@ public:
 
   void end_batch(); //!< end current batch
 
-  int add_ambiguity(Motus_Tag_ID mid1, Motus_Tag_ID mid2); // indicate that two tags are indistinguishable
+  void add_ambiguity(Motus_Tag_ID mid1, Motus_Tag_ID mid2); // indicate that two tags are indistinguishable
 
 protected:
   // settings

@@ -9,6 +9,7 @@ using namespace boost::icl;
 class DFA_Node {
 
   friend class DFA_Graph;
+  friend class Tag_Finder;
 
 private:
   typedef interval_map < Gap, DFA_Node * > Edges;
@@ -26,6 +27,7 @@ private:
                                 // adding a pulse, then it is
                                 // guaranteed to NOT recognize a valid
                                 // burst, and so is killed.
+
 public:  
   DFA_Node(unsigned int phase);
 
