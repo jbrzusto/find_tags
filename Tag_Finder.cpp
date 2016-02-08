@@ -45,14 +45,25 @@ Tag_Finder::setup_graph() {
 	  
       // sanity check: make sure there's only one tag ID left after a pair of bursts
       if (phase == 2 * PULSES_PER_BURST && it->first.size() > 1) {
-	std::ostringstream ids;
-	for (Tag_ID_Iter i = it->first.begin(); i != it->first.end(); ++i) {
+        std::ostringstream ids;
+        auto i = it->first.begin();
+        auto id = (*i)->motusID;
+        ids << (*i)->motusID << "\n";
+        ++i;
+	for ( ; i != it->first.end(); ++i) {
 	  ids << (*i)->motusID << "\n";
+          Tag_Candidate::filer->add_ambiguity(id, (*i)->motusID);
 	}
+        // FIXME: we should delete all but the first tag 
+        // i = it->first.begin();
+        // ++i;
+        // it->first.erase(i, it->first.end());
 #ifdef FIND_TAGS_DEBUG        
         graph.get_root()->dump(std::cerr);
 #endif
-	throw std::runtime_error(string("Error: the following motus tag IDs are not distinguishable with current parameters:\n") + ids.str());
+
+        std::cerr << "Warning: The following motus tag IDs are not distinguishable with current parameters:\n" << ids.str();
+        throw std::runtime_error(string("Error: the following motus tag IDs are not distinguishable with current parameters:\n") + ids.str());
       }
   
       // for each tag, add its (gap range, ID) pair to the interval_map

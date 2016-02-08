@@ -5,10 +5,9 @@
 // Note: in the following, gaps points to an array of PULSES_PER_BURST gaps;
 // the first PULSES_PER_BURST-1 gaps are intra burst gaps, but the last gap is the burst interval
 
-Known_Tag::Known_Tag(Motus_Tag_ID motusID, Frequency_MHz freq, Frequency_MHz fcd_freq, Frequency_Offset_kHz dfreq, float *gaps):
+Known_Tag::Known_Tag(Motus_Tag_ID motusID, Frequency_MHz freq, Frequency_Offset_kHz dfreq, float *gaps):
   motusID(motusID),
   freq(freq),
-  fcd_freq(fcd_freq),
   dfreq(dfreq)
 {
   // gaps are stored in the database as milliseconds

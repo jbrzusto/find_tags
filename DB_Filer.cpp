@@ -110,6 +110,27 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
   sqlite3_finalize(st_get_rid);
   st_get_rid = 0;
 
+  Check( sqlite3_prepare_v2(outdb,
+                            "select ambigID from batchAmbig where batchID=? and motusTagID =?",
+                            -1,
+                            & st_find_ambig,
+                            0),
+         "SQLite output database does not have valid 'batchAmbig' table");
+
+  Check( sqlite3_prepare_v2(outdb,
+                            "select 1 + max(ambigID) from batchAmbig;",
+                            -1,
+                            & st_new_ambig,
+                            0),
+         "SQLite output database does not have valid 'batchAmbig' table");
+
+  Check( sqlite3_prepare_v2(outdb,
+                            "insert into batchAmbig (ambigID, batchID, motusTagID) values (?, ?, ?);",
+                            -1,
+                            & st_add_ambig,
+                            0),
+         "SQLite output database does not have valid 'batchAmbig' table");
+
 };
 
 
@@ -233,4 +254,37 @@ DB_Filer::begin_tx() {
 void
 DB_Filer::end_tx() {
   Check( sqlite3_exec(outdb, "commit", 0, 0, 0), "Failed to commit remaining inserts.");
+};
+
+int
+DB_Filer::add_ambiguity(Motus_Tag_ID mid1, Motus_Tag_ID mid2) {
+  // indicate that two tags are indistinguishable
+  int ai;
+  sqlite3_reset(st_find_ambig);
+  sqlite3_bind_int64(st_find_ambig, 1, bid);
+  sqlite3_bind_int64(st_find_ambig, 2, mid1);
+  int rv = sqlite3_step(st_find_ambig);
+  if (rv == SQLITE_DONE) {
+    sqlite3_reset(st_new_ambig);
+    sqlite3_step(st_new_ambig);
+    ai = sqlite3_column_int(st_new_ambig, 0);
+    if (ai == 0)
+      ai = 1;
+    sqlite3_reset(st_add_ambig);
+    sqlite3_bind_int64(st_add_ambig, 0, ai);
+    sqlite3_bind_int64(st_add_ambig, 1, bid);
+    sqlite3_bind_int64(st_add_ambig, 2, mid1);
+    sqlite3_step(st_add_ambig);
+    sqlite3_reset(st_add_ambig);
+    sqlite3_bind_int64(st_add_ambig, 2, mid2);
+    sqlite3_step(st_add_ambig);
+  } else {
+    ai = sqlite3_column_int(st_find_ambig, 0);
+    sqlite3_reset(st_add_ambig);
+    sqlite3_bind_int64(st_add_ambig, 0, ai);
+    sqlite3_bind_int64(st_add_ambig, 1, bid);
+    sqlite3_bind_int64(st_add_ambig, 2, mid2);
+    sqlite3_reset(st_add_ambig);
+  }
+  return ai;
 };

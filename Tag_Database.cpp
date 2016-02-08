@@ -23,18 +23,17 @@ Tag_Database::populate_from_sqlite_file(string filename) {
 
   sqlite3_stmt * st; //!< pre-compiled statement for recording raw pulses
 
-  if (SQLITE_OK != sqlite3_prepare_v2(db, "select motusID, tagFreq, fcdFreq, dfreq, round(4*g1)/4000.0, round(4*g2)/4000.0, round(4*g3)/4000.0, round(4000*bi)/4000.0 from tags order by tagFreq, motusID",
+  if (SQLITE_OK != sqlite3_prepare_v2(db, "select tagID, nomFreq, offsetFreq, round(4*param1)/4000.0, round(4*param2)/4000.0, round(4*param3)/4000.0, round(4000 * period) / 4000 from tags order by nomFreq, tagID",
                                       -1, &st, 0)) 
-    throw std::runtime_error("Sqlite tag database does not have the required columns: motusID, tagFreq, fcdFreq, dfreq, g1, g2, g3, bi");
+    throw std::runtime_error("Sqlite tag database does not have the required columns: tagID, nomFreq, offsetFreq, param1, param2, param3, period");
 
   while (SQLITE_DONE != sqlite3_step(st)) {
     Motus_Tag_ID  motusID = (Motus_Tag_ID) sqlite3_column_int(st, 0);
     float freq_MHz = sqlite3_column_double(st, 1);
-    float fcd_freq = sqlite3_column_double(st, 2);
-    float dfreq = sqlite3_column_double(st, 3);
+    float dfreq = sqlite3_column_double(st, 2);
     float gaps[4];
     for (int i = 0; i < 4; ++i)
-      gaps[i] = sqlite3_column_double(st, 4 + i);
+      gaps[i] = sqlite3_column_double(st, 3 + i);
     Nominal_Frequency_kHz nom_freq = Freq_Setting::as_Nominal_Frequency_kHz(freq_MHz);
     if (nominal_freqs.count(nom_freq) == 0) {
       // we haven't seen this nominal frequency before
@@ -42,7 +41,7 @@ Tag_Database::populate_from_sqlite_file(string filename) {
       nominal_freqs.insert(nom_freq);
       tags[nom_freq] = Tag_Set();
     }
-    tags[nom_freq].insert (new Known_Tag (motusID, freq_MHz, fcd_freq, dfreq, &gaps[0]));
+    tags[nom_freq].insert (new Known_Tag (motusID, freq_MHz, dfreq, &gaps[0]));
   };
   sqlite3_finalize(st);
   sqlite3_close(db);

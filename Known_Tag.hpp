@@ -15,7 +15,6 @@ public:
 
   Motus_Tag_ID		motusID;			// motus tag ID
   Frequency_MHz		freq;				// nominal transmit frequency (MHz)
-  Frequency_MHz		fcd_freq;			// frequency of funcubedongle at which tag was registered (MHz)
   Frequency_Offset_kHz	dfreq;				// offset from nominal frequency observed by funcube at registration (kHz)
   float			gaps[PULSES_PER_BURST+1];	// gaps between pulses; if p0..p3 are times of pulses in one burst, and p4 is the time of the first
 							// pulse in the next burst,
@@ -30,7 +29,7 @@ public:
   // Note: in the following, gaps points to an array of PULSES_PER_BURST gaps;
   // the first PULSES_PER_BURST-1 gaps are intra burst gaps, but the last gap is the burst interval
 
-  Known_Tag(Motus_Tag_ID motusID, Frequency_MHz freq, Frequency_MHz fcd_freq, Frequency_Offset_kHz dfreq, float *gaps);
+  Known_Tag(Motus_Tag_ID motusID, Frequency_MHz freq, Frequency_Offset_kHz dfreq, float *gaps);
 
 };
 

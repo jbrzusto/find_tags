@@ -15,6 +15,7 @@
 
 // forward declaration for include of Tag_Finder.hpp
 class Tag_Candidate;
+class Tag_Finder;
 
 #include "Tag_Finder.hpp"
 
@@ -56,6 +57,7 @@ protected:
   
   static DB_Filer * filer;
 
+  friend class Tag_Finder;
 public:
   
   Tag_Candidate(Tag_Finder *owner, DFA_Node *state, const Pulse &pulse);
