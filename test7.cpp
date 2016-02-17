@@ -28,7 +28,21 @@ public:
 
   Set(ID p) : _label(numSets++) {s.insert(p);allSets.insert(this); std::cout << "Called Set(p) with p = " << p << std::endl;};
 
-  void augment(ID i) { if(this == _empty) throw std::runtime_error("Augmenting _empty set"); s.insert(i);};
+  void augment(ID i) { if(this == _empty) throw std::runtime_error("Augmenting empty set"); s.insert(i);};
+
+  Set * reduce(ID i) { 
+    // remove i from set; return pointer to empty set if 
+    // reduction leads to that
+    if(this == _empty) 
+      throw std::runtime_error("Reducing empty set"); 
+    s.erase(i);
+    if (s.size() == 0) {
+      allSets.erase(this);
+      delete this;
+      return _empty;
+    }
+    return this;
+  };
 
   Set * clone() { if (this == _empty) return this; Set * ns = new Set(); ns->s = s; return ns;};
 
@@ -54,6 +68,10 @@ public:
   static void init() {
     allSets = std::set < Set * > ();
     _empty = new Set();
+  };
+
+  bool operator==(const Set & s) {
+    return (this->s == s.s);
   };
 };
 
@@ -83,6 +101,17 @@ class Node {
     return this;
   };
 
+  Node * reduce (ID p) {
+    if (this == empty || s == Set::empty())
+      throw std::runtime_error("called reduce on Node::empty");
+
+    s = s->reduce(p);
+    if (s == Set::empty())
+      return empty;
+
+    return this;
+  };
+      
   Node * cloneAugment (ID p) {
     // if (this == empty)
     //   throw std::runtime_error("called cloneAugment on Node::empty");
@@ -139,7 +168,7 @@ int Set::numSets = 0;
 void
 Node::add (Point b1, Point b2, ID p) {
   // Get the largest endpoint not right of each new endpoint.  Because
-  // of map entries for -Inf, +Inf, i, j are guaranteed be valid
+  // of map entries for -Inf and +Inf, i, j are guaranteed be valid
   auto i = -- e.upper_bound(b1);
   auto j = -- e.upper_bound(b2);
 
@@ -183,59 +212,30 @@ Node::add (Point b1, Point b2, ID p) {
   }
 };
 
-// void
-// Node::remove (Point b1, Point b2, ID p) {
-//   auto i = e.lower_bound(b1);
-//   if ( e.size() == 0 || i == e.end() || e.begin()->first >= b2) {
-//     // no existing segments, or all are strictly to left
-//     // or all are strictly to right of new segment
-//     // nothing to do: no interval actually overlaps the
-//     // one we're removing
-//     return;
-//   }
 
-//   // special case of removal segment fully nested in existing segment
-//   if (i->first >= b2) {
-//     // i is not the first segment (else we'd have
-//     // returned in the preceding if statement)
-//     // So we have complete containment of [b1, b2]
-//     // in the interval [--i->first, i->first]
-//     auto j = i;
-//     --j;
-//     e.insert (std::make_pair(b1, j->second->cloneAugment(p)));
-//     if (i->first > b2)
-//       e.insert (std::make_pair(b2, j->second));
-//     return;
-//   }
+void
+Node::remove (Point b1, Point b2, ID p) {
+  // iterate through endpoints in the range [b1, b2]
+  // reducing them by {p}, and merging adjacent
+  // endpoints that end up mapping to the same set
 
-//   while (i->first < b2) {
-//     if (i->first == b1) {
-//       auto j = i;
-//       ++j;
-//       if (j != e.end() && b2 > j->first) {
-//         i->second->augment(p);
-//       } else {
-//         e.insert (std::make_pair(b2, i->second->clone()));
-//         i->second->augment(p);
-//         break;
-//       }
-//       b1 = std::min(b2, j->first);
-//       i = j;
-//     } else {
-//       // i->first > b1
-//       if (i == e.begin()) {
-//         e.insert (std::make_pair(b1, new Node(p)));
-//       } else {
-//         auto j = i;
-//         --j;
-//         auto nn = j->second->cloneAugment(p);
-//         e.insert (std::make_pair(b1, nn));
-//       }
-//       b1 = std::min(b2, i->first);
-//     }
-//   }
-//  }
-;
+  auto i = e.lower_bound(b1);
+  auto ip = i;
+  --ip;
+
+  while (i->first <= b2) {
+    if (i->first < b2)
+      i->second = i->second->reduce(p);
+    if (* (i->second->s) == *(ip->second->s)) {
+      auto idel = i;
+      ++i;
+      e.erase(idel);
+    } else {
+      ip = i;
+      ++i;
+    }
+  }
+};
 
 Node * Node::empty = 0;
 
@@ -275,6 +275,39 @@ main (int argc, char * argv[] ) {
   root.dump();
 
   Set::dumpAll();
+
+  //-------------------------------------------------------------
+
+  root.remove(5, 10, 1000);
+  root.dump();
+
+  root.remove(14, 16, 1007);
+  root.dump();
+  
+  root.remove(3, 13, 1003);
+  root.dump();
+  
+  root.remove(1, 2, 1005);
+  root.dump();
+
+  root.remove(7, 12, 1001);
+  root.dump();
+  
+  root.remove(4, 9, 1002);
+  root.dump();
+
+  root.remove(7, 9, 1004);
+  root.dump();
+  
+  root.remove(12, 19, 1009);
+  root.dump();
+
+  root.remove(0, 1, 1006);
+  root.dump();
+  
+  root.remove(14, 18, 1008);
+  root.dump();
+  
 };
 
   
