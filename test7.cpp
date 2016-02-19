@@ -148,7 +148,8 @@ struct hashSet {
 
 class Node {
   friend class Graph;
-  std::map < double, Node * > e;
+  typedef std::map < double, Node * > Edges;
+  Edges e;
   Set * s;
   int useCount;
 
@@ -160,8 +161,11 @@ class Node {
   };
 
   void unlink() {
-    if (-- useCount == 0)
+    if (-- useCount == 0) {
+      if (s != Set::empty())
+        delete s;
       delete this;
+    }
   };
 
   Node * clone() { 
@@ -215,8 +219,9 @@ public:
     }
   };
 
-  Node(const Node &n) { 
+  Node(const Node &n) : label(numNodes++) { 
     std::cout << "Called Node copy ctor with " << n.label << std::endl;
+    useCount = 0;
   };
 
   Node(ID p) : label(numNodes++) {
@@ -268,19 +273,12 @@ public:
   // map from sets to nodes
   std::unordered_map < Set *, Node *, hashSet, SetEqual > setToNode; 
 
-  void insert (const ID &t); // insert tagphase to root node
-  void erase (const ID &t); // erase tagphase from root node
   // void insert (DFA_Node *n, const ID &t); // insert tagphase to non-root node
   // void erase (DFA_Node *n, const ID &t); // erase tagphase from non-root node
-  void insert (Point b1, Point b2, ID p); // insert transitions from n for t
-  void erase (Point b1, Point b2, ID p); // erase transitions from n for t
-  void insert (Node *n, Point b1, Point b2, ID p); // insert transitions from n for t
-  void erase (Node *n, Point b1, Point b2, ID p); // erase transitions from n for t
   void insert_rec (Node *n, Point lo, Point hi, ID tFrom, ID tTo); // recursively insert a transition from tFrom to tTo
   void erase_rec (Node *n, Point lo, Point hi, ID tFrom, ID tTo); // recursively erase all transitions from tFrom to tTo
   Node * advance (Node *n, Point dt);
 
-  Node * addEdge (Node * head, Point b, Set *s, ID p); // add edge from head at point b to node for set union(s, {p}); return pointer to tail node
   void removeEdge (Node * head, Point b, Node * tail); // remove edge at point b from head to tail
   void augmentEdge (Node * head, Point b, Node * tail, ID p); // existing edge from head at point b will now go to node for set union(tail->s, {p})
                                                               // if there is no node yet for that set, create one by cloning tail.
@@ -331,14 +329,14 @@ public:
       }
       return i->second;
     }
-    if (n->useCount == 1) {
-      // special case to save work
-      unmapSet(n->s);
-      n->s->augment(p);
-      mapSet(n->s, n);
-      delete s;
-      return n;
-    }
+    // if (n->useCount == 1) {
+    //   // special case to save work
+    //   unmapSet(n->s);
+    //   n->s->augment(p);
+    //   mapSet(n->s, n);
+    //   delete s;
+    //   return n;
+    // }
     Node * nn = new Node();
     nn->s = s;
     mapSet(s, nn);
@@ -348,6 +346,36 @@ public:
     }
     return nn;
   };
+
+
+  // Node * cloneAugment (Node * n, ID p) {
+  //   // return the node for the set:  n->s U {p}
+  //   // If it doesn't already exist, clone n then
+  //   // augment it by p and return that.
+  //   Set * s = n->s->cloneAugment(p);
+  //   auto i = setToNode.find(s);
+  //   if (i != setToNode.end()) {
+  //     // already have a node for this set
+  //     delete s;
+  //     return i->second;
+  //   }
+  //   // if (n->useCount == 1) {
+  //   //   // special case to save work
+  //   //   unmapSet(n->s);
+  //   //   n->s->augment(p);
+  //   //   mapSet(n->s, n);
+  //   //   delete s;
+  //   //   return n;
+  //   // }
+  //   Node * nn = new Node();
+  //   nn->s = s;
+  //   mapSet(s, nn);
+  //   if (doLinks) {
+  //     nn->link();
+  //     n->unlink();
+  //   }
+  //   return nn;
+  // };
 
   Node * nodeReduce (Node * n, ID p) {
     // return the node for the set:  n->s \ {p}
@@ -379,113 +407,175 @@ public:
     root->dump();
   };
 
-};
+
+  Node * addEdge (Node * head, Point b, Set *s, ID p) {
+    // add edge from head at point b to node for set union(s, {p}); return pointer to tail node
+  };
+
+  void insert (const ID &t) {
+    root->s->augment(t);
+    // note: we don't remap root in setToNode, since we
+    // never try to lookup the root node from its set.
+  };
+
+  void erase (const ID &t) {
+    root->s->reduce(t);
+    // note: we don't remap root in setToNode
+  };
+
+  void insert (Point b1, Point b2, ID p) {
+    insert (root, b1, b2, p);
+  };
+
+  Node::Edges::iterator ensureEdge ( Node *n, Point b) {
+    // ensure there is an edge from node n at point b,
+    // and returns an iterator to it
+
+    // if it does not already exist, create an 
+    // edge pointing to the same node already
+    // implicitly pointed to for that point
+    // (i.e. the node pointed to by the first endpoint
+    // to the left of b)
+
+    auto i = n->e.upper_bound(b);
+    --i;  // i->first is now <= b
+    if (i->first == b)
+      // already have an edge at that point
+      return i;
+    n->e.insert(i, std::make_pair(b, i->second));
+    // increase use count for that node
+    i->second->link();
+    // return iterator to the new edge, which
+    // will be immediately to the right of i
+    return ++i;
+  };
+
+  void augmentEdge(Node::Edges::iterator i, ID p) {
+    // given an existing edge, augment its tail node by p
+
+    Node * n = i->second;
+    Set * s = n->s->cloneAugment(p);
+    auto j = setToNode.find(s);
+    if (j != setToNode.end()) {
+      // already have a node for this set
+      delete s;
+      n->unlink();
+      i->second = j->second;
+      i->second->link();
+      return;
+    }
+    if (n->useCount == 1) {
+      // special case to save work: re-use this node
+      unmapSet(n->s);
+      n->s->augment(p);
+      mapSet(n->s, n);
+      delete s;
+      return;
+    }
+    // create new node with augmented set, but preserving
+    // its outgoing edges
+    Node * nn = new Node(n);
+    nn->s = s;
+    mapSet(s, nn);
+    n->unlink();
+    nn->link();
+    i->second = nn;
+  };
 
 
-Node *
-Graph::addEdge (Node * head, Point b, Set *s, ID p) {
-  // add edge from head at point b to node for set union(s, {p}); return pointer to tail node
-};
+  void insert (Node *n, Point b1, Point b2, ID p)
+  {
+    // From the node at n, add appropriate edges to other nodes
+    // given that the segment [b1, b2] is being augmented by p.
 
-void
-Graph:: insert (const ID &t) {
-  root->s->augment(t);
-  // note: we don't remap root in setToNode, since we
-  // never try to lookup the root node from its set.
-};
+    ensureEdge(n, b2);  // ensure there is an edge from n at b2 to the
+                        // current node for that point
 
-void
-Graph:: erase (const ID &t) {
-  root->s->reduce(t);
-  // note: we don't remap root in setToNode
-};
+    auto i = ensureEdge(n, b1); // ensure there is an edge from n at
+                                // b1 to the current node for that
+                                // point
 
-void 
-Graph::insert (Point b1, Point b2, ID p) {
-  insert (root, b1, b2, p);
-};
+    // From the b1 to the last existing endpoint in [b1, b2), augment
+    // each edge by p.
 
-
-void 
-Graph::insert (Node *n, Point b1, Point b2, ID p)
-{
-  // From the node at n, add appropriate edges to other nodes
-  // given that the segment [b1, b2] is being augmented by p.
-
-  // Get the largest endpoint not right of each new endpoint.  Because
-  // of map entries for -Inf and +Inf, i, j are guaranteed be valid
-  auto i = -- (n->e.upper_bound(b1));
-  auto j = -- (n->e.upper_bound(b2));
-
-  // If b1 is a new endpoint, map it to a Node including
-  // what i maps to but augmented by {p}. (Otherwise, b1
-  // is the same endpoint as i, so we just augment it
-  // in the loop below.)
-
-  if (i->first < b1) {
-    n->newEdge( b1, nodeAugment(i->second, p, false));
-    // advance to next existing endpoint; we increment twice
-    // to skip over the newly added endpoint at b1, since
-    // we have i->first < b1 < (++i)->first
-
-    ++i;  ++i;  // Yes, twice. Read above
-  }
-  // augment all but the last endpoint overlapping the interval
-
-  while (i->first < j->first) {
-    i->second = nodeAugment(i->second, p);
-    ++i;
-  }
-
-  // j, the last endpoint, requires special treatment to correctly
-  // "end" the new segment containing {p}.
-
-  // We have j->first <= b2:
-
-  //    If "=", there's nothing to do, as j already maps to a node
-  //    without {p}.
-
-  //    If "<", we must add an endpoint at b2 which maps to the
-  //    original Node mapped to by j (i.e. without {p}).  Then, if j
-  //    was in [b1, b2], we need to augment its node with {p} since the
-  //    loop above deliberately stopped before doing so.
-
-  if (j->first < b2) {
-    n->newEdge (b2,  j->second);
-    if (j->first >= b1)
-      j->second = nodeAugment(j->second, p);
-  }
-};
- 
-
-void
-Graph::erase (Point b1, Point b2, ID p) {
-  erase(root, b1, b2, p);
-};
-
-void
-Graph::erase (Node *n, Point b1, Point b2, ID p) {
-  // iterate through endpoints in the range [b1, b2]
-  // reducing them by {p}, and merging adjacent
-  // endpoints that end up mapping to the same node
-
-  auto i = n->e.lower_bound(b1);
-  auto ip = i;
-  --ip;
-
-  while (i->first <= b2) {
-    if (i->first < b2)
-      i->second = nodeReduce(i->second, p);
-    if (i->second == ip->second) {
-      auto idel = i;
-      ++i;
-      idel->second->unlink();
-      n->e.erase(idel);
-    } else {
-      ip = i;
+    while (i->first < b2) {
+      augmentEdge(i, p);
       ++i;
     }
-  }
+  };
+    
+
+  // // If b1 is a new endpoint, map it to a Node including
+  // // what i maps to but augmented by {p}. (Otherwise, b1
+  // // is the same endpoint as i, so we just augment it
+  // // in the loop below.)
+
+  // if (i->first < b1) {
+  //   //    newEdgeToAugmentedNode( n, b1, i->second, p)
+  //   n->newEdge( b1, nodeAugment(i->second, p, false));
+  //   // advance to next existing endpoint; we increment twice
+  //   // to skip over the newly added endpoint at b1, since
+  //   // we have i->first < b1 < (++i)->first
+
+  //   ++i;  ++i;  // Yes, twice. Read above
+  // }
+  // // augment all but the last endpoint overlapping the interval
+
+  // while (i->first < j->first) {
+  //   //repointEdgeToAugmentedNode (i, p);
+  //   i->second = nodeAugment(i->second, p);
+  //   ++i;
+  // }
+
+  // // j, the last endpoint, requires special treatment to correctly
+  // // "end" the new segment containing {p}.
+
+  // // We have j->first <= b2:
+
+  // //    If "=", there's nothing to do, as j already maps to a node
+  // //    without {p}.
+
+  // //    If "<", we must add an endpoint at b2 which maps to the
+  // //    original Node mapped to by j (i.e. without {p}).  Then, if j
+  // //    was in [b1, b2], we need to augment its node with {p} since the
+  // //    loop above deliberately stopped before doing so.
+
+  // if (j->first < b2) {
+  //   //    newEdgeToNode(n, b2, j->second);
+  //   n->newEdge (b2,  j->second);
+  //   if (j->first >= b1)
+  //     //      repointEdgeToAugmentedNode (j, p);
+  //        j->second = nodeAugment(j->second, p);
+  // }
+ 
+
+  void erase (Point b1, Point b2, ID p) {
+    erase(root, b1, b2, p);
+  };
+
+  void erase (Node *n, Point b1, Point b2, ID p) {
+    // iterate through endpoints in the range [b1, b2]
+    // reducing them by {p}, and merging adjacent
+    // endpoints that end up mapping to the same node
+
+    auto i = n->e.lower_bound(b1);
+    auto ip = i;
+    --ip;
+
+    while (i->first <= b2) {
+      if (i->first < b2)
+        i->second = nodeReduce(i->second, p);
+      if (i->second == ip->second) {
+        auto idel = i;
+        ++i;
+        idel->second->unlink();
+        n->e.erase(idel);
+      } else {
+        ip = i;
+        ++i;
+      }
+    }
+  };
 };
 
 main (int argc, char * argv[] ) {
