@@ -244,13 +244,15 @@ public:
   void add (Point b1, Point b2, ID p);
   void remove (Point b1, Point b2, ID p);
 
-  void dump() {
+  void dump(bool skipEdges=false) {
     std::cout << "Node: " << label << " has " << e.size() << " entries in edge map:\n";
-    for (auto i = e.begin(); i != e.end(); ++i) {
-      std::cout << "   " << i->first << " -> Node (" << i->second->label << ", uc=" << i->second->useCount << ") for Set ";
-      i->second->s->dump();
-      std::cout << std::endl;
-    };
+    if (! skipEdges) {
+      for (auto i = e.begin(); i != e.end(); ++i) {
+        std::cout << "   " << i->first << " -> Node (" << i->second->label << ", uc=" << i->second->useCount << ") for Set ";
+        i->second->s->dump();
+        std::cout << std::endl;
+      }
+    }
   };
 
   static Node * empty;
@@ -300,6 +302,8 @@ public:
                                                               // create one by cloning tail and removing p from its set.
   
   void mapSet( Set * s, Node * n) {
+    if (s == Set::empty())
+      return;
     auto p = std::make_pair(s, n);
     setToNode.insert(p);
   };
@@ -441,6 +445,10 @@ public:
     insert (root, b1, b2, p);
   };
 
+  void erase (Point b1, Point b2, ID p) {
+    erase(root, b1, b2, p);
+  };
+
   Node::Edges::iterator ensureEdge ( Node *n, Point b) {
     // ensure there is an edge from node n at point b,
     // and returns an iterator to it
@@ -491,11 +499,66 @@ public:
     Node * nn = new Node(n);
     nn->s = s;
     mapSet(s, nn);
+    // adjust incoming edge counts on old and new nodes
     n->unlink();
     nn->link();
     i->second = nn;
   };
 
+
+  void reduceEdge(Node::Edges::iterator i, ID p) {
+    // given an existing edge, reduce its tail node by p
+    // caller must guarantee this is not called
+    // on an edge which differs from its predecessor
+    // only by having p.
+
+    Node * n = i->second;
+    if (n->s->s.count(p) == 0)
+      return;
+    Set * s = n->s->cloneReduce(p);
+    auto j = setToNode.find(s);
+    if (j != setToNode.end()) {
+      // already have a node for this set
+      delete s;
+      n->unlink();
+      i->second = j->second;
+      i->second->link();
+      return;
+    }
+    if (n->useCount == 1) {
+      // special case to save work: re-use this node
+      unmapSet(n->s);
+      auto ss = n->s->reduce(p);
+      mapSet(ss, n);
+      delete s;
+      return;
+    }
+    // create new node with reduced set, but preserving
+    // its outgoing edges
+    Node * nn = new Node(n);
+    nn->s = s;
+    mapSet(s, nn);
+    // adjust incoming edge counts on old and new nodes
+    n->unlink();
+    nn->link();
+    i->second = nn;
+  };
+
+
+  void dropEdgeIfExtra(Node * n, Node::Edges::iterator i) {
+    // compare edge to its predecessor; if they map 
+    // to the same nodes, remove this one and
+    // adjust useCount
+    // caller must guarantee i does not point to
+    // first edge.
+
+    auto j = i;
+    --j;
+    if (i->second->s == j->second->s) {
+      i->second->unlink();
+      n->e.erase(i);
+    };
+  };
 
   void insert (Node *n, Point b1, Point b2, ID p)
   {
@@ -518,32 +581,32 @@ public:
     }
   };
     
-
-  void erase (Point b1, Point b2, ID p) {
-    erase(root, b1, b2, p);
-  };
-
   void erase (Node *n, Point b1, Point b2, ID p) {
-    // iterate through endpoints in the range [b1, b2]
-    // reducing them by {p}, and merging adjacent
-    // endpoints that end up mapping to the same node
+    // for any edges from n at points in the range [b1, b2]
+    // remove p from the tail node.
+    // If edges at b1 and/or b2 become redundant after 
+    // this, remove them.
 
     auto i = n->e.lower_bound(b1);
-    auto ip = i;
-    --ip;
-
+    auto j = i; // save value for later
     while (i->first <= b2) {
-      if (i->first < b2)
-        i->second = nodeReduce(i->second, p);
-      if (i->second == ip->second) {
-        auto idel = i;
-        ++i;
-        idel->second->unlink();
-        n->e.erase(idel);
-      } else {
-        ip = i;
-        ++i;
-      }
+      reduceEdge(i, p);
+      ++i;
+    }
+    dropEdgeIfExtra(n, --i); // rightmost edge
+    dropEdgeIfExtra(n, j);  // leftmost edge
+  };
+
+  void dumpSetToNode() {
+    for (auto i = setToNode.begin(); i != setToNode.end(); ++i) {
+      std::cout << "Set ";
+      i->first->dump();
+      std::cout << "Maps to Node ";
+      if (i->second)
+        i->second->dump(true);
+      else
+        std::cout << "(no Node)";
+      std::cout << "\n";
     }
   };
 };
@@ -586,7 +649,7 @@ main (int argc, char * argv[] ) {
   g.dump();
 
   Set::dumpAll();
-
+  g.dumpSetToNode();
   //-------------------------------------------------------------
 
   g.erase(5, 10, 1000);
