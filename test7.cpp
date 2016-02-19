@@ -30,18 +30,21 @@ public:
   static Set * empty() { return _empty;};
   int label() { return _label;};
 
+  ~Set() {
+    allSets.erase(this);
+  };
+
   Set(const Set &s) {    // std::cout << "Called Set copy ctor with " << s._label << std::endl;
     allSets.insert(this);
   };
 
-  Set() : _label(numSets++) {
+  Set() : s(), _label(numSets++) , hash(0) {
     allSets.insert(this);
     //    std::cout << "Called Set()\n";
   };
 
-  Set(ID p) : _label(numSets++) {
+  Set(ID p) : s(), _label(numSets++), hash(p) {
     s.insert(p);
-    hash ^= p; 
     allSets.insert(this); 
     //    std::cout << "Called Set(p) with p = " << p << std::endl;
   };
@@ -110,7 +113,7 @@ public:
     for (auto i = allSets.begin(); i != allSets.end(); ++i) {
       std::cout << "Set " << (*i)->_label << " has " << (*i)->s.size() << " elements:\n";
       for (auto j = (*i)->s.begin(); j != (*i)->s.end(); ++j) {
-        std::cout << "   Node " << *j << std::endl;
+        std::cout << "   ID " << *j << std::endl;
       }
     }
   };
@@ -149,8 +152,8 @@ struct hashSet {
 class Node {
   friend class Graph;
   typedef std::map < double, Node * > Edges;
-  Edges e;
   Set * s;
+  Edges e;
   int useCount;
 
   int label;
@@ -207,28 +210,37 @@ class Node {
     return n;
   };
 
+protected:
+
+  void _init() {
+    useCount = 0;
+    label = numNodes++;
+  }
 
 public:
 
-  Node(bool edges = true) : label(numNodes++) {
-    std::cout << "Called Node(edges) ctor with edges = " << edges << " label: " <<  label << std::endl;
-    s = Set::empty();
-    if (edges) {
-      e.insert(std::make_pair(-1.0 / 0.0, empty));
-      e.insert(std::make_pair( 1.0 / 0.0, empty));
-    }
+  
+  Node() : s(Set::empty()), e() {
+    _init();
+    e.insert(std::make_pair(-1.0 / 0.0, empty));
+    e.insert(std::make_pair( 1.0 / 0.0, empty));
   };
 
-  Node(const Node &n) : label(numNodes++) { 
+  Node(const Node &n) : s(n.s), e(n.e) { 
+    _init();
     std::cout << "Called Node copy ctor with " << n.label << std::endl;
     useCount = 0;
   };
 
-  Node(ID p) : label(numNodes++) {
-    s = new Set(p); 
-    std::cout << "Called Node (p) with p = " << p << " and label is " << label << std::endl;
+  Node(const Node *n) : s(n->s), e(n->e) {
+    _init();
   };
 
+  Node(ID p) : s(new Set(p)), e() {
+    _init();
+  };
+
+  
   void add (Point b1, Point b2, ID p);
   void remove (Point b1, Point b2, ID p);
 
@@ -244,7 +256,7 @@ public:
   static Node * empty;
   static void init() {
     Set::init();
-    empty = new Node(false);
+    empty = new Node();
   };
 
   void newEdge (Point b, Node * p) {
@@ -270,6 +282,7 @@ class Graph {
   Node * root;
 
 public:
+
   // map from sets to nodes
   std::unordered_map < Set *, Node *, hashSet, SetEqual > setToNode; 
 
@@ -287,15 +300,16 @@ public:
                                                               // create one by cloning tail and removing p from its set.
   
   void mapSet( Set * s, Node * n) {
-    setToNode.insert(std::make_pair(s, n));
+    auto p = std::make_pair(s, n);
+    setToNode.insert(p);
   };
 
   void unmapSet ( Set * s) {
     setToNode.erase(s);
   };
 
-  Graph() {
-    root = new Node;
+  Graph() : setToNode(100) {
+    root = new Node();
     mapSet(root->s, root);
   };
 
@@ -504,50 +518,6 @@ public:
     }
   };
     
-
-  // // If b1 is a new endpoint, map it to a Node including
-  // // what i maps to but augmented by {p}. (Otherwise, b1
-  // // is the same endpoint as i, so we just augment it
-  // // in the loop below.)
-
-  // if (i->first < b1) {
-  //   //    newEdgeToAugmentedNode( n, b1, i->second, p)
-  //   n->newEdge( b1, nodeAugment(i->second, p, false));
-  //   // advance to next existing endpoint; we increment twice
-  //   // to skip over the newly added endpoint at b1, since
-  //   // we have i->first < b1 < (++i)->first
-
-  //   ++i;  ++i;  // Yes, twice. Read above
-  // }
-  // // augment all but the last endpoint overlapping the interval
-
-  // while (i->first < j->first) {
-  //   //repointEdgeToAugmentedNode (i, p);
-  //   i->second = nodeAugment(i->second, p);
-  //   ++i;
-  // }
-
-  // // j, the last endpoint, requires special treatment to correctly
-  // // "end" the new segment containing {p}.
-
-  // // We have j->first <= b2:
-
-  // //    If "=", there's nothing to do, as j already maps to a node
-  // //    without {p}.
-
-  // //    If "<", we must add an endpoint at b2 which maps to the
-  // //    original Node mapped to by j (i.e. without {p}).  Then, if j
-  // //    was in [b1, b2], we need to augment its node with {p} since the
-  // //    loop above deliberately stopped before doing so.
-
-  // if (j->first < b2) {
-  //   //    newEdgeToNode(n, b2, j->second);
-  //   n->newEdge (b2,  j->second);
-  //   if (j->first >= b1)
-  //     //      repointEdgeToAugmentedNode (j, p);
-  //        j->second = nodeAugment(j->second, p);
-  // }
- 
 
   void erase (Point b1, Point b2, ID p) {
     erase(root, b1, b2, p);
