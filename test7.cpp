@@ -36,6 +36,8 @@ public:
 
   Set(const Set &s) {    // std::cout << "Called Set copy ctor with " << s._label << std::endl;
     allSets.insert(this);
+    this->s = s.s;
+    this->hash = s.hash;
   };
 
   Set() : s(), _label(numSets++) , hash(0) {
@@ -85,6 +87,7 @@ public:
       return this; 
     Set * ns = new Set(); 
     ns->s = s; 
+    ns->hash = hash;
     return ns;
   };
 
@@ -95,6 +98,7 @@ public:
     Set * ns = new Set(); 
     ns->s = s; 
     ns->s.insert(p);
+    ns->hash = hash ^ p;
     return ns;
   };
       
@@ -106,6 +110,11 @@ public:
     Set * ns = new Set(); 
     ns->s = s; 
     ns->s.erase(p);
+    if (ns->s.size() == 0) {
+      delete ns;
+      return empty();
+    }
+    ns->hash = hash ^ p;
     return ns;
   };
       
@@ -163,12 +172,14 @@ class Node {
     ++ useCount;
   };
 
-  void unlink() {
-    if (-- useCount == 0) {
-      if (s != Set::empty())
-        delete s;
-      delete this;
-    }
+  bool unlink() {
+    return -- useCount == 0;
+  };
+
+  void drop() {
+    if (s != Set::empty())
+      delete s;
+    delete this;
   };
 
   Node * clone() { 
@@ -282,6 +293,7 @@ struct SetEqual {
 
 class Graph {
   Node * root;
+  Node * empty;
 
 public:
 
@@ -302,19 +314,19 @@ public:
                                                               // create one by cloning tail and removing p from its set.
   
   void mapSet( Set * s, Node * n) {
-    if (s == Set::empty())
-      return;
     auto p = std::make_pair(s, n);
     setToNode.insert(p);
   };
 
   void unmapSet ( Set * s) {
-    setToNode.erase(s);
+    if (s != Set::empty())
+      setToNode.erase(s);
   };
 
   Graph() : setToNode(100) {
     root = new Node();
-    mapSet(root->s, root);
+    empty = new Node();
+    mapSet(empty->s, empty);
   };
 
   Node * nodeForSet (Set * s) {
@@ -331,69 +343,6 @@ public:
     mapSet(s, nn);
     return nn;
   };
-
-  Node * nodeAugment (Node * n, ID p, bool doLinks = true) {
-    // return the node for the set:  n->s U {p}
-    // If it doesn't already exist, clone n then
-    // augment it by p and return that.
-    Set * s = n->s->cloneAugment(p);
-    auto i = setToNode.find(s);
-    if (i != setToNode.end()) {
-      delete s;
-      if (doLinks) {
-        // transfer one usage from original node to augmented one
-        i->second->link();
-        n->unlink();
-      }
-      return i->second;
-    }
-    // if (n->useCount == 1) {
-    //   // special case to save work
-    //   unmapSet(n->s);
-    //   n->s->augment(p);
-    //   mapSet(n->s, n);
-    //   delete s;
-    //   return n;
-    // }
-    Node * nn = new Node();
-    nn->s = s;
-    mapSet(s, nn);
-    if (doLinks) {
-      nn->link();
-      n->unlink();
-    }
-    return nn;
-  };
-
-
-  // Node * cloneAugment (Node * n, ID p) {
-  //   // return the node for the set:  n->s U {p}
-  //   // If it doesn't already exist, clone n then
-  //   // augment it by p and return that.
-  //   Set * s = n->s->cloneAugment(p);
-  //   auto i = setToNode.find(s);
-  //   if (i != setToNode.end()) {
-  //     // already have a node for this set
-  //     delete s;
-  //     return i->second;
-  //   }
-  //   // if (n->useCount == 1) {
-  //   //   // special case to save work
-  //   //   unmapSet(n->s);
-  //   //   n->s->augment(p);
-  //   //   mapSet(n->s, n);
-  //   //   delete s;
-  //   //   return n;
-  //   // }
-  //   Node * nn = new Node();
-  //   nn->s = s;
-  //   mapSet(s, nn);
-  //   if (doLinks) {
-  //     nn->link();
-  //     n->unlink();
-  //   }
-  //   return nn;
-  // };
 
   Node * nodeReduce (Node * n, ID p) {
     // return the node for the set:  n->s \ {p}
@@ -472,6 +421,13 @@ public:
     return ++i;
   };
 
+  void unlinkNode (Node *n) {
+    if (n->unlink() && n != empty) {
+      unmapSet(n->s);
+      n->drop();
+    };
+  };
+
   void augmentEdge(Node::Edges::iterator i, ID p) {
     // given an existing edge, augment its tail node by p
 
@@ -480,8 +436,8 @@ public:
     auto j = setToNode.find(s);
     if (j != setToNode.end()) {
       // already have a node for this set
+      unlinkNode(n);
       delete s;
-      n->unlink();
       i->second = j->second;
       i->second->link();
       return;
@@ -489,7 +445,7 @@ public:
     if (n->useCount == 1) {
       // special case to save work: re-use this node
       unmapSet(n->s);
-      n->s->augment(p);
+      n->s = n->s->augment(p);
       mapSet(n->s, n);
       delete s;
       return;
@@ -500,7 +456,7 @@ public:
     nn->s = s;
     mapSet(s, nn);
     // adjust incoming edge counts on old and new nodes
-    n->unlink();
+    unlinkNode(n);
     nn->link();
     i->second = nn;
   };
@@ -508,9 +464,6 @@ public:
 
   void reduceEdge(Node::Edges::iterator i, ID p) {
     // given an existing edge, reduce its tail node by p
-    // caller must guarantee this is not called
-    // on an edge which differs from its predecessor
-    // only by having p.
 
     Node * n = i->second;
     if (n->s->s.count(p) == 0)
@@ -519,8 +472,9 @@ public:
     auto j = setToNode.find(s);
     if (j != setToNode.end()) {
       // already have a node for this set
-      delete s;
-      n->unlink();
+      if (s != Set::empty())
+        delete s;
+      unlinkNode(n);
       i->second = j->second;
       i->second->link();
       return;
@@ -528,9 +482,10 @@ public:
     if (n->useCount == 1) {
       // special case to save work: re-use this node
       unmapSet(n->s);
-      auto ss = n->s->reduce(p);
-      mapSet(ss, n);
-      delete s;
+      n->s = n->s->reduce(p);
+      mapSet(n->s, n);
+      if (s != Set::empty())
+        delete s;
       return;
     }
     // create new node with reduced set, but preserving
@@ -539,7 +494,7 @@ public:
     nn->s = s;
     mapSet(s, nn);
     // adjust incoming edge counts on old and new nodes
-    n->unlink();
+    unlinkNode(n);
     nn->link();
     i->second = nn;
   };
@@ -554,8 +509,8 @@ public:
 
     auto j = i;
     --j;
-    if (i->second->s == j->second->s) {
-      i->second->unlink();
+    if (* (i->second->s) == * (j->second->s)) {
+      unlinkNode(i->second);
       n->e.erase(i);
     };
   };
@@ -609,6 +564,21 @@ public:
       std::cout << "\n";
     }
   };
+  
+  void validateSetToNode() {
+    // verify that each set maps to a node that has it as a set!
+    for (auto i = setToNode.begin(); i != setToNode.end(); ++i) {
+      if (! i->second) {
+        std::cout << "Null Node Ptr for set:" << std::endl;
+        i->first->dump();
+      } else if (i->second->s != i->first) {
+        std::cout << "Invalid setToNode map:" << std::endl;
+        dumpSetToNode();
+        return;
+      }
+    }
+    std::cout << "setToNode is okay" << std::endl;
+  };
 };
 
 main (int argc, char * argv[] ) {
@@ -649,44 +619,60 @@ main (int argc, char * argv[] ) {
   g.dump();
 
   Set::dumpAll();
-  g.dumpSetToNode();
+  g.validateSetToNode();
+
   //-------------------------------------------------------------
 
   g.erase(5, 10, 1000);
   g.dump();
+  Set::dumpAll();
+  g.validateSetToNode();
 
   g.erase(14, 16, 1007);
   g.dump();
+  Set::dumpAll();
+  g.validateSetToNode();
   
   g.erase(3, 13, 1003);
   g.dump();
+  Set::dumpAll();
+  g.validateSetToNode();
   
   g.erase(1, 2, 1005);
   g.dump();
+  Set::dumpAll();
+  g.validateSetToNode();
 
   g.erase(7, 12, 1001);
   g.dump();
+  Set::dumpAll();
+  g.validateSetToNode();
   
   g.erase(4, 9, 1002);
   g.dump();
+  Set::dumpAll();
+  g.validateSetToNode();
 
   g.erase(7, 9, 1004);
   g.dump();
+  Set::dumpAll();
+  g.validateSetToNode();
   
   g.erase(12, 19, 1009);
   g.dump();
+  Set::dumpAll();
+  g.validateSetToNode();
 
   g.erase(0, 1, 1006);
   g.dump();
+  Set::dumpAll();
+  g.validateSetToNode();
   
   g.erase(14, 18, 1008);
   g.dump();
+  Set::dumpAll();
+  g.validateSetToNode();
 
   Set::dumpAll();
   
 };
-
-  
-
-
-
