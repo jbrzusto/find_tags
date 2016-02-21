@@ -168,6 +168,8 @@ class Node {
   int label;
   static int numNodes;
 
+  static Node * _empty;
+
   void link() {
     ++ useCount;
   };
@@ -189,7 +191,7 @@ class Node {
   };
 
   Node * augment (ID p) {
-    if (this == empty)
+    if (this == _empty)
       return new Node(p);
     if (s == Set::empty())
       s = new Set(p);
@@ -199,12 +201,12 @@ class Node {
   };
 
   Node * reduce (ID p) {
-    if (this == empty || s == Set::empty())
+    if (this == _empty || s == Set::empty())
       throw std::runtime_error("called reduce on Node::empty");
 
     s = s->reduce(p);
     if (s == Set::empty())
-      return empty;
+      return _empty;
 
     return this;
   };
@@ -230,11 +232,19 @@ protected:
 
 public:
 
+  static void init() {
+    Set::init();
+    _empty = new Node();
+  };
+
+  static Node * empty() {
+    return _empty;
+  };
   
   Node() : s(Set::empty()), e() {
     _init();
-    e.insert(std::make_pair(-1.0 / 0.0, empty));
-    e.insert(std::make_pair( 1.0 / 0.0, empty));
+    e.insert(std::make_pair(-1.0 / 0.0, _empty));
+    e.insert(std::make_pair( 1.0 / 0.0, _empty));
   };
 
   Node(const Node &n) : s(n.s), e(n.e) { 
@@ -266,12 +276,6 @@ public:
     }
   };
 
-  static Node * empty;
-  static void init() {
-    Set::init();
-    empty = new Node();
-  };
-
   void newEdge (Point b, Node * p) {
     e.insert (std::make_pair(b, p));
     p->link();
@@ -281,7 +285,7 @@ public:
 int Node::numNodes = 0;
 int Set::numSets = 0;
 
-Node * Node::empty = 0;
+Node * Node::_empty = 0;
 
 struct SetEqual {
   // comparison function used in DFA::setToNode
@@ -293,7 +297,6 @@ struct SetEqual {
 
 class Graph {
   Node * root;
-  Node * empty;
 
 public:
 
@@ -325,8 +328,7 @@ public:
 
   Graph() : setToNode(100) {
     root = new Node();
-    empty = new Node();
-    mapSet(empty->s, empty);
+    mapSet(Set::empty(), Node::empty());
   };
 
   Node * nodeForSet (Set * s) {
@@ -422,7 +424,7 @@ public:
   };
 
   void unlinkNode (Node *n) {
-    if (n->unlink() && n != empty) {
+    if (n->unlink() && n != Node::empty()) {
       unmapSet(n->s);
       n->drop();
     };
@@ -474,9 +476,9 @@ public:
       // already have a node for this set
       if (s != Set::empty())
         delete s;
-      unlinkNode(n);
       i->second = j->second;
       i->second->link();
+      unlinkNode(n);
       return;
     }
     if (n->useCount == 1) {
@@ -586,34 +588,34 @@ main (int argc, char * argv[] ) {
   Graph g;
 
   g.insert(5, 10, 1000);
-  g.dump();
+  // g.dump();
   Set::dumpAll();
 
   g.insert(7, 12, 1001);
-  g.dump();
+  // g.dump();
   
   g.insert(4, 9, 1002);
-  g.dump();
+  // g.dump();
   
   g.insert(3, 13, 1003);
-  g.dump();
+  // g.dump();
 
   Set::dumpAll();
 
   g.insert(7, 9, 1004);
-  g.dump();
+  // g.dump();
   
   g.insert(1, 2, 1005);
-  g.dump();
+  // g.dump();
   
   g.insert(0, 1, 1006);
-  g.dump();
+  // g.dump();
   
   g.insert(14, 16, 1007);
-  g.dump();
+  // g.dump();
   
   g.insert(14, 18, 1008);
-  g.dump();
+  // g.dump();
   
   g.insert(12, 19, 1009);
   g.dump();
