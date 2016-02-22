@@ -1,3 +1,8 @@
+// FIXME: if we limit the tags read in to 839, the
+// random add/remove algorithm runs indefinitely without any
+// problem.  If we allow 840 tags, it segfaults quickly.
+// WTF???
+
 #include <set>
 #include <map>
 #include <iostream>
@@ -8,6 +13,10 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <random>
+
+
+#include "Tag_Database.hpp"
 
 class Node;
 typedef double Point;
@@ -706,7 +715,6 @@ public:
         return;
       }
     }
-    std::cout << "setToNode is okay" << std::endl;
   };
 
   void  viz() {
@@ -796,12 +804,17 @@ public:
 
 };
 
+#include <stdlib.h>
+
 main (int argc, char * argv[] ) {
   Node::init();
   Graph g("test");
 
   int n = 0;
 
+  int maxnt = 840;
+  if (argc > 1)
+    maxnt = atoi(argv[1]);
 
   g.insert(5, 10, TagPhase(1000, 1));
   // g.dump();
@@ -861,52 +874,42 @@ main (int argc, char * argv[] ) {
 
   g.erase(5, 10, TagPhase(1000, 1));
   g.viz();
-  Set::dumpAll();
-  g.validateSetToNode();
+    g.validateSetToNode();
 
   g.erase(14, 16, TagPhase(1007, 1));
   g.viz();
-  Set::dumpAll();
-  g.validateSetToNode();
+    g.validateSetToNode();
   
   g.erase(3, 13, TagPhase(1003, 1));
   g.viz();
-  Set::dumpAll();
-  g.validateSetToNode();
+    g.validateSetToNode();
   
   g.erase(1, 2, TagPhase(1005, 1));
   g.viz();
-  Set::dumpAll();
-  g.validateSetToNode();
+    g.validateSetToNode();
 
   g.erase(7, 12, TagPhase(1001, 1));
   g.viz();
-  Set::dumpAll();
-  g.validateSetToNode();
+    g.validateSetToNode();
   
   g.erase(4, 9, TagPhase(1002, 1));
   g.viz();
-  Set::dumpAll();
-  g.validateSetToNode();
+    g.validateSetToNode();
 
   g.erase(7, 9, TagPhase(1004, 1));
   g.viz();
-  Set::dumpAll();
-  g.validateSetToNode();
+    g.validateSetToNode();
   
   g.erase(12, 19, TagPhase(1009, 1));
   g.viz();
-  Set::dumpAll();
-  g.validateSetToNode();
+    g.validateSetToNode();
 
   g.erase(0, 1, TagPhase(1006, 1));
   g.viz();
-  Set::dumpAll();
-  g.validateSetToNode();
+    g.validateSetToNode();
   
   g.erase(14, 18, TagPhase(1008, 1));
   g.viz();
-  Set::dumpAll();
   g.validateSetToNode();
 
   g.delTag(4, T2, tol, timeFuzz, 500);
@@ -914,5 +917,63 @@ main (int argc, char * argv[] ) {
   g.viz();
 
   g.validateSetToNode();
+
+  Tag_Database T("/sgm/2015_normalized_full_motus_nodups_database.sqlite");
+
+  auto ts = T.get_tags_at_freq(Nominal_Frequency_kHz(166380));
+
+  int nt = ts->size();
+  std::cout << "Got " << nt << " tags\n";
+
+  // FIXME: just use the first 10 tags
+  nt = maxnt;
+
+  std::vector < Known_Tag > tags (nt);
+  int i = 0;
+  for (auto j = ts->begin(); j != ts->end() && i < nt; ++j)
+    tags[i++] = **j;
+
+  for (i = 1; i < nt; ++i) {
+    for (auto ii = 0; ii < i; ++ii) {
+      if (tags[i].gaps[0] == tags[ii].gaps[0] 
+          &&
+          tags[i].gaps[1] == tags[ii].gaps[1] 
+          &&
+          tags[i].gaps[2] == tags[ii].gaps[2] 
+          &&
+          tags[i].gaps[3] == tags[ii].gaps[3]
+          )
+        std::cout << "Tag dups: " << i << "," << ii << std::endl;
+    }
+  }
+
+  std::vector < bool > inTree(nt);
+
+  std::random_device rd;     // only used once to initialise (seed) engine
+  std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
+  std::uniform_int_distribution<int> uni(0, nt - 1); // guaranteed unbiased
   
+  tol = 0.0015;
+  timeFuzz = 0;
+
+  int numTags = 1;
+  for(int numEvts = 0; ; ++ numEvts) {
+    auto r = uni(rng);
+    std::vector < double > T;
+    for (i = 0; i < 4; ++i)
+      T.push_back(tags[r].gaps[i]);
+    if (inTree[r]) {
+      g.delTag(tags[r].motusID, T, tol, timeFuzz, 60);
+      inTree[r] = false;
+      --numTags;
+    } else {
+      g.addTag(tags[r].motusID, T, tol, timeFuzz, 60);
+      inTree[r] = true;
+      ++numTags;
+    };
+    g.validateSetToNode();
+    if (numEvts % 100 == 0)
+      std::cout << "After "  << numEvts << "events,  # tags in tree is " << numTags << std::endl;
+  }
+  g.viz();
 };

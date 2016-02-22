@@ -11,7 +11,7 @@
 
 ## PRODUCTION FLAGS:
 CPPFLAGS=-Wall  -O3 -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS)
-LDFLAGS=-lsqlite3 -lrt
+LDFLAGS=-dl -lrt
 PROGRAM_VERSION=\""$(shell git describe)\""
 PROGRAM_BUILD_TS=$(shell date +%s)
 
@@ -53,3 +53,9 @@ find_tags_motus.o: find_tags_motus.cpp find_tags_common.hpp Freq_History.hpp Fre
 
 find_tags_motus: Freq_Setting.o Freq_History.o DFA_Node.o DFA_Graph.o Known_Tag.o Tag_Database.o Pulse.o Tag_Candidate.o Tag_Finder.o Rate_Limiting_Tag_Finder.o find_tags_motus.o Tag_Foray.o DB_Filer.o
 	g++ $(PROFILING) -o find_tags_motus $^ $(LDFLAGS)
+
+sqlite3.o: sqlite3.c
+	gcc -c -o sqlite3.o -O2 sqlite3.c
+
+test7: test7.cpp Known_Tag.o Tag_Database.o sqlite3.o Freq_Setting.o
+	g++ -O2 -std=c++0x  -g3  -o test7 test7.cpp Tag_Database.o sqlite3.o Known_Tag.o Freq_Setting.o -lrt -ldl
