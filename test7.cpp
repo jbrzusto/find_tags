@@ -6,11 +6,31 @@
 #include <memory>
 #include <unordered_map>
 
+
 class Node;
 typedef double Point;
-typedef int ID;
+typedef int TagID;
+typedef short Phase;
+typedef std::pair < TagID, Phase > TagPhase;
+typedef std::unordered_multimap < TagID, Phase > TagPhaseSet;
+
+TagPhase TP(TagID t, Phase p) {
+  return std::make_pair(t, p);
+};
+
+
+template<class CharType, class CharTraits>
+std::basic_ostream<CharType, CharTraits> &operator<<
+(std::basic_ostream<CharType, CharTraits> &stream, TagPhase const& value)
+{
+  if (value.second >= 0)
+    return stream << "# " << value.first << " (" << value.second << ") ";
+  return stream;
+};
+
+
 class Set;
-typedef size_t SetHash;
+typedef size_t TagPhaseSetHash;
 
 class Graph;
 
@@ -19,9 +39,9 @@ class Set {
   friend class Graph;
   friend class hashSet;
   friend class SetEqual;
-  std::set < ID > s;
+  TagPhaseSet s;
   int _label;
-  SetHash hash;
+  TagPhaseSetHash hash;
   static int numSets;
   static Set * _empty;
   static std::set < Set * > allSets;
@@ -45,42 +65,58 @@ public:
     //    std::cout << "Called Set()\n";
   };
 
-  Set(ID p) : s(), _label(numSets++), hash(p) {
+  Set(TagPhase p) : s(), _label(numSets++), hash(hashTP(p)) {
     s.insert(p);
     allSets.insert(this); 
     //    std::cout << "Called Set(p) with p = " << p << std::endl;
   };
 
-  bool exists( std::set < ID > s ) {
-    for (auto i = allSets.begin(); i != allSets.end(); ++i)
-      if ((*i) -> s == s)
-        return true;
-    return false;
-  };
-
-  Set * augment(ID p) { 
+  Set * augment(TagPhase p) { 
     // augment this set with p, unless this set is empty
     // in which case return a new set with just p;
     if(this == _empty) 
       return new Set(p);
     s.insert(p);
-    hash ^= p;
+    hash ^= hashTP(p);
     return this;
   };
 
-  Set * reduce(ID p) { 
+  Set * reduce(TagPhase p) { 
     // remove p from set; return pointer to empty set if 
     // reduction leads to that
     if(this == _empty) 
       throw std::runtime_error("Reducing empty set"); 
-    s.erase(p);
-    hash ^= p;
+    erase(p);
+    hash ^= hashTP(p);
     if (s.size() == 0) {
       delete this;
       return _empty;
     }
     return this;
   };
+
+  void erase(TagPhase p) {
+    // erase specific element p from multimap; i.e. match
+    // by both key and value
+    auto r = s.equal_range(p.first);
+    for (auto i = r.first; i != r.second; ++i) {
+      if (i->second == p.second) {
+        s.erase(i);
+        return;
+      }
+    }
+  };
+
+  int count(TagPhase p) {
+    // count specific element p from multimap; i.e. match
+    // by both key and value; returns 0 or 1
+    auto r = s.equal_range(p.first);
+    for (auto i = r.first; i != r.second; ++i)
+      if (i->second == p.second)
+        return 1;
+    return 0;
+  };
+    
 
   Set * clone() {
     if (this == _empty) 
@@ -91,30 +127,30 @@ public:
     return ns;
   };
 
-  Set * cloneAugment(ID p) {
+  Set * cloneAugment(TagPhase p) {
     // return pointer to clone of this Set, augmented by p
     if (this == _empty)
       return new Set(p);
     Set * ns = new Set(); 
     ns->s = s; 
     ns->s.insert(p);
-    ns->hash = hash ^ p;
+    ns->hash = hash ^ hashTP(p);
     return ns;
   };
       
 
-  Set * cloneReduce(ID p) {
+  Set * cloneReduce(TagPhase p) {
     // return pointer to clone of this Set, reduced by p
-    if (s.count(p) == 0)
+    if (count(p) == 0)
       throw std::runtime_error("Set::cloneReduce(p) called with p not in set");
     Set * ns = new Set(); 
     ns->s = s; 
-    ns->s.erase(p);
+    ns->erase(p);
     if (ns->s.size() == 0) {
       delete ns;
       return empty();
     }
-    ns->hash = hash ^ p;
+    ns->hash = hash ^ hashTP(p);
     return ns;
   };
       
@@ -122,7 +158,7 @@ public:
     for (auto i = allSets.begin(); i != allSets.end(); ++i) {
       std::cout << "Set " << (*i)->_label << " has " << (*i)->s.size() << " elements:\n";
       for (auto j = (*i)->s.begin(); j != (*i)->s.end(); ++j) {
-        std::cout << "   ID " << *j << std::endl;
+        std::cout << "   TagPhase " << *j << std::endl;
       }
     }
   };
@@ -145,6 +181,11 @@ public:
 
   bool operator== (const Set & s) const {
     return hash == s.hash && this->s == s.s;
+  };
+
+private:
+  static TagPhaseSetHash hashTP (TagPhase tp) {
+    return tp.first * tp.second;
   };
 };
 
@@ -190,7 +231,7 @@ class Node {
     return n;
   };
 
-  Node * augment (ID p) {
+  Node * augment (TagPhase p) {
     if (this == _empty)
       return new Node(p);
     if (s == Set::empty())
@@ -200,7 +241,7 @@ class Node {
     return this;
   };
 
-  Node * reduce (ID p) {
+  Node * reduce (TagPhase p) {
     if (this == _empty || s == Set::empty())
       throw std::runtime_error("called reduce on Node::empty");
 
@@ -211,7 +252,7 @@ class Node {
     return this;
   };
       
-  Node * cloneAugment (ID p) {
+  Node * cloneAugment (TagPhase p) {
     // if (this == empty)
     //   throw std::runtime_error("called cloneAugment on Node::empty");
     std::cout << "calling cloneAugment on " << label << " for " << s->label() << " with " << p << std::endl;
@@ -257,13 +298,13 @@ public:
     _init();
   };
 
-  Node(ID p) : s(new Set(p)), e() {
+  Node(TagPhase p) : s(new Set(p)), e() {
     _init();
   };
 
   
-  void add (Point b1, Point b2, ID p);
-  void remove (Point b1, Point b2, ID p);
+  void add (Point b1, Point b2, TagPhase p);
+  void remove (Point b1, Point b2, TagPhase p);
 
   void dump(bool skipEdges=false) {
     std::cout << "Node: " << label << " has " << e.size() << " entries in edge map:\n";
@@ -281,7 +322,6 @@ public:
     p->link();
   };
 };
-
 int Node::numNodes = 0;
 int Set::numSets = 0;
 
@@ -305,14 +345,14 @@ public:
 
   // void insert (DFA_Node *n, const ID &t); // insert tagphase to non-root node
   // void erase (DFA_Node *n, const ID &t); // erase tagphase from non-root node
-  void insert_rec (Node *n, Point lo, Point hi, ID tFrom, ID tTo); // recursively insert a transition from tFrom to tTo
-  void erase_rec (Node *n, Point lo, Point hi, ID tFrom, ID tTo); // recursively erase all transitions from tFrom to tTo
+  void insert_rec (Node *n, Point lo, Point hi, TagPhase tFrom, TagPhase tTo); // recursively insert a transition from tFrom to tTo
+  void erase_rec (Node *n, Point lo, Point hi, TagPhase tFrom, TagPhase tTo); // recursively erase all transitions from tFrom to tTo
   Node * advance (Node *n, Point dt);
 
   void removeEdge (Node * head, Point b, Node * tail); // remove edge at point b from head to tail
-  void augmentEdge (Node * head, Point b, Node * tail, ID p); // existing edge from head at point b will now go to node for set union(tail->s, {p})
+  void augmentEdge (Node * head, Point b, Node * tail, TagPhase p); // existing edge from head at point b will now go to node for set union(tail->s, {p})
                                                               // if there is no node yet for that set, create one by cloning tail.
-  void reduceEdge (Node * head, Point b, Node * tail, ID p);  // existing edge from head at point b will now go to node for set diff(tail->s, {p})
+  void reduceEdge (Node * head, Point b, Node * tail, TagPhase p);  // existing edge from head at point b will now go to node for set diff(tail->s, {p})
                                                               // use count for node tail will decrease by one. If no node that set, 
                                                               // create one by cloning tail and removing p from its set.
   
@@ -346,7 +386,7 @@ public:
     return nn;
   };
 
-  Node * nodeReduce (Node * n, ID p) {
+  Node * nodeReduce (Node * n, TagPhase p) {
     // return the node for the set:  n->s \ {p}
     // If it doesn't already exist, clone n then
     // reduce it by p and return that.
@@ -377,26 +417,26 @@ public:
   };
 
 
-  Node * addEdge (Node * head, Point b, Set *s, ID p) {
+  Node * addEdge (Node * head, Point b, Set *s, TagPhase p) {
     // add edge from head at point b to node for set union(s, {p}); return pointer to tail node
   };
 
-  void insert (const ID &t) {
+  void insert (const TagPhase &t) {
     root->s->augment(t);
     // note: we don't remap root in setToNode, since we
     // never try to lookup the root node from its set.
   };
 
-  void erase (const ID &t) {
+  void erase (const TagPhase &t) {
     root->s->reduce(t);
     // note: we don't remap root in setToNode
   };
 
-  void insert (Point b1, Point b2, ID p) {
+  void insert (Point b1, Point b2, TagPhase p) {
     insert (root, b1, b2, p);
   };
 
-  void erase (Point b1, Point b2, ID p) {
+  void erase (Point b1, Point b2, TagPhase p) {
     erase(root, b1, b2, p);
   };
 
@@ -430,7 +470,7 @@ public:
     };
   };
 
-  void augmentEdge(Node::Edges::iterator i, ID p) {
+  void augmentEdge(Node::Edges::iterator i, TagPhase p) {
     // given an existing edge, augment its tail node by p
 
     Node * n = i->second;
@@ -464,11 +504,11 @@ public:
   };
 
 
-  void reduceEdge(Node::Edges::iterator i, ID p) {
+  void reduceEdge(Node::Edges::iterator i, TagPhase p) {
     // given an existing edge, reduce its tail node by p
 
     Node * n = i->second;
-    if (n->s->s.count(p) == 0)
+    if (n->s->count(p) == 0)
       return;
     Set * s = n->s->cloneReduce(p);
     auto j = setToNode.find(s);
@@ -517,7 +557,7 @@ public:
     };
   };
 
-  void insert (Node *n, Point b1, Point b2, ID p)
+  void insert (Node *n, Point b1, Point b2, TagPhase p)
   {
     // From the node at n, add appropriate edges to other nodes
     // given that the segment [b1, b2] is being augmented by p.
@@ -538,7 +578,7 @@ public:
     }
   };
     
-  void erase (Node *n, Point b1, Point b2, ID p) {
+  void erase (Node *n, Point b1, Point b2, TagPhase p) {
     // for any edges from n at points in the range [b1, b2]
     // remove p from the tail node.
     // If edges at b1 and/or b2 become redundant after 
@@ -587,37 +627,37 @@ main (int argc, char * argv[] ) {
   Node::init();
   Graph g;
 
-  g.insert(5, 10, 1000);
+  g.insert(5, 10, TP(1000, 1));
   // g.dump();
   Set::dumpAll();
 
-  g.insert(7, 12, 1001);
+  g.insert(7, 12, TP(1001, 1));
   // g.dump();
   
-  g.insert(4, 9, 1002);
+  g.insert(4, 9, TP(1002, 1));
   // g.dump();
   
-  g.insert(3, 13, 1003);
+  g.insert(3, 13, TP(1003, 1));
   // g.dump();
 
   Set::dumpAll();
 
-  g.insert(7, 9, 1004);
+  g.insert(7, 9, TP(1004, 1));
   // g.dump();
   
-  g.insert(1, 2, 1005);
+  g.insert(1, 2, TP(1005, 1));
   // g.dump();
   
-  g.insert(0, 1, 1006);
+  g.insert(0, 1, TP(1006, 1));
   // g.dump();
   
-  g.insert(14, 16, 1007);
+  g.insert(14, 16, TP(1007, 1));
   // g.dump();
   
-  g.insert(14, 18, 1008);
+  g.insert(14, 18, TP(1008, 1));
   // g.dump();
   
-  g.insert(12, 19, 1009);
+  g.insert(12, 19, TP(1009, 1));
   g.dump();
 
   Set::dumpAll();
@@ -625,52 +665,52 @@ main (int argc, char * argv[] ) {
 
   //-------------------------------------------------------------
 
-  g.erase(5, 10, 1000);
+  g.erase(5, 10, TP(1000, 1));
   g.dump();
   Set::dumpAll();
   g.validateSetToNode();
 
-  g.erase(14, 16, 1007);
+  g.erase(14, 16, TP(1007, 1));
   g.dump();
   Set::dumpAll();
   g.validateSetToNode();
   
-  g.erase(3, 13, 1003);
+  g.erase(3, 13, TP(1003, 1));
   g.dump();
   Set::dumpAll();
   g.validateSetToNode();
   
-  g.erase(1, 2, 1005);
+  g.erase(1, 2, TP(1005, 1));
   g.dump();
   Set::dumpAll();
   g.validateSetToNode();
 
-  g.erase(7, 12, 1001);
+  g.erase(7, 12, TP(1001, 1));
   g.dump();
   Set::dumpAll();
   g.validateSetToNode();
   
-  g.erase(4, 9, 1002);
+  g.erase(4, 9, TP(1002, 1));
   g.dump();
   Set::dumpAll();
   g.validateSetToNode();
 
-  g.erase(7, 9, 1004);
+  g.erase(7, 9, TP(1004, 1));
   g.dump();
   Set::dumpAll();
   g.validateSetToNode();
   
-  g.erase(12, 19, 1009);
+  g.erase(12, 19, TP(1009, 1));
   g.dump();
   Set::dumpAll();
   g.validateSetToNode();
 
-  g.erase(0, 1, 1006);
+  g.erase(0, 1, TP(1006, 1));
   g.dump();
   Set::dumpAll();
   g.validateSetToNode();
   
-  g.erase(14, 18, 1008);
+  g.erase(14, 18, TP(1008, 1));
   g.dump();
   Set::dumpAll();
   g.validateSetToNode();
