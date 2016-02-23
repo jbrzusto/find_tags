@@ -1,17 +1,3 @@
-// UseCount appears to be too small; here's an example:
-//    Unlink Node(2650) for set \n# 11501 (1) 
-//    Unlink Node(2651) for set \n# 11501 (1) \n# 17061 (1) 
-//    Unlink Node(2151) for set \n# 17061 (2) 
-//    Unlink Node(2152) for set \n# 17061 (3) 
-// Note that 17061 had been most recently added, so that the
-// indegree of node 2651 should not have been zero after
-// removing the link from the node from the root node.
-// (where phase(11501)=0)
-// FIXME: if we limit the tags read in to 839, the
-// random add/remove algorithm runs indefinitely without any
-// problem.  If we allow 840 tags, it segfaults quickly.
-// WTF???
-
 #include <set>
 #include <map>
 #include <iostream>
@@ -23,7 +9,6 @@
 #include <unordered_map>
 #include <string>
 #include <random>
-
 
 #include "Tag_Database.hpp"
 
@@ -68,6 +53,7 @@ class Set {
   int _label;
   TagPhaseSetHash hash;
   static int numSets;
+  static int maxLabel;
   static Set * _empty;
   static std::set < Set * > allSets;
 
@@ -77,23 +63,28 @@ public:
 
   ~Set() {
     allSets.erase(this);
+    --numSets;
   };
 
-  Set(const Set &s) {    // std::cout << "Called Set copy ctor with " << s._label << std::endl;
+  static int getNumSets() {
+    return numSets;
+  };
+  
+  Set() : s(), _label(maxLabel++) , hash(0) {
     allSets.insert(this);
-    this->s = s.s;
-    this->hash = s.hash;
+    ++numSets;
+#ifdef DEBUG
+    std::cout << "Called Set()\n";
+#endif
   };
 
-  Set() : s(), _label(numSets++) , hash(0) {
-    allSets.insert(this);
-    //    std::cout << "Called Set()\n";
-  };
-
-  Set(TagPhase p) : s(), _label(numSets++), hash(hashTP(p)) {
+  Set(TagPhase p) : s(), _label(maxLabel++), hash(hashTP(p)) {
     s.insert(p);
     allSets.insert(this); 
-    //    std::cout << "Called Set(p) with p = " << p << std::endl;
+    ++numSets;
+#ifdef DEBUG
+    std::cout << "Called Set(p) with p = " << p << std::endl;
+#endif
   };
 
   Set * augment(TagPhase p) { 
@@ -144,16 +135,6 @@ public:
       if (i->second == p.second)
         return 1;
     return 0;
-  };
-    
-
-  Set * clone() {
-    if (this == _empty) 
-      return this; 
-    Set * ns = new Set(); 
-    ns->s = s; 
-    ns->hash = hash;
-    return ns;
   };
 
   Set * cloneAugment(TagPhase p) {
@@ -206,6 +187,7 @@ public:
     allSets = std::set < Set * > ();
     _empty = new Set();
     allSets.insert(_empty);
+    ++numSets;
   };
 
   bool operator== (const Set & s) const {
@@ -227,6 +209,9 @@ struct hashSet {
     return  x ? x->hash : 0;
   };
 };
+
+int Set::numSets = 0;
+int Set::maxLabel = 0;
 
 class Node {
   friend class Graph;
@@ -258,53 +243,7 @@ class Node {
     --numNodes;
     delete this;
   };
-
-  Node * clone() { 
-#ifdef DEBUG
-    std::cout << "Cloning node " << label << std::endl;
-#endif
-    Node * n = new Node();
-    n->s = s->clone(); 
-    for (auto i = e.begin(); i != e.end(); ++i)
-      i->second->link();
-    return n;
-  };
-
-  Node * augment (TagPhase p) {
-    if (this == _empty)
-      return new Node(p);
-    if (s == Set::empty())
-      s = new Set(p);
-    else
-      s->augment(p);
-    return this;
-  };
-
-  Node * reduce (TagPhase p) {
-    if (this == _empty || s == Set::empty())
-      throw std::runtime_error("called reduce on Node::empty");
-
-    s = s->reduce(p);
-    if (s == Set::empty())
-      return _empty;
-
-    return this;
-  };
       
-  Node * cloneAugment (TagPhase p) {
-    // if (this == empty)
-    //   throw std::runtime_error("called cloneAugment on Node::empty");
-#ifdef DEBUG
-    std::cout << "calling cloneAugment on " << label << " for " << s->label() << " with " << p << std::endl;
-#endif
-    Node * n = clone();
-    if (n->s == Set::empty())
-      n->s = new Set(p);
-    else
-      n->s->augment(p);
-    return n;
-  };
-
 protected:
 
   void _init() {
@@ -322,8 +261,7 @@ public:
   static void init() {
     Set::init();
     _empty = new Node();
-    //    _empty->e.insert(std::make_pair(-1.0 / 0.0, _empty));
-    //    _empty->e.insert(std::make_pair( 1.0 / 0.0, _empty));
+    ++numNodes;
   };
 
   static Node * empty() {
@@ -332,14 +270,6 @@ public:
   
   Node() : s(Set::empty()), e() {
     _init();
-  };
-
-  Node(const Node &n) : s(n.s), e(n.e) { 
-    _init();
-#ifdef DEBUG
-    std::cout << "Called Node copy ctor with " << n.label << std::endl;
-#endif
-    useCount = 0;
   };
 
   Node(const Node *n) : s(n->s), e(n->e), useCount(0) {
@@ -351,16 +281,9 @@ public:
       i->second->link();
   };
 
-  Node(TagPhase p) : s(new Set(p)), e() {
-    _init();
-  };
-
   static int getNumNodes() {
     return numNodes;
   };
-
-  void add (Point lo, Point hi, TagPhase p);
-  void remove (Point lo, Point hi, TagPhase p);
 
   void dump(bool skipEdges=false) {
     std::cout << "Node: " << label << " has " << e.size() << " entries in edge map:\n";
@@ -373,15 +296,9 @@ public:
     }
   };
 
-  void newEdge (Point b, Node * p) {
-    e.insert (std::make_pair(b, p));
-    p->link();
-  };
 };
 int Node::numNodes = 0;
 int Node::maxLabel = 0;
-int Set::numSets = 0;
-
 Node * Node::_empty = 0;
 
 struct SetEqual {
@@ -403,22 +320,17 @@ class Graph {
 
 public:
 
-
-  // void insert (DFA_Node *n, const ID &t); // insert tagphase to non-root node
-  // void erase (DFA_Node *n, const ID &t); // erase tagphase from non-root node
-  // void insertRec (Node *n, Point lo, Point hi, TagPhase tFrom, TagPhase tTo); // recursively insert a transition from tFrom to tTo
-  // void eraseRec (Node *n, Point lo, Point hi, TagPhase tFrom, TagPhase tTo); // recursively erase all transitions from tFrom to tTo
   Node * advance (Node *n, Point dt);
+    
   Graph(std::string vizPrefix) : vizPrefix(vizPrefix), numViz(0), setToNode(100) {
     root = new Node();
     mapSet(Set::empty(), Node::empty());
     mapSet(0, root);
   };
+
   void dump () {
     root->dump();
   };
-
-
 
   // map from sets to nodes
   std::unordered_map < Set *, Node *, hashSet, SetEqual > setToNode; 
@@ -438,52 +350,6 @@ public:
   void unmapSet ( Set * s) {
     if (s != Set::empty())
       setToNode.erase(s);
-  };
-
-  Node * nodeForSet (Set * s) {
-    // find the node for set s.  If found, return the node
-    // and delete this copy of s.  If not found, create a new
-    // node for this set, which becomes the owner.
-    auto i = setToNode.find(s);
-    if (i != setToNode.end()) {
-      delete s;
-      return i->second;
-    }
-    Node * nn = new Node();
-    nn->s = s;
-    mapSet(s, nn);
-    return nn;
-  };
-
-  Node * nodeReduce (Node * n, TagPhase p) {
-    // return the node for the set:  n->s \ {p}
-    // If it doesn't already exist, clone n then
-    // reduce it by p and return that.
-    Set * s = n->s->cloneReduce(p);
-    auto i = setToNode.find(s);
-    if (i != setToNode.end()) {
-      delete s;
-      i->second->link();
-      return i->second;
-    }
-    if (n->useCount == 1) {
-      // special case to save work
-      unmapSet(n->s);
-      n->s->reduce(p);
-      mapSet(n->s, n);
-      delete s;
-      return n;
-    }
-    Node * nn = new Node();
-    nn->s = s;
-    mapSet(s, nn);
-    nn->link();
-    return nn;
-  };
-
-
-  Node * addEdge (Node * head, Point b, Set *s, TagPhase p) {
-    // add edge from head at point b to node for set union(s, {p}); return pointer to tail node
   };
 
   void insert (const TagPhase &t) {
@@ -747,21 +613,26 @@ public:
   
   void validateSetToNode() {
     // verify that each set maps to a node that has it as a set!
+    bool okay = true;
     for (auto i = setToNode.begin(); i != setToNode.end(); ++i) {
       if (! i->second) {
         std::cout << "Null Node Ptr for set:" << std::endl;
         i->first->dump();
+        okay = false;
       } else if (! i->first) {
         if (i->second != root) {
           std::cout << "Non-root Node mapped by null set *: " << std::endl;
           i->second->dump();
+          okay = false;
         }
       } else if (i->second->s != i->first) {
         std::cout << "Invalid setToNode map:" << std::endl;
         dumpSetToNode();
-        return;
+        okay = false;
       }
     }
+    if (!okay)
+      throw std::runtime_error("validateSetToNode() failed");
   };
 
   void  viz() {
@@ -845,14 +716,11 @@ public:
 #endif
     }
     erase(TagPhase(id, 0));
-    validateSetToNode();
 #ifdef DEBUG
+    validateSetToNode();
     viz();
 #endif
   };
-
-
-
 };
 
 #include <stdlib.h>
@@ -974,6 +842,7 @@ main (int argc, char * argv[] ) {
   auto ts = T.get_tags_at_freq(Nominal_Frequency_kHz(166380));
 
   int nt = ts->size();
+
   std::cout << "Got " << nt << " tags\n";
 
   // FIXME: just use the first 10 tags
@@ -1038,7 +907,7 @@ main (int argc, char * argv[] ) {
     g.viz();
 #endif
     if (numEvts % 100 == 0)
-      std::cout << "After "  << numEvts << "events,  # tags in tree is " << numTags << " and # nodes = " << Node::getNumNodes() << std::endl;
+      std::cout << "After "  << numEvts << " events, # tags in tree is " << numTags << ", # Nodes = " << Node::getNumNodes() << ", # Sets = " << Set::getNumSets() << std::endl;
   }
   g.viz();
 };
