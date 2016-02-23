@@ -1,6 +1,7 @@
 #include "Tag_Foray.hpp"
 
 #include <string.h>
+#include <sstream>
 
 Tag_Foray::Tag_Foray (Tag_Database &tags, std::istream *data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq) :
   tags(tags),

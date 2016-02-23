@@ -1,28 +1,12 @@
-#include "Known_Tag.hpp"
+#include "Tag.hpp"
 
 #include <sstream>
 #include <math.h>
-// Note: in the following, gaps points to an array of PULSES_PER_BURST gaps;
-// the first PULSES_PER_BURST-1 gaps are intra burst gaps, but the last gap is the burst interval
 
-Known_Tag::Known_Tag(Motus_Tag_ID motusID, Frequency_MHz freq, Frequency_Offset_kHz dfreq, float *gaps):
+Tag::Tag(Motus_Tag_ID motusID, Frequency_MHz freq, Frequency_Offset_kHz dfreq, const std::vector < Gap > & gaps):
   motusID(motusID),
   freq(freq),
-  dfreq(dfreq)
+  dfreq(dfreq),
+  gaps(gaps)
 {
-  // gaps are stored in the database as milliseconds
-  float burst_length = 0.0;
-  for (unsigned i = 0; i < PULSES_PER_BURST - 1; ++i) {
-    burst_length += this->gaps[i] = gaps[i];
-  }
-  // calculate gap to start of next pulse, 
-  this->gaps[PULSES_PER_BURST - 1] = gaps[PULSES_PER_BURST - 1] - burst_length;
-
-  // store the burst interval
-  this->gaps[PULSES_PER_BURST] = gaps[PULSES_PER_BURST - 1];
-  if (burst_length > max_burst_length)
-    max_burst_length = burst_length;
 };
-
-float 
-Known_Tag::max_burst_length = 0.0;   // will be calculated as tags database is built

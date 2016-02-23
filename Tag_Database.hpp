@@ -4,16 +4,16 @@
 #include "find_tags_common.hpp"
 
 #include "Freq_Setting.hpp"
-#include "Known_Tag.hpp"
+#include "Tag.hpp"
 
 #include <map>
 
 class Tag_Database {
 
  private:
-  typedef std::map < Nominal_Frequency_kHz, Tag_Set > Tag_Set_Set;
+  typedef std::map < Nominal_Frequency_kHz, TagSet > TagSetSet;
   
-  Tag_Set_Set tags;
+  TagSetSet tags;
 
   Freq_Set nominal_freqs;
 
@@ -26,9 +26,7 @@ public:
 
   Freq_Set & get_nominal_freqs();
 
-  Tag_Set * get_tags_at_freq(Nominal_Frequency_kHz freq);
-
-  Known_Tag * get_tag(Tag_ID id);
+  TagSet * get_tags_at_freq(Nominal_Frequency_kHz freq);
 };
 
 #endif // TAG_DATABASE_HPP

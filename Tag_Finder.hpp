@@ -3,9 +3,9 @@
 
 #include "find_tags_common.hpp"
 
-#include "Known_Tag.hpp"
+#include "Tag.hpp"
 #include "Freq_Setting.hpp"
-#include "DFA_Graph.hpp"
+#include "Graph.hpp"
 
 class Tag_Foray;
 
@@ -39,11 +39,11 @@ public:
   Nominal_Frequency_kHz nom_freq;
 
   // - internal representation of tag database
-  // the set of tags at a single nominal frequency is a "Tag_Set"
+  // the set of tags at a single nominal frequency is a "TagSet"
 
-  Tag_Set *tags;
+  TagSet *tags;
 
-  DFA_Graph graph;
+  Graph graph;
 
   Cand_List_Vec	cands;
 
@@ -89,7 +89,7 @@ public:
 
   Tag_Finder(Tag_Foray * owner){};
 
-  Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, Tag_Set * tags, string prefix="");
+  Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, TagSet * tags, string prefix="");
 
   virtual ~Tag_Finder();
 
@@ -109,7 +109,7 @@ public:
 
   void initialize_tag_buffers();
 
-  float *get_true_gaps(Tag_ID tid);
+  Gap *get_true_gaps(Tag * tid);
 
   void dump_bogus_burst(Pulse &p);
 };

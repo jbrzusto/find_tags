@@ -8,194 +8,60 @@
 #include <boost/icl/split_interval_map.hpp>
 #include <stdexcept>
 #include <fstream>
-#include <unordered_map>
+#include <vector>
 
 using namespace std;
 using namespace boost::icl;
 
 typedef int TagID;
-typedef short Phase;
 
-typedef std::pair < TagID, Phase > TagPhase;
-typedef size_t TagPhaseMapHash;
-
-struct TagPhaseMap {
-  unordered_multimap < TagID, Phase > s; // a map of tagID to phase; each tagID can be present in multiple phases
-  TagPhaseMapHash hash; // simple hash for set whose value is maintained as set insert, erase methods are called
-  TagPhaseMap() : hash(0) {
-    cout << "created empty TagPhaseMap\n";
-  };
-
-  void info() const {
-    //    std::cout << " TPM " << label << " (" << this << ") ";
-    std::cout << " TPM " << " (" << this << ") ";
-  };
-
-
-  TagPhaseMap(const TagPhase & tp) {
-    insert (tp);
-    cout << "created singleton TagPhaseMap with ";
-    cout << tp.first << "," << tp.second;
-    cout << "\n";
-  };
-
-  bool has (const TagPhase & tp) {
-    auto r = s.equal_range(tp.first);
-    for( auto i = r.first; i != r.second; ++i)
-      if (i->second == tp.second)
-        return true;
-    return false;
-  };
-
-  // Note: we need a symmetric (in permutations of element order) hash
-  // function that can be computed incrementally by both insert() and
-  // erase().  Does any associative, commutative binary function work?
-  // Obvious candidates are '+' and '^'.  We use both tag ID and phase
-  // in computing it.
-
-  void insert( const TagPhase & tp) {
-    s.insert(tp);
-    hash = hash ^ (tp.first * tp.second);
-  };
-
-  void erase( const TagPhase & tp ) {
-    auto r = s.equal_range(tp.first);
-    for( auto i = r.first; i != r.second; ++i) {
-      if (i->second == tp.second) {
-        s.erase(i);
-        hash = hash ^ (tp.first * tp.second);
-        return;
-      }
-    }
-  };
-
-  TagPhaseMap ctor() {
-    return TagPhaseMap();
-  };
-  
-  bool operator== (const TagPhaseMap & tps) const {
-    return hash == tps.hash && s == tps.s;
-  };
+class TagPhase {
+public:
+  TagPhase(TagID tagID, int phase) :
+    tagID(tagID),
+    phase(phase)
+  {};
+  TagID tagID;
+  int phase;
+  TagPhase onlyID() {
+    TagPhase rv = * this;
+    rv.phase = -1;
+    return(rv);
+  }
 };
 
+typedef set < TagPhase > TagPhaseSet;
 
-struct HashTagPhaseMap {
-  // hashing function used in DFA::setToNode
-  size_t operator() (const TagPhaseMap & x) const {
-    return x.hash;
-  };
-};
-
-struct TagPhaseMapEqual {
-  // comparison function used in DFA::setToNode
-  bool operator() ( const TagPhaseMap & x1, const TagPhaseMap & x2 ) const {
-    return x1 == x2;
-  };
-};
-
-template<class Type> struct TagPhaseMapCombine {
-  typedef Type first_argument_type;
-  static const Type identity_element () { return TagPhaseMap();};
-  Type operator() (Type n1, Type n2) {
-    std::cout << "Called TPMCombine with ";
-    n1.info();
-    std::cout << "and";
-    n2.info();
-    std::cout << "\n";
-    Type n = n1.ctor();
-    n.s = n1.s;
-    n.s.insert(n2.s.begin(), n2.s.end());
-    return n;
-  };
-};
-
-template<class Type> struct TagPhaseMapUncombine {
-  static const Type identity_element () { return TagPhaseMap();};
-  Type operator() (Type n1, Type n2) {
-    std::cout << "Called TPMUnCombine with ";
-    n1.info();
-    std::cout << "and";
-    n2.info();
-    std::cout << "\n";
-    Type n = n1.ctor();
-    n.s = n1.s;
-    n.s.erase(n2.s.begin(), n2.s.end());
-    return n;
-  };
-};
-  
-template<class Type> 
-struct boost::icl::inverse<TagPhaseMapCombine <Type> > { 
-  typedef TagPhaseMapUncombine<Type> type; 
-};
-
-template<class Type> struct TagPhaseMapIntersect {
-  Type operator() (Type n1, Type n2) {
-    std::cout << "Called TPMIntersect with ";
-    n1.info();
-    std::cout << "and";
-    n2.info();
-    std::cout << "\n";
-    auto i1 = n1.s.begin();
-    auto e1 = n1.s.end();
-    while (i1 != e1) {
-      auto i2 = i1;
-      ++i2;
-      bool found = false;
-      auto range = n2.s.equal_range(i1.first);
-      for (auto i3=range.first; i3 != range.second; ++i3) {
-        if (i3.second == i1.second) {
-          found = true;
-          break;
-        }
-      }
-      if (! found)
-        n1.s.erase(i1);
-      i1 = i2;
-    }
-    return n1;
-  };
-};
-  
 bool operator < (const TagPhase& x1, const TagPhase& x2) { 
-  return x1.first < x2.first || (x1.first == x2.first && x1.second < x2.second);
+  return x1.tagID < x2.tagID || (x1.tagID == x2.tagID && x1.phase < x2.phase);
 }
 
 bool operator == (const TagPhase& x1, const TagPhase& x2) { 
-  return x1.first == x2.first && x1.second == x2.second; 
+  return x1.tagID == x2.tagID && x1.phase == x2.phase; 
 }
 
 bool operator <= (const TagPhase& x1, const TagPhase& x2) { 
-  return x1.first <= x2.first ||  (x1.first == x2.first && x1.second <= x2.second);
+  return x1.tagID <= x2.tagID ||  (x1.tagID == x2.tagID && x1.phase <= x2.phase);
 }
 
 template<class CharType, class CharTraits>
 std::basic_ostream<CharType, CharTraits> &operator<<
 (std::basic_ostream<CharType, CharTraits> &stream, TagPhase const& value)
 {
-  if (value.second >= 0)
-    return stream << "# " << value.first << " (" << value.second << ") ";
+  if (value.phase >= 0)
+    return stream << "# " << value.tagID << " (" << value.phase << ") ";
   return stream;
 }
 
-template<class CharType, class CharTraits>
-std::basic_ostream<CharType, CharTraits> &operator<<
-(std::basic_ostream<CharType, CharTraits> &stream, TagPhaseMap const& value)
-{
-  for (auto i = value.s.begin(); i != value.s.end(); ++i)
-    std::cout << TagPhase(i->first, i->second) <<",";
-}
-
-
-typedef interval_map < double, TagPhaseMap, boost::icl::partial_absorber, std::less, TagPhaseMapCombine, TagPhaseMapIntersect  > Edges;
+typedef interval_map < double, TagPhaseSet > Edges;
 
 class DFA_Graph;
 
 class DFA_Node {
 public:
-  TagPhaseMap s;
+  TagPhaseSet s;
   Edges e;
-  int l;
+  string label;
 private:
   DFA_Node() {};
   friend class DFA_Graph;
@@ -203,29 +69,27 @@ private:
 
 class DFA_Graph {
 protected:
-  int nodesAlloc;    // number of nodes allocated (and possibly later deleted)
-  int nodesUsed; // number of nodes actually in tree.
-  DFA_Node * root; // root of DFA_Graph
-
-  typedef std::unordered_map < TagPhaseMap, DFA_Node, HashTagPhaseMap, TagPhaseMapEqual> SetToNode;
+  int ncount;
+  int graphSize;
+  DFA_Node * root;
+  typedef std::map < TagPhaseSet, DFA_Node> SetToNode;
   SetToNode setToNode; // will own all DFA_Node nodes in this graph
 
+public:
   DFA_Node new_node() {
     DFA_Node n;
-    n.l = ++nodesAlloc;
+    n.label = string("a") + std::to_string(++ncount);
     return n;
   };
 
-public:
-
-  DFA_Graph() : nodesAlloc(0)
+  DFA_Graph() : ncount(0)
   {
-    root = & setToNode.insert(make_pair(TagPhaseMap(), new_node())).first->second;
+    root = & setToNode.insert(make_pair(TagPhaseSet(), new_node())).first->second;
   };
 
   DFA_Node copy(DFA_Node &n) {
     DFA_Node rv = n;
-    rv.l = ++nodesAlloc;
+    rv.label = string("a") + std::to_string(++ncount);
     return rv;
   }
 
@@ -240,30 +104,27 @@ public:
   void add(DFA_Node &n, TagPhase tag, double tlo, double thi) {
     // add an edge from a node to one with tag for the interval [tlo,
     // thi)
-    TagPhaseMap tmp;
+    TagPhaseSet tmp;
     tmp.insert(tag);
+    tmp.insert(tag.onlyID());
     n.e.add(make_pair( interval < double > :: closed(tlo, thi), tmp));
     // iterate over segments, looking for those having the
     // just-added TagPhase; for each of these, build a new node.
     for(auto i = n.e.begin(); i != n.e.end(); ++i) {
       auto ss = i->second; // set of nodes
-      if (ss.has(tag)) {
-        if (ss.s.size() == 1) {
-          // this segment maps only to TagPhase
+      if (ss.count(tag)) {
+        if (ss.size() == 2) {
+          // this TagPhase (and its unphased sentinel) just added to set
           DFA_Node d = new_node();
           d.s.insert(tag);
+          d.s.insert(tag.onlyID());
           setToNode.insert(make_pair(d.s, d));
         } else {
           // we want to copy the node corresponding to the original
           // set, i.e. before this TagPhase was added
           auto sm = ss;
-          auto rng = ss.s.equal_range(tag.first);
-          for (auto is = rng.first; is != rng.second; ++is) {
-            if (is->second == tag.second) {
-              sm.s.erase(is);
-              break;
-            }
-          }
+          sm.erase(tag);
+          sm.erase(tag.onlyID());
           // if the original set still exists in the interval map,
           // then we must copy its node; otherwise, the newly-added
           // tagphase subsumed the original set, and we can augment
@@ -287,7 +148,7 @@ public:
             }
           }
           DFA_Node d = copy(nd->second);
-          if (d.s.s.count(tag.first))
+          if (d.s.count(tag.onlyID()))
             throw std::runtime_error("ID already in set");
           DFA_Node & n = (setToNode.insert(make_pair(ss, d)).first) -> second;
           n.s = ss;
@@ -305,15 +166,16 @@ public:
 
   void add_rec(DFA_Node & n, TagPhase tag, TagPhase newtag, double tlo , double thi) {
     // recursively search for nodes containing tag, and 
-    // add add an edge to tag' where tag'.first = tag.first
-    // and tag.second = newphase, with interval [t-dt, t+dt]
+    // add add an edge to tag' where tag'.tagID = tag.tagID
+    // and tag.phase = newphase, with interval [t-dt, t+dt]
     // Tag to a DFA_Node.
     
     // iterate over edges, adding to each child that has some phase
     // of the given tag.
+    auto id = tag.onlyID();
     if (interval_count(n.e) > 0) {
       for(auto i = n.e.begin(); i != n.e.end(); ++i) {
-        if (i->second.s.count(tag.first)) {
+        if (i->second.count(id)) {
           auto nn = setToNode.find(i->second);
           if (nn != setToNode.end())
             add_rec(nn->second, tag, newtag, tlo, thi);
@@ -321,15 +183,15 @@ public:
       }
       // possibly add edge from this node
     }
-    if (n.s.has(tag))
+    if (n.s.count(tag))
       add(n, newtag, tlo, thi);
   };
 
 
   void validate() {
-    nodesUsed = 0;
+    graphSize = 0;
     validate(* root);
-    if (nodesUsed != setToNode.size())
+    if (graphSize != setToNode.size())
       throw std::runtime_error("Node count != size of setToNode.");
   };
 
@@ -338,12 +200,12 @@ public:
     
     // iterate over edges, adding to each child that has some phase
     // of the given tag.
-    ++nodesUsed;
+    ++graphSize;
     if (interval_count(n.e) > 0) {
       for(auto i = n.e.begin(); i != n.e.end(); ++i) {
         auto nn = setToNode.find(i->second);
         if (nn == setToNode.end()) {
-          cout << "No node for map:\n" << i->second;
+          cout << "No node for set:\n" << i->second;
           throw std::runtime_error("Edge with no corresponding node.");
         }
         validate(nn->second);
@@ -361,19 +223,20 @@ public:
   };
 
   void del_rec(DFA_Node & n, TagPhase tp, double tlo, double thi) {
-    // delete the entire subgraph for the tag with ID tp.first
-    // tp.second should be -1.
+    // delete the entire subgraph for the tag with ID tp.tagID
+    // tp.phase should be -1.
     // we do this child-first, depth-first recursively.
     // When processing this node, we first correct the setToNode
     // mapping to reflect removal of tp, then correct the interval_map.
     if (interval_count(n.e) > 0) {
+      auto id = tp.onlyID();
       bool usedHere = false;
       for(auto i = n.e.begin(); i != n.e.end(); ++i) {
-        if (i->second.s.count(tp.first)) {
+        if (i->second.count(id)) {
           auto nn = setToNode.find(i->second);
           if (nn != setToNode.end()) {
             del_rec(nn->second, tp, tlo, thi);
-            if (nn->second.s.has(tp)) {
+            if (nn->second.s.count(tp)) {
               usedHere = true;
               // correct the setToNode mapping to reflect that
               // it will be the reduced set now mapping to the 
@@ -381,6 +244,7 @@ public:
               // set, then just delete the node for the current set.
               auto sm = i->second;
               sm.erase(tp);
+              sm.erase(tp.onlyID());
               auto rn = setToNode.find(sm);
               if (rn != setToNode.end()) {
                 setToNode.erase(nn);
@@ -396,24 +260,28 @@ public:
       }
       if (usedHere) {
         auto period = interval < double > :: closed(tlo, thi);
-        TagPhaseMap s1;
+        TagPhaseSet s1;
         s1.insert(tp);
+        s1.insert(id);
         n.e.subtract(make_pair( period, s1));
       }
     }
     
   };
   
+  int nnum;
+
   void viz(std::ostream &out) {
     // visualize
     out << "digraph TEST {\n";
+    nnum = 1;
     // generate node symbols and labels
     for (auto i = setToNode.begin(); i != setToNode.end(); ++i) {
-      out << "a" << i->second.l << "[label=\"a" << i->second.l << "=" << i->second.s<< "\"];\n";
+      out << i->second.label << "[label=\"" << i->second.label << "=" << i->second.s<< "\"];\n";
       for(auto j = i->second.e.begin(); j != i->second.e.end(); ++j) {
         auto n = setToNode.find(j->second);
         if (n != setToNode.end()) {
-          out << "a" << i->second.l << " -> a" << (n->second.l) << "[label = \""
+          out << i->second.label << " -> " << (n->second.label) << "[label = \""
               << j->first << "\"];\n";
         }
       }
@@ -423,8 +291,8 @@ public:
 
   void dumpNodes() {
     for (auto i = setToNode.begin(); i != setToNode.end(); ++i) {
-      cout << "   Node (a" << i->second.l << ") and set ";
-      for (auto j = i->first.s.begin(); j != i->first.s.end(); ++j) {
+      cout << "   Node (" << i->second.label << ") and set ";
+      for (auto j = i->first.begin(); j != i->first.end(); ++j) {
         cout << *j << " ";
       }
     }
@@ -443,13 +311,13 @@ public:
     TagPhase last(id, p);
     add(last);
     for(;;) {
-      double g = gaps[p % n];
-      t += g;
+      t += gaps[p % n];
       if (t > maxTime)
         break;
-      ++p;
-      TagPhase next(id, p);
+      TagPhase next(id, p+1);
+      double g = gaps[p % n];
       add_rec(last, next, g * (1 - tol), g * (1 + tol));
+      ++p;
       last = next;
     };
   }    
@@ -467,6 +335,8 @@ public:
       ++p;
     }      
 
+    int N = 20;
+ 
     while(p > 0) {
       --p;
       double g = gaps[p % n];

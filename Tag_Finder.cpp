@@ -1,6 +1,6 @@
 #include "Tag_Finder.hpp"
 
-Tag_Finder::Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, Tag_Set *tags, string prefix) :
+Tag_Finder::Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, TagSet *tags, string prefix) :
   owner(owner),
   nom_freq(nom_freq),
   tags(tags),
@@ -18,84 +18,10 @@ void
 Tag_Finder::setup_graph() {
   // Create the DFA graph for the database of registered tags
 
-  // put all tag IDs in a set:
+  // add each tag to the graph.
 
-  Tag_ID_Set s;
-  for (Tag_Set::iterator i = tags->begin(); i != tags->end(); ++i)
-    s.insert((*i));
-
-  graph.set_all_ids(s);
-
-  // For each phase up to 2 bursts, add appropriate nodes to the graph
-  // This is done breadth-first, but non-recursively because the DFA_Graph
-  // class keeps a vector of nodes at each phase.
-  // We start by looking at all nodes in the previous phase.
-  // Each one represents a set of Tag_IDs.  We build an interval_map from
-  // pulse gaps for the current phase (including slop) to subsets of these
-  // Tag_IDs.
-      
-  for (unsigned int phase = 1; phase <= 2 * PULSES_PER_BURST; ++phase) {
-    // loop over all Tag_ID_Sets at this level
-    for (DFA_Graph::Node_For_IDs::iterator it = graph.get_node_for_set_at_phase()[phase-1].begin(); 
-	 it != graph.get_node_for_set_at_phase()[phase-1].end(); ++it) {
-	  
-      // a map of gap sizes to compatible tag IDs
-	  
-      interval_map < Gap, Tag_ID_Set > m;
-	  
-      // sanity check: make sure there's only one tag ID left after a pair of bursts
-      if (phase == 2 * PULSES_PER_BURST && it->first.size() > 1) {
-        auto i = it->first.begin();
-        auto id = (*i)->motusID;
-        ++i;
-	for ( ; i != it->first.end(); ++i) {
-          Tag_Candidate::filer->add_ambiguity(id, (*i)->motusID);
-	}
-        // we delete all but the first tag in the ambiguity group
-        i = it->second->ids.begin();
-        ++i;
-        it->second->ids.erase(i, it->second->ids.end());
-#ifdef FIND_TAGS_DEBUG        
-        graph.get_root()->dump(std::cerr);
-#endif
-      }
-  
-      // for each tag, add its (gap range, ID) pair to the interval_map
-	  
-      for (Tag_ID_Iter i = it->first.begin(); i != it->first.end(); ++i) {
-	Gap g = (*i)->gaps[(phase - 1) % PULSES_PER_BURST];
-	Tag_ID_Set id;
-	id.insert(*i);
-	Gap slop = ((phase - 1) % PULSES_PER_BURST == PULSES_PER_BURST - 1) ? burst_slop : pulse_slop;
-	m.add(make_pair(interval < Gap > :: closed(g - slop, g + slop), id));
-      }
-
-      if (phase == 2 * PULSES_PER_BURST) {
-	// add multiples of the burst interval to this interval map,
-	// so we can detect non-consecutive pulses
-	for (Tag_ID_Iter i = it->first.begin(); i != it->first.end(); ++i) {
-          Tag_ID_Set id;
-          id.insert(*i);
-          Gap bi = (*i)->gaps[PULSES_PER_BURST];
-          Gap g4 = (*i)->gaps[PULSES_PER_BURST - 1];
-          for (unsigned int j=2; j <= max_skipped_bursts + 1; ++j) {
-            Gap base = (j - 1) * bi + g4;
-            Gap slop = burst_slop + (j - 1) * burst_slop_expansion;
-            m.add(make_pair(interval < Gap > :: closed(base - slop, base + slop), id));
-          }
-        }
-      }
-
-      // grow the node by this interval_map; Pulses at phase 2 *
-      // PULSES_PER_BURST are linked back to pulses at phase
-      // PULSES_PER_BURST, so that we can keep track of runs of
-      // consecutive bursts from a tag
-      graph.grow(it->second, m, (phase != 2 * PULSES_PER_BURST) ? phase : PULSES_PER_BURST);
-    }
-  }
-#ifdef FIND_TAGS_DEBUG
-  graph.get_root()->dump(std::cerr);
-#endif
+  for (auto i = tags->begin(); i != tags->end(); ++i)
+    graph.addTag(*i, (*i)->gaps, pulse_slop, burst_slop / (*i)->gaps[3], max_skipped_bursts * (*i)->period);
 };
 
 void
@@ -176,7 +102,7 @@ Tag_Finder::process(Pulse &p) {
       }
 
       // see whether this Tag Candidate can accept this pulse
-      DFA_Node * next_state = ci->advance_by_pulse(p);
+      Node * next_state = ci->advance_by_pulse(p);
       
       if (!next_state) {
         ++ci;
@@ -237,7 +163,7 @@ Tag_Finder::process(Pulse &p) {
   }
   // maybe start a new Tag_Candidate with this pulse 
   if (! confirmed_acceptance) {
-    cands[2].push_back(Tag_Candidate(this, graph.get_root(), p));
+    cands[2].push_back(Tag_Candidate(this, graph.root(), p));
   }
 };
 
@@ -254,8 +180,8 @@ Tag_Finder::~Tag_Finder() {
   }
 };
 
-float *
-Tag_Finder::get_true_gaps(Tag_ID tid) {
+Gap *
+Tag_Finder::get_true_gaps(TagID tid) {
       // get the pointer to the true gaps from the database,
       // for calculation of burst parameters
   return &tid->gaps[0];

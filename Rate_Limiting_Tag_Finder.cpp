@@ -3,7 +3,7 @@ Rate_Limiting_Tag_Finder::Rate_Limiting_Tag_Finder(Tag_Foray *owner) :
   Tag_Finder(owner) {
 };
 
-Rate_Limiting_Tag_Finder::Rate_Limiting_Tag_Finder (Tag_Foray *owner, Nominal_Frequency_kHz nom_freq, Tag_Set * tags, Gap rate_window, float max_rate, Gap min_bogus_spacing, string prefix) :
+Rate_Limiting_Tag_Finder::Rate_Limiting_Tag_Finder (Tag_Foray *owner, Nominal_Frequency_kHz nom_freq, TagSet * tags, Gap rate_window, float max_rate, Gap min_bogus_spacing, string prefix) :
   Tag_Finder(owner, nom_freq, tags, prefix),
   rate_window(rate_window),
   max_rate(max_rate),

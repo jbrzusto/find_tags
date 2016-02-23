@@ -2,16 +2,17 @@
 
 #include "Tag_Foray.hpp"
 
-Tag_Candidate::Tag_Candidate(Tag_Finder *owner, DFA_Node *state, const Pulse &pulse) :
+Tag_Candidate::Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse) :
   owner(owner),
   state(state),
   pulses(),
   last_ts(pulse.ts),
   last_dumped_ts(BOGUS_TIMESTAMP),
-  tag_id(BOGUS_TAG_ID),
+  tag(BOGUS_TAG),
   tag_id_level(MULTIPLE),
   hit_count(0),
   true_gaps(0),
+  num_pulses(0),
   freq_range(freq_slop_kHz, pulse.dfreq),
   sig_range(sig_slop_dB, pulse.sig)
 {
@@ -25,7 +26,7 @@ Tag_Candidate::~Tag_Candidate() {
 };
 
 bool Tag_Candidate::has_same_id_as(Tag_Candidate &tc) {
-  return tag_id != BOGUS_TAG_ID && tag_id == tc.tag_id;
+  return tag != BOGUS_TAG && tag == tc.tag;
 };
 
 bool Tag_Candidate::shares_any_pulses(Tag_Candidate &tc) {
@@ -44,7 +45,7 @@ bool Tag_Candidate::is_too_old_given_pulse_time(const Pulse &p) {
   return p.ts - last_ts > state->get_max_age();
 };
 
-DFA_Node * Tag_Candidate::advance_by_pulse(const Pulse &p) {
+Node * Tag_Candidate::advance_by_pulse(const Pulse &p) {
 
   if (! ( freq_range.is_compatible(p.dfreq)
 	  && sig_range.is_compatible(p.sig)))
@@ -53,10 +54,10 @@ DFA_Node * Tag_Candidate::advance_by_pulse(const Pulse &p) {
   Gap gap = p.ts - last_ts;
 	  
   // try walk the DFA with this gap
-  return state->next(gap);
+  return state->advance(gap);
 }
 
-bool Tag_Candidate::add_pulse(const Pulse &p, DFA_Node *new_state) {
+bool Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
 
   /*
     Add this pulse to the tag candidate, given the new state this
@@ -72,7 +73,7 @@ bool Tag_Candidate::add_pulse(const Pulse &p, DFA_Node *new_state) {
   // (we already know that of the new pulse is compatible)
   freq_range.extend_by(p.dfreq);
 
-  bool pulse_completes_burst = new_state->get_phase() % PULSES_PER_BURST == PULSES_PER_BURST - 1;
+  bool pulse_completes_burst = tag_id_level == CONFIRMED && new_state->get_phase() % num_pulses == num_pulses - 1;
   // Extend the range of signal strengths seen in this burst, but
   // only if this is not the last pulse in a burst.  The range and
   // orientation of antennas can change significantly between
@@ -93,7 +94,7 @@ bool Tag_Candidate::add_pulse(const Pulse &p, DFA_Node *new_state) {
   switch (tag_id_level) {
   case MULTIPLE:
     if (state->is_unique()) {
-      tag_id = state->get_id();
+      tag = state->get_tag();
       tag_id_level = SINGLE;
     }
     break;
@@ -101,7 +102,6 @@ bool Tag_Candidate::add_pulse(const Pulse &p, DFA_Node *new_state) {
   case SINGLE:
     if (pulses.size() >= pulses_to_confirm_id) {
       tag_id_level = CONFIRMED;
-      conf_tag = owner->owner->tags.get_tag(tag_id);
       rv= true;
     };
     break;
@@ -116,11 +116,12 @@ bool Tag_Candidate::add_pulse(const Pulse &p, DFA_Node *new_state) {
   return rv;
 };
 
-Tag_ID Tag_Candidate::get_tag_id() {
-  // get the ID of the tag associated with this candidate
-  // if more than one tag is still compatible, this returns BOGUS_TAG_ID
+Tag *
+Tag_Candidate::get_tag() {
+  // get the tag associated with this candidate
+  // if more than one tag is still compatible, this returns BOGUS_TAG
 
-  return tag_id;
+  return tag;
 };
 
 Tag_Candidate::Tag_ID_Level Tag_Candidate::get_tag_id_level() {
@@ -133,7 +134,7 @@ Tag_Candidate::is_confirmed() {
 };
 
 bool Tag_Candidate::has_burst() {
-  return pulses.size() >= PULSES_PER_BURST;
+  return pulses.size() >= num_pulses;
 };
 
 bool Tag_Candidate::next_pulse_confirms() {
@@ -141,19 +142,20 @@ bool Tag_Candidate::next_pulse_confirms() {
 };
 
 bool Tag_Candidate::at_end_of_burst() {
-  return state->get_phase() % PULSES_PER_BURST == PULSES_PER_BURST - 1;
+  return state->get_phase() % num_pulses == num_pulses - 1;
 };
 
 void Tag_Candidate::clear_pulses() {
   // drop pulses from the most recent burst (presumably after
   // outputting it)
 
-  for (unsigned int i=0; i < PULSES_PER_BURST; ++i)
+  for (unsigned int i=0; i < num_pulses; ++i)
     pulses.erase(pulses.begin());
 };
 
-void Tag_Candidate::set_true_gaps(float *true_gaps) {
-  this->true_gaps = true_gaps;
+void Tag_Candidate::set_true_gaps(std::vector < Gap > & true_gaps) {
+  this->true_gaps = & * (true_gaps.begin());
+  num_pulses = true_gaps.size();
 };
 
 Burst_Params * Tag_Candidate::calculate_burst_params() {
@@ -176,7 +178,7 @@ Burst_Params * Tag_Candidate::calculate_burst_params() {
   float slop   	= 0.0;
   double pts		= 0.0;
 
-  unsigned int n = PULSES_PER_BURST;
+  unsigned int n = num_pulses;
 
   if (pulses.size() < n)
     return 0;
@@ -184,7 +186,7 @@ Burst_Params * Tag_Candidate::calculate_burst_params() {
   Pulses_Iter p  = pulses.begin();
 
   if (!true_gaps)
-    true_gaps = owner->get_true_gaps(tag_id);
+    true_gaps = & * (tag->gaps.begin());
 
   if (last_dumped_ts != BOGUS_TIMESTAMP) {
     Gap g = p->second.ts - last_dumped_ts;
@@ -221,7 +223,7 @@ Burst_Params * Tag_Candidate::calculate_burst_params() {
 void Tag_Candidate::dump_bursts(string prefix) {
   // dump as many bursts as we have data for
 
-  if (pulses.size() < PULSES_PER_BURST)
+  if (pulses.size() < num_pulses)
     return;
 
   // get the hit rate: this is the number of tag hits
@@ -231,10 +233,10 @@ void Tag_Candidate::dump_bursts(string prefix) {
 
   Timestamp ts = pulses.rbegin()->second.ts;
 
-  while (pulses.size() >= PULSES_PER_BURST) {
+  while (pulses.size() >= num_pulses) {
     if (++hit_count == 1) {
       // first hit, so start a run
-      run_id = filer->begin_run(conf_tag->motusID);
+      run_id = filer->begin_run(tag->motusID);
     }
     Burst_Params *bp = calculate_burst_params();
     ts = pulses.begin()->second.ts;
@@ -281,7 +283,7 @@ Frequency_Offset_kHz Tag_Candidate::freq_slop_kHz = 2.0;       // (kHz) maximum 
 
 float Tag_Candidate::sig_slop_dB = 10;         // (dB) maximum allowed range of signal strengths within a burst
 
-unsigned int Tag_Candidate::pulses_to_confirm_id = PULSES_PER_BURST; // default number of pulses before a hit is confirmed
+unsigned int Tag_Candidate::pulses_to_confirm_id = 4; // default number of pulses before a hit is confirmed
 
 const float Tag_Candidate::BOGUS_BURST_SLOP = 0.0; // burst slop reported for first burst of ru
 

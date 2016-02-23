@@ -31,17 +31,17 @@ Tag_Database::populate_from_sqlite_file(string filename) {
     Motus_Tag_ID  motusID = (Motus_Tag_ID) sqlite3_column_int(st, 0);
     float freq_MHz = sqlite3_column_double(st, 1);
     float dfreq = sqlite3_column_double(st, 2);
-    float gaps[4];
+    std::vector < Gap > gaps;
     for (int i = 0; i < 4; ++i)
-      gaps[i] = sqlite3_column_double(st, 3 + i);
+      gaps.push_back(sqlite3_column_double(st, 3 + i));
     Nominal_Frequency_kHz nom_freq = Freq_Setting::as_Nominal_Frequency_kHz(freq_MHz);
     if (nominal_freqs.count(nom_freq) == 0) {
       // we haven't seen this nominal frequency before
       // add it to the list and create a place to hold stuff
       nominal_freqs.insert(nom_freq);
-      tags[nom_freq] = Tag_Set();
+      tags[nom_freq] = TagSet();
     }
-    tags[nom_freq].insert (new Known_Tag (motusID, freq_MHz, dfreq, &gaps[0]));
+    tags[nom_freq].insert (new Tag (motusID, freq_MHz, dfreq, gaps));
   };
   sqlite3_finalize(st);
   sqlite3_close(db);
@@ -53,14 +53,7 @@ Freq_Set & Tag_Database::get_nominal_freqs() {
   return nominal_freqs;
 };
 
-Tag_Set *
+TagSet *
 Tag_Database::get_tags_at_freq(Nominal_Frequency_kHz freq) {
   return & tags[freq];
 };
-
-Known_Tag *
-Tag_Database::get_tag(Tag_ID id) {
-  return id;
-};
-
-

@@ -495,6 +495,7 @@ main (int argc, char **argv) {
     string program_version(PROGRAM_VERSION); // defined in Makefile
     double program_build_ts = PROGRAM_BUILD_TS; // defined in Makefile
     try {
+      Node::init();
       Tag_Database tag_db (tag_filename);
       DB_Filer dbf (output_filename, program_name, program_version, program_build_ts, bootNum);
       dbf.add_param("default_freq", default_freq);

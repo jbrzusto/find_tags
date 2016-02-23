@@ -3,6 +3,10 @@
 
 #include <set>
 #include <unordered_set>
+#include <vector>
+#include <map>
+#include <unordered_map>
+#include <cmath>
 
 const static unsigned int PULSES_PER_BURST = 4;	// pulses in a burst (Lotek VHF tags)
 const static unsigned int MAX_LINE_SIZE = 512;	// characters in a .CSV file line
@@ -34,14 +38,17 @@ static const Motus_Tag_ID BOGUS_MOTUS_TAG_ID = -1;
 // type representing an internal tag ID; each entry in the database
 // receives its own internal tag ID
 
-class Known_Tag;
-typedef Known_Tag * Tag_ID;
-static const Tag_ID BOGUS_TAG_ID = 0;
+class Tag;
+typedef Tag * TagID;
+static const TagID BOGUS_TAG = 0;
 
-// a set of tag IDs;
-typedef std::set< Tag_ID > Tag_ID_Set;
-// an iterator for the set
-typedef Tag_ID_Set::iterator Tag_ID_Iter;
+typedef std::unordered_set < TagID > TagSet; 
+
+typedef short Phase;
+static const Phase BOGUS_PHASE = -1;
+
+typedef std::pair < TagID, Phase > TagPhase;
+typedef std::unordered_multimap < TagID, Phase > TagPhaseSet;
 
 // The type for interpulse gaps this should be able to represent a
 // difference between two nearby Timestamp values We use float, which
@@ -64,5 +71,23 @@ using std::ostream;
 using std::ifstream;
 
 #include <stdexcept>
+
+template<class CharType, class CharTraits>
+std::basic_ostream<CharType, CharTraits> &operator<<
+(std::basic_ostream<CharType, CharTraits> &stream, TagPhase const& value)
+{
+  if (value.second >= 0)
+    return stream << "# " << value.first << " (" << value.second << ") ";
+  return stream;
+};
+
+template<class CharType, class CharTraits>
+std::basic_ostream<CharType, CharTraits> &operator<<
+(std::basic_ostream<CharType, CharTraits> &stream, TagPhaseSet const& value)
+{
+  for (auto i = value.begin(); i != value.end(); ++i)
+    stream << "\\n" << (*i);
+  return stream;
+};
 
 #endif // FIND_TAGS_COMMON_HPP
