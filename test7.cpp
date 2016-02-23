@@ -1,3 +1,12 @@
+// UseCount appears to be too small; here's an example:
+//    Unlink Node(2650) for set \n# 11501 (1) 
+//    Unlink Node(2651) for set \n# 11501 (1) \n# 17061 (1) 
+//    Unlink Node(2151) for set \n# 17061 (2) 
+//    Unlink Node(2152) for set \n# 17061 (3) 
+// Note that 17061 had been most recently added, so that the
+// indegree of node 2651 should not have been zero after
+// removing the link from the node from the root node.
+// (where phase(11501)=0)
 // FIXME: if we limit the tags read in to 839, the
 // random add/remove algorithm runs indefinitely without any
 // problem.  If we allow 840 tags, it segfaults quickly.
@@ -228,11 +237,15 @@ class Node {
 
   int label;
   static int numNodes;
+  static int maxLabel;
 
   static Node * _empty;
 
   void link() {
     ++ useCount;
+#ifdef DEBUG
+    std::cout << "UC for Node " << label << " = " << useCount << std::endl;
+#endif
   };
 
   bool unlink() {
@@ -242,12 +255,18 @@ class Node {
   void drop() {
     if (s != Set::empty())
       delete s;
+    --numNodes;
     delete this;
   };
 
   Node * clone() { 
+#ifdef DEBUG
+    std::cout << "Cloning node " << label << std::endl;
+#endif
     Node * n = new Node();
     n->s = s->clone(); 
+    for (auto i = e.begin(); i != e.end(); ++i)
+      i->second->link();
     return n;
   };
 
@@ -275,7 +294,9 @@ class Node {
   Node * cloneAugment (TagPhase p) {
     // if (this == empty)
     //   throw std::runtime_error("called cloneAugment on Node::empty");
+#ifdef DEBUG
     std::cout << "calling cloneAugment on " << label << " for " << s->label() << " with " << p << std::endl;
+#endif
     Node * n = clone();
     if (n->s == Set::empty())
       n->s = new Set(p);
@@ -288,7 +309,8 @@ protected:
 
   void _init() {
     useCount = 0;
-    label = numNodes++;
+    label = maxLabel++;
+    ++numNodes;
     if (_empty) {
       e.insert(std::make_pair(-1.0 / 0.0, _empty));
       e.insert(std::make_pair( 1.0 / 0.0, _empty));
@@ -314,19 +336,29 @@ public:
 
   Node(const Node &n) : s(n.s), e(n.e) { 
     _init();
+#ifdef DEBUG
     std::cout << "Called Node copy ctor with " << n.label << std::endl;
+#endif
     useCount = 0;
   };
 
-  Node(const Node *n) : s(n->s), e(n->e) {
+  Node(const Node *n) : s(n->s), e(n->e), useCount(0) {
     _init();
+#ifdef DEBUG
+    std::cout << "Called Node * copy ctor with " << n->label << std::endl;
+#endif
+    for (auto i = e.begin(); i != e.end(); ++i)
+      i->second->link();
   };
 
   Node(TagPhase p) : s(new Set(p)), e() {
     _init();
   };
 
-  
+  static int getNumNodes() {
+    return numNodes;
+  };
+
   void add (Point lo, Point hi, TagPhase p);
   void remove (Point lo, Point hi, TagPhase p);
 
@@ -347,6 +379,7 @@ public:
   };
 };
 int Node::numNodes = 0;
+int Node::maxLabel = 0;
 int Set::numSets = 0;
 
 Node * Node::_empty = 0;
@@ -508,11 +541,18 @@ public:
 
   void unlinkNode (Node *n) {
     if (n->unlink() && n != Node::empty()) {
+#ifdef DEBUG
+      std::cout << "Unlink Node(" << n->label << ") for set " << n->s->s << std::endl;
+#endif
       unmapSet(n->s);
       // unlink tail nodes
-      for (auto i = n->e.begin(); i != n->e.end(); ++i)
+      for (auto i = n->e.begin(); i != n->e.end(); ) {
+        auto j = i;
+        ++j;
         if (i->second != Node::empty())
           unlinkNode(i->second);
+        i = j;
+      }
       n->drop();
     };
   };
@@ -620,8 +660,10 @@ public:
     // each edge by p.
 
     while (i->first < hi) {
+      auto j = i;
+      ++j;
       augmentEdge(i, p);
-      ++i;
+      i = j;
     }
   };
     
@@ -634,10 +676,13 @@ public:
 
     if (hasEdge(n, lo, tTo))
       return;
-    for(auto i = n->e.begin(); i != n->e.end(); ++i) {
+    for(auto i = n->e.begin(); i != n->e.end(); ) {
+      auto j = i;
+      ++j;
       if (i->second->s->count(id)) {
         insertRec(i->second, lo, hi, tFrom, tTo);
       }
+      i = j;
     }
       // possibly add edge from this node
     if (n->s->count(tFrom))
@@ -653,13 +698,15 @@ public:
     auto i = n->e.lower_bound(lo);
     auto j = i; // save value for later
     while (i->first <= hi) {
+      auto j = i;
+      ++j;
       reduceEdge(i, tp);
-      ++i;
+      i = j;
     }
     --i;
     if (std::isfinite(i->first))
       dropEdgeIfExtra(n, i); // rightmost edge
-    if (std::isfinite(j->first))
+    if (i != j && std::isfinite(j->first))
       dropEdgeIfExtra(n, j);  // leftmost edge
   };
 
@@ -668,16 +715,16 @@ public:
     // the range lo, hi
     auto id = tpFrom.first;
     bool here = n->s->count(tpFrom) > 0;
-    bool usedHere = true;
+    bool usedHere = false;
     for(auto i = n->e.begin(); i != n->e.end(); ) {
       auto j = i;
       ++j;
       if (i->second->s->count(id)) {
         // recurse to any child node that has this tag ID in
         // its set, because we might eventually reach a node with tpFrom
-        eraseRec(i->second, lo, hi, tpFrom, tpTo);
         if (here && i->second->s->count(tpTo))
           usedHere = true;
+        eraseRec(i->second, lo, hi, tpFrom, tpTo);
       }
       i = j;
     }
@@ -769,6 +816,9 @@ public:
       ++p;
       TagPhase next(id, p);
       insertRec(root, std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), last, next);
+#ifdef DEBUG
+      validateSetToNode();
+#endif
       last = next;
     };
   };    
@@ -791,10 +841,11 @@ public:
       double g = gaps[p % n];
       eraseRec(root, std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(id, p), TagPhase(id, p+1));
 #ifdef DEBUG
-      viz();
+      validateSetToNode();
 #endif
     }
     erase(TagPhase(id, 0));
+    validateSetToNode();
 #ifdef DEBUG
     viz();
 #endif
@@ -812,7 +863,7 @@ main (int argc, char * argv[] ) {
 
   int n = 0;
 
-  int maxnt = 840;
+  int maxnt = -1;
   if (argc > 1)
     maxnt = atoi(argv[1]);
 
@@ -918,7 +969,7 @@ main (int argc, char * argv[] ) {
 
   g.validateSetToNode();
 
-  Tag_Database T("/sgm/2015_normalized_full_motus_nodups_database.sqlite");
+  Tag_Database T("/sgm/2015_normalized_full_motus_database.sqlite");
 
   auto ts = T.get_tags_at_freq(Nominal_Frequency_kHz(166380));
 
@@ -926,12 +977,17 @@ main (int argc, char * argv[] ) {
   std::cout << "Got " << nt << " tags\n";
 
   // FIXME: just use the first 10 tags
-  nt = maxnt;
+  if (maxnt > 0)
+    nt = maxnt;
 
   std::vector < Known_Tag > tags (nt);
   int i = 0;
-  for (auto j = ts->begin(); j != ts->end() && i < nt; ++j)
+  for (auto j = ts->begin(); j != ts->end() && i < nt; ++j) {
+#ifdef DEBUG
+    std::cout << (*j)->motusID << std::endl;
+#endif
     tags[i++] = **j;
+  }
 
   for (i = 1; i < nt; ++i) {
     for (auto ii = 0; ii < i; ++ii) {
@@ -957,23 +1013,32 @@ main (int argc, char * argv[] ) {
   timeFuzz = 0;
 
   int numTags = 1;
-  for(int numEvts = 0; ; ++ numEvts) {
+  for(int numEvts = 0; /**/ ; ++ numEvts) {
     auto r = uni(rng);
     std::vector < double > T;
     for (i = 0; i < 4; ++i)
       T.push_back(tags[r].gaps[i]);
     if (inTree[r]) {
+#ifdef DEBUG      
+      std::cout << "-" << tags[r].motusID << std::endl;
+#endif
       g.delTag(tags[r].motusID, T, tol, timeFuzz, 60);
       inTree[r] = false;
       --numTags;
     } else {
+#ifdef DEBUG
+      std::cout << "+" << tags[r].motusID << std::endl;
+#endif
       g.addTag(tags[r].motusID, T, tol, timeFuzz, 60);
       inTree[r] = true;
       ++numTags;
     };
+#ifdef DEBUG
     g.validateSetToNode();
+    g.viz();
+#endif
     if (numEvts % 100 == 0)
-      std::cout << "After "  << numEvts << "events,  # tags in tree is " << numTags << std::endl;
+      std::cout << "After "  << numEvts << "events,  # tags in tree is " << numTags << " and # nodes = " << Node::getNumNodes() << std::endl;
   }
   g.viz();
 };
