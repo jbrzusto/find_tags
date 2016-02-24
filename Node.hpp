@@ -24,6 +24,7 @@ protected:
   bool _seen; //!< has this node been visited during an algorithm operating on the graph?
 
   static int _numNodes;  //!< number of allocated nodes not yet deleted
+  static int _numLinks; //!< number of links between nodes
   static int maxLabel; //!< max label value
   static Node * _empty; //!< pointer to unique node representing empty tag phase set
 
@@ -54,7 +55,7 @@ public:
 
   static Node * empty(); //!< return unique node for empty set
   static int numNodes(); //!< return number of nodes allocated but not deleted
-  
+  static int numLinks(); //!< return number of links
   void dump(bool skipEdges=false);
 };
 

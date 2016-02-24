@@ -76,7 +76,7 @@ int main (int argc, char * argv[] ) {
     g.viz();
 #endif
     if (numEvts % 100 == 0)
-      std::cout << "After "  << numEvts << " events, # tags in tree is " << numTags << ", # Nodes = " << Node::numNodes() << ", # Sets = " << Set::numSets() << std::endl;
+      std::cout << "After "  << numEvts << " events, # tags in tree is " << numTags << ", # Nodes = " << Node::numNodes() << ", # Sets = " << Set::numSets() << ", # Edges = " << Node::numLinks() << std::endl;
   }
   g.viz();
 };

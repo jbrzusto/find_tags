@@ -252,10 +252,15 @@ Graph::ensureEdge ( Node *n, Gap b) {
     return i;
   n->e.insert(i, std::make_pair(b, i->second));
   // increase use count for that node
-  i->second->link();
+  linkNode(i->second);
   // return iterator to the new edge, which
   // will be immediately to the right of i
   return ++i;
+};
+
+void
+Graph::linkNode (Node *n) {
+  n->link();
 };
 
 void 
@@ -269,8 +274,7 @@ Graph::unlinkNode (Node *n) {
     for (auto i = n->e.begin(); i != n->e.end(); ) {
       auto j = i;
       ++j;
-      if (i->second != Node::empty())
-        unlinkNode(i->second);
+      unlinkNode(i->second);
       i = j;
     }
     n->drop();
@@ -289,7 +293,7 @@ Graph::augmentEdge(Node::Edges::iterator i, TagPhase p) {
     unlinkNode(n);
     delete s;
     i->second = j->second;
-    i->second->link();
+    linkNode(i->second);
     return;
   }
   if (n->useCount == 1) {
@@ -307,7 +311,7 @@ Graph::augmentEdge(Node::Edges::iterator i, TagPhase p) {
   mapSet(s, nn);
   // adjust incoming edge counts on old and new nodes
   unlinkNode(n);
-  nn->link();
+  linkNode(nn);
   i->second = nn;
 };
 
@@ -326,7 +330,7 @@ Graph::reduceEdge(Node::Edges::iterator i, TagPhase p) {
     if (s != Set::empty())
       delete s;
     i->second = j->second;
-    i->second->link();
+    linkNode(i->second);
     unlinkNode(n);
     return;
   }
@@ -346,7 +350,7 @@ Graph::reduceEdge(Node::Edges::iterator i, TagPhase p) {
   mapSet(s, nn);
   // adjust incoming edge counts on old and new nodes
   unlinkNode(n);
-  nn->link();
+  linkNode(nn);
   i->second = nn;
 };
 

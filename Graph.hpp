@@ -57,6 +57,8 @@ protected:
 
   Node::Edges::iterator ensureEdge ( Node *n, Gap b);
 
+  void linkNode (Node *n);
+
   void unlinkNode (Node *n); 
 
   void augmentEdge(Node::Edges::iterator i, TagPhase p);

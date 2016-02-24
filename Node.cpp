@@ -7,10 +7,12 @@
 void
 Node::link() {
   ++ useCount;
+  ++ _numLinks;
 };
 
 bool
 Node::unlink() {
+  -- _numLinks;
   return -- useCount == 0;
 };
 
@@ -18,7 +20,7 @@ void
 Node::drop() {
   if (s != Set::empty())
     delete s;
-  --_numNodes;
+  -- _numNodes;
   delete this;
 };
 
@@ -78,6 +80,11 @@ Node::numNodes() {
   return _numNodes;
 };
 
+int
+Node::numLinks() {
+  return _numLinks;
+};
+
 
 bool
 Node::Node::is_unique() {
@@ -124,5 +131,6 @@ Node::dump(bool skipEdges) {
 };
 
 int Node::_numNodes = 0;
+int Node::_numLinks = 0;
 int Node::maxLabel = 0;
 Node * Node::_empty = 0;
