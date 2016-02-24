@@ -383,8 +383,6 @@ Graph::insertRec (Node *n, Gap lo, Gap hi, TagPhase tFrom, TagPhase tTo) {
   // recursion of the given node already has the transition
   auto id = tFrom.first;
   n->stamp = stamp;
-  if (hasEdge(n, lo, tTo)) // FIXME: unneeded?
-    return;
   for(auto i = n->e.begin(); i != n->e.end(); ) {
     auto j = i;
     ++j;
@@ -450,4 +448,3 @@ Graph::eraseRec (Node *n, Gap lo, Gap hi, TagPhase tpFrom, TagPhase tpTo) {
   if (usedHere)
     erase(n, lo, hi, tpTo);
 };
-
