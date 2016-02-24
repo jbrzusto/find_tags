@@ -33,7 +33,7 @@ Graph::root() {
 };
     
 void 
-Graph::addTag(TagID id, std::vector < Gap > gaps, double tol, double timeFuzz, double maxTime) {
+Graph::addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   // add the repeated sequence of gaps from a tag, with fractional
   // tolerance tol, starting at phase 0, until adding the next gap
   // would exceed a total elapsed time of maxTime.  The gap is set
@@ -41,51 +41,60 @@ Graph::addTag(TagID id, std::vector < Gap > gaps, double tol, double timeFuzz, d
 
   // NB: gap 0 takes the tag from phase 0 to phase 1, etc.
 
-  int n = gaps.size();
-  int p = 0;
-  double t = 0;
-  TagPhase last(id, p);
-  insert(last);
-  for(;;) {
-    double g = gaps[p % n];
-    t += g;
-    if (t > maxTime)
-      break;
-    ++p;
-    TagPhase next(id, p);
-    insertRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), last, next);
+  int n = tag->gaps.size();
+  insert(TagPhase(tag, 0));
+  // add two cycles of tag.  After the first cycle, the tag should be unique
+  // and so we'll add new edges for skipped bursts
+  Gap g;
+  for(int i = 0; i < 2 * n - 1; ++i) {
+    g = tag->gaps[i % n];
+    insertRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(tag, i), TagPhase(tag, i+1));
 #ifdef DEBUG
     validateSetToNode();
 #endif
-    last = next;
   };
+
+  // We want to add two kinds of edges:
+  // - "back" edges from the node at phase 2 * n - 1 to the node at phase n
+  // corresponding to repetition of bursts.  There should be an edge for gap[n-1]
+  // plus multiples of the period.
+  // - "skip" edges from the node at phase n - 1 to the node at phase n corresponding
+  // to missed bursts
+  
+  // back edges 
+  for(g = tag->gaps[n - 1]; g < maxTime; g += tag->period)
+    insertRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(tag, 2 * n - 1), TagPhase(tag, n));
+
+  // skip edges
+  for(g = tag->gaps[n - 1] + tag->period; g < maxTime; g += tag->period)
+    insertRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(tag, n - 1), TagPhase(tag, n));
+  
 };    
 
 void 
-Graph::delTag(TagID id, std::vector < Gap > gaps, double tol, double timeFuzz, double maxTime) {
+Graph::delTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   // remove the tag which was added with given gaps, tol, and maxTime
 
-  int n = gaps.size();
-  int p = 0;
-  double t = 0;
-  for(;;) {
-    t += gaps[p % n];
-    if (t > maxTime)
-      break;
-    ++p;
-  }      
+  int n = tag->gaps.size();
+  Gap g;
 
-  while(p > 0) {
-    --p;
-    double g = gaps[p % n];
-    eraseRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(id, p), TagPhase(id, p+1));
+  // remove skip edges
+  for(g = tag->gaps[n - 1] + tag->period; g < maxTime; g += tag->period)
+    eraseRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(tag, n - 1), TagPhase(tag, n));
 
+  // remove back edges 
+  for(g = tag->gaps[n - 1]; g < maxTime; g += tag->period)
+    eraseRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(tag, 2 * n - 1), TagPhase(tag, n));
+
+  for(int i = 2 * n - 2; i >= 0; --i) {
+    g = tag->gaps[i % n];
+    eraseRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(tag, i), TagPhase(tag, i + 1));
 #ifdef DEBUG
     validateSetToNode();
 #endif
-
-  }
-  erase(TagPhase(id, 0));
+  };
+  
+  erase(TagPhase(tag, 0));
 #ifdef DEBUG
   validateSetToNode();
   viz();

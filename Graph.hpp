@@ -29,8 +29,8 @@ public:
 
   Graph(std::string vizPrefix = "graph");
   Node * root();
-  void addTag(TagID id, std::vector < Gap > gaps, double tol, double timeFuzz, double maxTime);    
-  void delTag(TagID id, std::vector < Gap > gaps, double tol, double timeFuzz, double maxTime);
+  void addTag(Tag * tag, double tol, double timeFuzz, double maxTime);    
+  void delTag(Tag * tag, double tol, double timeFuzz, double maxTime);
   void viz();
   void dumpSetToNode();
   void validateSetToNode();

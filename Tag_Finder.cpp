@@ -21,7 +21,7 @@ Tag_Finder::setup_graph() {
   // add each tag to the graph.
 
   for (auto i = tags->begin(); i != tags->end(); ++i)
-    graph.addTag(*i, (*i)->gaps, pulse_slop, burst_slop / (*i)->gaps[3], max_skipped_bursts * (*i)->period);
+    graph.addTag(*i, pulse_slop, burst_slop / (*i)->gaps[3], max_skipped_bursts * (*i)->period);
 };
 
 void
