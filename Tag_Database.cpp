@@ -32,8 +32,16 @@ Tag_Database::populate_from_sqlite_file(string filename) {
     float freq_MHz = sqlite3_column_double(st, 1);
     float dfreq = sqlite3_column_double(st, 2);
     std::vector < Gap > gaps;
-    for (int i = 0; i < 4; ++i)
-      gaps.push_back(sqlite3_column_double(st, 3 + i));
+    double totalBurst = 0.0;
+    for (int i = 0; i < 3; ++i) {
+      double gap = sqlite3_column_double(st, 3 + i);
+      gaps.push_back(gap);
+      totalBurst += gap;
+    }
+    // subtract burst total from period to get final gap
+    double gap = sqlite3_column_double(st, 6) - totalBurst;
+    gaps.push_back(gap);
+      
     Nominal_Frequency_kHz nom_freq = Freq_Setting::as_Nominal_Frequency_kHz(freq_MHz);
     if (nominal_freqs.count(nom_freq) == 0) {
       // we haven't seen this nominal frequency before

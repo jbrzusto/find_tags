@@ -95,6 +95,7 @@ bool Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
   case MULTIPLE:
     if (state->is_unique()) {
       tag = state->get_tag();
+      num_pulses = tag->gaps.size();
       tag_id_level = SINGLE;
     }
     break;
