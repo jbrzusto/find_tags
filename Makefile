@@ -55,9 +55,6 @@ find_tags_motus: Freq_Setting.o Freq_History.o Set.o Node.o Graph.o Tag.o Tag_Da
 sqlite3.o: sqlite3.c
 	gcc -c -o sqlite3.o -O2 sqlite3.c
 
-test7: test7.cpp Tag.o Tag_Database.o sqlite3.o Freq_Setting.o
-	g++ -O3 -std=c++0x  -g3  -o test7 test7.cpp Tag_Database.o sqlite3.o Tag.o Freq_Setting.o -lrt -ldl
-
 Tag.o: Tag.hpp Tag.cpp find_tags_common.hpp
 
 Node.o: Node.hpp Node.cpp Tag.hpp find_tags_common.hpp
@@ -65,3 +62,8 @@ Node.o: Node.hpp Node.cpp Tag.hpp find_tags_common.hpp
 Set.o: Set.hpp find_tags_common.hpp
 
 Graph.o: Graph.cpp Set.hpp Node.hpp Tag.hpp find_tags_common.hpp
+
+testAddRemoveTag.o: testAddRemoveTag.cpp Graph.o Tag_Database.o sqlite3.o Freq_Setting.o
+
+testAddRemoveTag: testAddRemoveTag.o Tag_Database.o sqlite3.o Tag.o Node.o Set.o Graph.o Freq_Setting.o
+	g++ $(PROFILING) -o testAddRemoveTag $^ $(LDFLAGS)
