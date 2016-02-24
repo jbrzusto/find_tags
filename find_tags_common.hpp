@@ -51,10 +51,12 @@ typedef std::pair < TagID, Phase > TagPhase;
 typedef std::unordered_multimap < TagID, Phase > TagPhaseSet;
 
 // The type for interpulse gaps this should be able to represent a
-// difference between two nearby Timestamp values We use float, which
+// difference between two nearby timestamp values. We use float, which
 // has sufficient precision here.
 
 typedef float Gap;
+typedef std::pair < Gap, Gap > GapRange;
+typedef std::vector < GapRange > GapRanges;
 
 // common standard stuff
 

@@ -48,7 +48,10 @@ Graph::addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   Gap g;
   for(int i = 0; i < 2 * n - 1; ++i) {
     g = tag->gaps[i % n];
-    insertRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(tag, i), TagPhase(tag, i+1));
+    GapRange gr(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)));
+    GapRanges grs;
+    grs.push_back(gr);
+    insertRec(grs, TagPhase(tag, i), TagPhase(tag, i+1));
 #ifdef DEBUG
     validateSetToNode();
 #endif
@@ -62,12 +65,17 @@ Graph::addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   // to missed bursts
   
   // back edges 
+  GapRanges grs;
   for(g = tag->gaps[n - 1]; g < maxTime; g += tag->period)
-    insertRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(tag, 2 * n - 1), TagPhase(tag, n));
+    grs.push_back(GapRange(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz))));
+
+  insertRec(grs, TagPhase(tag, 2 * n - 1), TagPhase(tag, n));
 
   // skip edges
+  grs.clear();
   for(g = tag->gaps[n - 1] + tag->period; g < maxTime; g += tag->period)
-    insertRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(tag, n - 1), TagPhase(tag, n));
+    grs.push_back(GapRange(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz))));
+  insertRec(grs, TagPhase(tag, n - 1), TagPhase(tag, n));
   
 };    
 
@@ -79,16 +87,22 @@ Graph::delTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   Gap g;
 
   // remove skip edges
+  GapRanges grs;
   for(g = tag->gaps[n - 1] + tag->period; g < maxTime; g += tag->period)
-    eraseRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(tag, n - 1), TagPhase(tag, n));
+    grs.push_back(GapRange(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz))));
+  eraseRec(grs, TagPhase(tag, n - 1), TagPhase(tag, n));
 
   // remove back edges 
+  grs.clear();
   for(g = tag->gaps[n - 1]; g < maxTime; g += tag->period)
-    eraseRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(tag, 2 * n - 1), TagPhase(tag, n));
+    grs.push_back(GapRange(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz))));
+  eraseRec(grs, TagPhase(tag, 2 * n - 1), TagPhase(tag, n));
 
   for(int i = 2 * n - 2; i >= 0; --i) {
     g = tag->gaps[i % n];
-    eraseRec(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)), TagPhase(tag, i), TagPhase(tag, i + 1));
+    grs.clear();
+    grs.push_back(GapRange(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz))));
+    eraseRec(grs, TagPhase(tag, i), TagPhase(tag, i + 1));
 #ifdef DEBUG
     validateSetToNode();
 #endif
@@ -199,13 +213,13 @@ Graph::erase (const TagPhase &t) {
 };
 
 void 
-Graph::insert (Gap lo, Gap hi, TagPhase p) {
-  insert (_root, lo, hi, p);
+Graph::insert (GapRanges & grs, TagPhase p) {
+  insert (_root, grs, p);
 };
 
 void 
-Graph::erase (Gap lo, Gap hi, TagPhase p) {
-  erase(_root, lo, hi, p);
+Graph::erase (GapRanges & grs, TagPhase p) {
+  erase(_root, grs, p);
 };
 
 bool 
@@ -355,37 +369,41 @@ Graph::dropEdgeIfExtra(Node * n, Node::Edges::iterator i)
 };
 
 void
-Graph::insert (Node *n, Gap lo, Gap hi, TagPhase p)
+Graph::insert (Node *n, GapRanges & grs, TagPhase p)
 {
-  // From the node at n, add appropriate edges to other nodes
-  // given that the segment [lo, hi] is being augmented by p.
+  for (auto gr = grs.begin(); gr != grs.end(); ++gr) {
+    Gap lo = gr->first;
+    Gap hi = gr->second;
+    // From the node at n, add appropriate edges to other nodes
+    // given that the segment [lo, hi] is being augmented by p.
 
-  ensureEdge(n, hi);  // ensure there is an edge from n at hi to the
-  // current node for that point
+    ensureEdge(n, hi);  // ensure there is an edge from n at hi to the
+    // current node for that point
 
-  auto i = ensureEdge(n, lo); // ensure there is an edge from n at
-  // lo to the current node for that
-  // point
+    auto i = ensureEdge(n, lo); // ensure there is an edge from n at
+    // lo to the current node for that
+    // point
 
-  // From the lo to the last existing endpoint in [lo, hi), augment
-  // each edge by p.
+    // From the lo to the last existing endpoint in [lo, hi), augment
+    // each edge by p.
 
-  while (i->first < hi) {
-    auto j = i;
-    ++j;
-    augmentEdge(i, p);
-    i = j;
+    while (i->first < hi) {
+      auto j = i;
+      ++j;
+      augmentEdge(i, p);
+      i = j;
+    }
   }
 };
 
 void 
-Graph::insertRec (Gap lo, Gap hi, TagPhase tFrom, TagPhase tTo) {
+Graph::insertRec (GapRanges & grs, TagPhase tFrom, TagPhase tTo) {
   newStamp();
-  insertRec (_root, lo, hi, tFrom, tTo);
+  insertRec (_root, grs, tFrom, tTo);
 };
     
 void 
-Graph::insertRec (Node *n, Gap lo, Gap hi, TagPhase tFrom, TagPhase tTo) {
+Graph::insertRec (Node *n, GapRanges & grs, TagPhase tFrom, TagPhase tTo) {
   // recursively insert a transition from tFrom to tTo because this
   // is a DAG, rather than a tree, a given node might already have
   // been visited by depth-first search, so we don't continue the
@@ -396,45 +414,49 @@ Graph::insertRec (Node *n, Gap lo, Gap hi, TagPhase tFrom, TagPhase tTo) {
     auto j = i;
     ++j;
     if (i->second->stamp != stamp && i->second->s->count(id)) {
-      insertRec(i->second, lo, hi, tFrom, tTo);
+      insertRec(i->second, grs, tFrom, tTo);
     }
     i = j;
   }
   // possibly add edge from this node
   if (n->s->count(tFrom))
-    insert(n, lo, hi, tTo);
+    insert(n, grs, tTo);
 };
 
 void 
-Graph::erase (Node *n, Gap lo, Gap hi, TagPhase tp) {
+Graph::erase (Node *n, GapRanges & grs, TagPhase tp) {
   // for any edges from n at points in the range [lo, hi]
   // remove p from the tail node.
   // If edges at lo and/or hi become redundant after 
   // this, remove them.
 
-  auto i = n->e.lower_bound(lo);
-  auto j = i; // save value for later
-  while (i->first <= hi) {
-    auto j = i;
-    ++j;
-    reduceEdge(i, tp);
-    i = j;
+  for (auto gr = grs.begin(); gr != grs.end(); ++gr) {
+    Gap lo = gr->first;
+    Gap hi = gr->second;
+    auto i = n->e.lower_bound(lo);
+    auto j = i; // save value for later
+    while (i->first <= hi) {
+      auto j = i;
+      ++j;
+      reduceEdge(i, tp);
+      i = j;
+    }
+    --i;
+    if (std::isfinite(i->first))
+      dropEdgeIfExtra(n, i); // rightmost edge
+    if (i != j && std::isfinite(j->first))
+      dropEdgeIfExtra(n, j);  // leftmost edge
   }
-  --i;
-  if (std::isfinite(i->first))
-    dropEdgeIfExtra(n, i); // rightmost edge
-  if (i != j && std::isfinite(j->first))
-    dropEdgeIfExtra(n, j);  // leftmost edge
 };
 
 void 
-Graph::eraseRec (Gap lo, Gap hi, TagPhase tpFrom, TagPhase tpTo) {
+Graph::eraseRec (GapRanges & grs, TagPhase tpFrom, TagPhase tpTo) {
   newStamp();
-  eraseRec (_root, lo, hi, tpFrom, tpTo);
+  eraseRec (_root, grs, tpFrom, tpTo);
 };
 
 void 
-Graph::eraseRec (Node *n, Gap lo, Gap hi, TagPhase tpFrom, TagPhase tpTo) {
+Graph::eraseRec (Node *n, GapRanges & grs, TagPhase tpFrom, TagPhase tpTo) {
   // recursively erase all transitions between tpFrom and tpTo for
   // the range lo, hi
   n->stamp = stamp;
@@ -450,10 +472,10 @@ Graph::eraseRec (Node *n, Gap lo, Gap hi, TagPhase tpFrom, TagPhase tpTo) {
       if (here && i->second->s->count(tpTo))
         usedHere = true;
       if (i->second->stamp != stamp)
-        eraseRec(i->second, lo, hi, tpFrom, tpTo);
+        eraseRec(i->second, grs, tpFrom, tpTo);
     }
     i = j;
   }
   if (usedHere)
-    erase(n, lo, hi, tpTo);
+    erase(n, grs, tpTo);
 };

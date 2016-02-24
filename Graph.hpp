@@ -49,9 +49,9 @@ protected:
 
   void erase (const TagPhase &t);
 
-  void insert (Gap lo, Gap hi, TagPhase p);
+  void insert (GapRanges & gr, TagPhase p);
 
-  void erase (Gap lo, Gap hi, TagPhase p);
+  void erase (GapRanges & gr, TagPhase p);
 
   bool hasEdge ( Node *n, Gap b, TagPhase p);
 
@@ -65,17 +65,17 @@ protected:
 
   void dropEdgeIfExtra(Node * n, Node::Edges::iterator i);
 
-  void insert (Node *n, Gap lo, Gap hi, TagPhase p);
+  void insert (Node *n, GapRanges & gr, TagPhase p);
     
-  void insertRec (Gap lo, Gap hi, TagPhase tFrom, TagPhase tTo);
+  void insertRec (GapRanges & gr, TagPhase tFrom, TagPhase tTo);
 
-  void insertRec (Node *n, Gap lo, Gap hi, TagPhase tFrom, TagPhase tTo);
+  void insertRec (Node *n, GapRanges & gr, TagPhase tFrom, TagPhase tTo);
 
-  void erase (Node *n, Gap lo, Gap hi, TagPhase tp);
+  void erase (Node *n, GapRanges & gr, TagPhase tp);
 
-  void eraseRec (Gap lo, Gap hi, TagPhase tpFrom, TagPhase tpTo);
+  void eraseRec (GapRanges & gr, TagPhase tpFrom, TagPhase tpTo);
 
-  void eraseRec (Node *n, Gap lo, Gap hi, TagPhase tpFrom, TagPhase tpTo);
+  void eraseRec (Node *n, GapRanges & gr, TagPhase tpFrom, TagPhase tpTo);
 
 };
 
