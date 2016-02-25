@@ -5,17 +5,23 @@
 #include "Event.hpp"
 #include <queue>
 
+class Ticker;
+
 class History {
+  friend class Ticker;
+
 public:
+  typedef std::set < Event > timeline; //!< ordered sequence of events
+  typedef timeline::iterator marker; //!< pointer to a location in history
+
   History();
-  void push(Timestamp ts, Event e); //!< add an event to the end of the history
-  Event pop(); //!< remove and return the event at the start of the history
-  Timestamp ts(); //!< return the timestamp for the next event
-  
+
+  Ticker getTicker(); //!< get iterator to history
+  void push(Event e); //!< add an event to the end of the history
+
 protected:
   // represent a time-mapped sequence of events
-
-  std::map < Timestamp, Event > q; //!< ordered sequence of events
+  timeline q;
 };
 
 #endif // HISTORY_HPP

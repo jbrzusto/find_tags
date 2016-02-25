@@ -24,7 +24,6 @@ Tag_Foray::start() {
   long long bn = 0;
   double ts;
   History *hist = tags.get_history();
-  double nextEventTS = hist->ts(); // might be +Inf if no events
 
   while (! bn) {
       // read and parse a line from a SensorGnome file
@@ -79,12 +78,6 @@ Tag_Foray::start() {
             continue;
           }
 
-          // process any tag history events that must happen before this pulse record
-          while (nextEventTS <= ts) {
-            process_event(hist->pop());
-            nextEventTS = hist->ts();
-          }
-
           if (dfreq > max_dfreq || dfreq < min_dfreq)
             continue;
 
@@ -101,7 +94,7 @@ Tag_Foray::start() {
               newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags.get_tags_at_freq(key.second), pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix.str());
             else
               newtf = new Tag_Finder(this, key.second, tags.get_tags_at_freq(key.second), prefix.str());
-            newtf->init();
+            newtf->init(hist);
             tag_finders[key] = newtf;
 #if 0
             //#ifdef FIND_TAGS_DEBUG
@@ -150,16 +143,9 @@ Tag_Foray::test() {
       newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags.get_tags_at_freq(key.second), pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix);
     else
       newtf = new Tag_Finder(this, key.second, tags.get_tags_at_freq(key.second), prefix);
-    newtf->init();
+    newtf->init(tags.get_history());
   }
 }
-
-void
-Tag_Foray::process_event(Event e) {
- //!< process a tag event; force all tag
-  for (auto tfi = tag_finders.begin(); tfi != tag_finders.end(); ++tfi)
-    tfi->second->process_event(e);
-};
 
 Tag_Foray::~Tag_Foray () {
   for (auto tfi = tag_finders.begin(); tfi != tag_finders.end(); ++tfi)

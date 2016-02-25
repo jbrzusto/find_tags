@@ -7,6 +7,8 @@
 #include "Freq_Setting.hpp"
 #include "Graph.hpp"
 #include "Event.hpp"
+#include "History.hpp"
+#include "Ticker.hpp"
 
 class Tag_Foray;
 
@@ -84,11 +86,13 @@ public:
   static unsigned int default_max_skipped_bursts;
 
 
+  Ticker cron; //!< iterator through history
+
   // output parameters
 
   string prefix;   // prefix before each tag record (e.g. port number then comma)
 
-  Tag_Finder(Tag_Foray * owner){};
+  Tag_Finder(Tag_Foray * owner) {};
 
   Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, TagSet * tags, string prefix="");
 
@@ -104,7 +108,7 @@ public:
 
   static void set_default_max_skipped_bursts(unsigned int skip);
 
-  void init();
+  void init(History *h);
 
   virtual void process (Pulse &p);
 

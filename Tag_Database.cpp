@@ -52,16 +52,13 @@ Tag_Database::populate_from_sqlite_file(string filename, bool get_history) {
     }
     Tag * t = new Tag (motusID, freq_MHz, dfreq, gaps);
     tags[nom_freq].insert (t);
-    if (get_history)
-      motusIDToPtr[motusID] = t;
+    motusIDToPtr[motusID] = t;
   };
   sqlite3_finalize(st);
 
   h = new History();  // empty history
-  if (get_history) {
-    if (SQLITE_OK != sqlite3_prepare_v2(db, "select ts, tagID, event from events order by ts",
-                                        -1, &st, 0))
-      throw std::runtime_error("You asked to use events but there is no 'events' table in the tag database.");
+  if (get_history && SQLITE_OK == sqlite3_prepare_v2(db, "select ts, tagID, event from events order by ts",
+                                                     -1, &st, 0)) {
     while (SQLITE_DONE != sqlite3_step(st)) {
       Timestamp ts = (Timestamp) sqlite3_column_double(st, 0);
       Motus_Tag_ID  motusID = (Motus_Tag_ID) sqlite3_column_int(st, 1);
@@ -69,11 +66,15 @@ Tag_Database::populate_from_sqlite_file(string filename, bool get_history) {
       auto p = motusIDToPtr.find(motusID);
       if (p == motusIDToPtr.end())
         throw std::runtime_error(std::string("Event refers to non-existent motus tag ID ") + std::to_string(motusID));
-      h->push(ts, Event(p->second, event));
+      h->push(Event(ts, p->second, event));
     }
     sqlite3_finalize(st);
-  }
-  
+  } else {
+    // create a bogus history where every tag in the database is activated at time 0 and remains active 
+    // forever
+    for (auto i = motusIDToPtr.begin(); i != motusIDToPtr.end(); ++i)
+      h->push(Event(0, i->second, Event::E_ACTIVATE));
+  };
   sqlite3_close(db);
   if (tags.size() == 0)
     throw std::runtime_error("No tags in database.");

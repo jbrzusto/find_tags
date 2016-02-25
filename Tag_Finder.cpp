@@ -45,8 +45,8 @@ Tag_Finder::set_default_max_skipped_bursts(unsigned int skip) {
 };
 
 void
-Tag_Finder::init() {
-  setup_graph();
+Tag_Finder::init(History *h) {
+  cron = h->getTicker();
 };
 
 void
@@ -81,6 +81,12 @@ Tag_Finder::process(Pulse &p) {
      - if this pulse didn't confirm any candidate, then start a new
      Tag_Candidate at this pulse.
   */
+
+
+  // process any tag events up to this point in time
+
+  while (cron.ts() <= p.ts)
+    process_event(cron.get());
 
   // the clone list 
   Cand_List & cloned_candidates = cands[3];
@@ -194,6 +200,20 @@ Tag_Finder::dump_bogus_burst(Pulse &p) {
 
 void
 Tag_Finder::process_event(Event e) {
+  auto t = e.tag;
+  if (Freq_Setting::as_Nominal_Frequency_kHz(t->freq) != nom_freq)
+    return; // skip tags not on this finder's frequency
+
+  switch (e.code) {
+  case Event::E_ACTIVATE:
+      graph.addTag(t, pulse_slop, burst_slop / t->gaps[3], max_skipped_bursts * t->period);
+    break;
+  case Event::E_DEACTIVATE:
+    graph.delTag(t, pulse_slop, burst_slop / t->gaps[3], max_skipped_bursts * t->period);
+    break;
+  default:
+    std::cerr << "Warning: Unknown event code " << e.code << " for tag " << t->motusID << std::endl;
+  };
 };
 
 

@@ -29,12 +29,6 @@ public:
   Tag_Database & tags; // registered tags on all known nominal frequencies
 
 protected:
-
-  void process_event(Event e); //!< process a tag event; force all tag
-                               //! finders to process a tag event,
-                               //! which typically adds or removes a
-                               //! tag from the graph of active tags
-
   // settings
 
   std::istream * data; // stream from which data records are read
