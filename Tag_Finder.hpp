@@ -6,6 +6,7 @@
 #include "Tag.hpp"
 #include "Freq_Setting.hpp"
 #include "Graph.hpp"
+#include "Event.hpp"
 
 class Tag_Foray;
 
@@ -108,6 +109,8 @@ public:
   virtual void process (Pulse &p);
 
   void initialize_tag_buffers();
+
+  void process_event(Event e); //!< process a tag event; typically adds or removes a tag from the graph of active tags
 
   Gap *get_true_gaps(Tag * tid);
 

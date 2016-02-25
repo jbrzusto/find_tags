@@ -95,7 +95,7 @@ Node::Node::is_unique() {
 };
 
 
-Gap 
+Gap
 Node::get_max_age() {
   auto i = e.rbegin();
   --i;

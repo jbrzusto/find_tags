@@ -23,6 +23,9 @@ long long
 Tag_Foray::start() {
   long long bn = 0;
   double ts;
+  History *hist = tags.get_history();
+  double nextEventTS = hist->ts(); // might be +Inf if no events
+
   while (! bn) {
       // read and parse a line from a SensorGnome file
 
@@ -74,6 +77,12 @@ Tag_Foray::start() {
           if (5 != sscanf(buf+1, "%hd,%lf,%f,%f,%f", &port_num, &ts, &dfreq, &sig, &noise)) {
             std::cerr << "Warning: malformed line in input\n  at line " << line_no << ":\n" << (string("") + buf) << std::endl;
             continue;
+          }
+
+          // process any tag history events that must happen before this pulse record
+          while (nextEventTS <= ts) {
+            process_event(hist->pop());
+            nextEventTS = hist->ts();
           }
 
           if (dfreq > max_dfreq || dfreq < min_dfreq)
@@ -144,7 +153,14 @@ Tag_Foray::test() {
     newtf->init();
   }
 }
-    
+
+void
+Tag_Foray::process_event(Event e) {
+ //!< process a tag event; force all tag
+  for (auto tfi = tag_finders.begin(); tfi != tag_finders.end(); ++tfi)
+    tfi->second->process_event(e);
+};
+
 Tag_Foray::~Tag_Foray () {
   for (auto tfi = tag_finders.begin(); tfi != tag_finders.end(); ++tfi)
     delete (tfi->second);

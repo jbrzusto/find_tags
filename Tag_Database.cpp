@@ -2,16 +2,17 @@
 #include <sqlite3.h>
 #include <math.h>
 
-Tag_Database::Tag_Database(string filename)
+Tag_Database::Tag_Database (string filename, bool get_history)
+  : h(0)
 {
   if (filename.substr(filename.length() - 7) == ".sqlite")
-    populate_from_sqlite_file(filename);
+    populate_from_sqlite_file(filename, get_history);
   else
     throw std::runtime_error("Tag_Database: unrecognized file type; name must end in '.sqlite'");
 };
 
 void
-Tag_Database::populate_from_sqlite_file(string filename) {
+Tag_Database::populate_from_sqlite_file(string filename, bool get_history) {
   
   sqlite3 * db; //<! handle to sqlite connection
   
@@ -49,9 +50,30 @@ Tag_Database::populate_from_sqlite_file(string filename) {
       nominal_freqs.insert(nom_freq);
       tags[nom_freq] = TagSet();
     }
-    tags[nom_freq].insert (new Tag (motusID, freq_MHz, dfreq, gaps));
+    Tag * t = new Tag (motusID, freq_MHz, dfreq, gaps);
+    tags[nom_freq].insert (t);
+    if (get_history)
+      motusIDToPtr[motusID] = t;
   };
   sqlite3_finalize(st);
+
+  h = new History();  // empty history
+  if (get_history) {
+    if (SQLITE_OK != sqlite3_prepare_v2(db, "select ts, tagID, event from events order by ts",
+                                        -1, &st, 0))
+      throw std::runtime_error("You asked to use events but there is no 'events' table in the tag database.");
+    while (SQLITE_DONE != sqlite3_step(st)) {
+      Timestamp ts = (Timestamp) sqlite3_column_double(st, 0);
+      Motus_Tag_ID  motusID = (Motus_Tag_ID) sqlite3_column_int(st, 1);
+      int event = sqlite3_column_int(st, 2);
+      auto p = motusIDToPtr.find(motusID);
+      if (p == motusIDToPtr.end())
+        throw std::runtime_error(std::string("Event refers to non-existent motus tag ID ") + std::to_string(motusID));
+      h->push(ts, Event(p->second, event));
+    }
+    sqlite3_finalize(st);
+  }
+  
   sqlite3_close(db);
   if (tags.size() == 0)
     throw std::runtime_error("No tags in database.");
@@ -64,4 +86,9 @@ Freq_Set & Tag_Database::get_nominal_freqs() {
 TagSet *
 Tag_Database::get_tags_at_freq(Nominal_Frequency_kHz freq) {
   return & tags[freq];
+};
+
+History *
+Tag_Database::get_history() {
+  return h;
 };

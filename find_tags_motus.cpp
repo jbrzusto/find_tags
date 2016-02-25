@@ -276,6 +276,22 @@ usage() {
 	"    before a hit is reported.\n"
 	"    default: PULSES_PER_BURST (i.e. 4)\n\n"
 
+        "-e --use-events\n"
+        "    This option can be used to limit the search for specific tags to\n"
+        "    periods of time when they are known to be active.  These periods are\n"
+        "    specified by a table in the tag database called 'events', which must have\n"
+        "    at least the columns 'ts', 'motusTagID', and 'event', where:\n\n"
+        "       ts: double, timestamp for event, in seconds since 1 Jan 1970 GMT\n"
+        "       tagID:  integer giving unique motus tag ID\n"
+        "       event: integer; 1 means active and deployed, 0 means inactive.\n"
+        "    A tag is only sought and reported when active.\n"
+        "    This lets you run multiple years of data from a single receiver\n"
+        "    and look for a shifting set of tags over the years.\n\n"
+
+        "    Note: If this option is *not* specified, then all tags in the database are sought\n"
+        "    and their detections reported over the entire timespan of the input file.\n\n"
+        
+
         "-n, --bootNum=BN\n"
         "    bootnum for first batch records sent to output db table 'batches'.\n"
         "    Each time the line '!NEWBN,XXX' is encountered in the input, a new batch is\n"
@@ -345,6 +361,7 @@ main (int argc, char **argv) {
 	OPT_BURST_SLOP	         = 'b',
 	OPT_BURST_SLOP_EXPANSION = 'B',
 	OPT_PULSES_TO_CONFIRM    = 'c',
+        OPT_USE_EVENTS           = 'e',
 	OPT_DEFAULT_FREQ         = 'f',
 	OPT_FORCE_DEFAULT_FREQ   = 'F',
         COMMAND_HELP	         = 'h',
@@ -361,11 +378,12 @@ main (int argc, char **argv) {
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:f:Fhi:l:m:M:p:R:s:S:tw:";
+    static const char short_options[] = "b:B:c:ef:Fhi:l:m:M:p:R:s:S:tw:";
     static const struct option long_options[] = {
         {"burst_slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst_slop_expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
 	{"pulses_to_confirm"	   , 1, 0, OPT_PULSES_TO_CONFIRM},
+        {"use_events"              , 0, 0, OPT_USE_EVENTS},
         {"default_freq"		   , 1, 0, OPT_DEFAULT_FREQ},
         {"force_default_freq"      , 0, 0, OPT_FORCE_DEFAULT_FREQ},
         {"help"			   , 0, 0, COMMAND_HELP},
@@ -389,6 +407,7 @@ main (int argc, char **argv) {
     float min_dfreq = -std::numeric_limits<float>::infinity();
     float max_dfreq = std::numeric_limits<float>::infinity();
 
+    bool use_events = false;
     bool force_default_freq = false;
     bool test_only = false;
     // rate-limiting buffer parameters
@@ -418,6 +437,9 @@ main (int argc, char **argv) {
 	case OPT_PULSES_TO_CONFIRM:
           pulses_to_confirm = atoi(optarg);
 	  break;
+        case OPT_USE_EVENTS:
+          use_events = true;
+          break;
 	case OPT_DEFAULT_FREQ:
 	  default_freq = atof(optarg);
 	  break;
@@ -496,10 +518,11 @@ main (int argc, char **argv) {
     double program_build_ts = PROGRAM_BUILD_TS; // defined in Makefile
     try {
       Node::init();
-      Tag_Database tag_db (tag_filename);
+      Tag_Database tag_db (tag_filename, use_events);
       DB_Filer dbf (output_filename, program_name, program_version, program_build_ts, bootNum);
       dbf.add_param("default_freq", default_freq);
       dbf.add_param("force_default_freq", force_default_freq);
+      dbf.add_param("use_events", use_events);
       dbf.add_param("burst_slop", burst_slop);
       dbf.add_param("burst_slop_expansion", burst_slop_expansion );
       dbf.add_param("pulses_to_confirm", pulses_to_confirm);

@@ -192,6 +192,11 @@ Tag_Finder::dump_bogus_burst(Pulse &p) {
   Tag_Candidate::dump_bogus_burst(p.ts, prefix, p.ant_freq);
 };
 
+void
+Tag_Finder::process_event(Event e) {
+};
+
+
 Gap Tag_Finder::default_pulse_slop = 0.0015; // 1.5 ms
 Gap Tag_Finder::default_burst_slop = 0.010; // 10 ms
 Gap Tag_Finder::default_burst_slop_expansion = 0.001; // 1ms = 1 part in 10000 for 10s BI
