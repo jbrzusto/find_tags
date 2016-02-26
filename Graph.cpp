@@ -62,20 +62,27 @@ Graph::addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   // corresponding to repetition of bursts.  There should be an edge for gap[n-1]
   // plus multiples of the period.
   // - "skip" edges from the node at phase n - 1 to the node at phase n corresponding
-  // to missed bursts
+  // to missed bursts (only if n > 1); a beeper tag has n = 1.
   
   // back edges 
   GapRanges grs;
   for(g = tag->gaps[n - 1]; g < maxTime; g += tag->period)
     grs.push_back(GapRange(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz))));
 
-  insertRec(grs, TagPhase(tag, 2 * n - 1), TagPhase(tag, n));
+  insertRec(grs, TagPhase(tag, 2 * n - 1), TagPhase(tag, n)); // self-linked edges for a beeper tag: 2 * 1 - 1 == 1
 
-  // skip edges
-  grs.clear();
-  for(g = tag->gaps[n - 1] + tag->period; g < maxTime; g += tag->period)
-    grs.push_back(GapRange(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz))));
-  insertRec(grs, TagPhase(tag, n - 1), TagPhase(tag, n));
+  // skip edges (only for n > 1).  FIXME:  We are privileging the last gap because
+  // for coded ID tags, it is typically much larger than the others, so that the pulses
+  // forming the first n - 1 gaps are called a "burst".  A more comprehensive
+  // approach, especially at low-noise, low-activity sites, would be to add edges for any number
+  // of missed pulses, not just entire "bursts".
+
+  if (n > 1) {
+    grs.clear();
+    for(g = tag->gaps[n - 1] + tag->period; g < maxTime; g += tag->period)
+      grs.push_back(GapRange(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz))));
+    insertRec(grs, TagPhase(tag, n - 1), TagPhase(tag, n));
+  }
   
 };    
 
