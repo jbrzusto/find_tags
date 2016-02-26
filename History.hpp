@@ -3,7 +3,6 @@
 
 #include "find_tags_common.hpp"
 #include "Event.hpp"
-#include <queue>
 
 class Ticker;
 
