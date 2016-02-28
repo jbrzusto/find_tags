@@ -253,6 +253,9 @@ void Tag_Candidate::dump_bursts(string prefix) {
                    bp->slop,
                    bp->burst_slop
                    );
+    ++ tag->count;
+    if (tag->cb)
+      tag->cb(tag);
     clear_pulses();
   }
 };

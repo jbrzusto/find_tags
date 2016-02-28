@@ -6,7 +6,8 @@ Graph::Graph(std::string vizPrefix) :
   vizPrefix(vizPrefix), 
   numViz(0), 
   setToNode(100),
-  stamp(1)
+  stamp(1),
+  amb()
 {
   _root = new Node();
   mapSet(Set::empty(), Node::empty());
@@ -31,9 +32,48 @@ Node *
 Graph::root() {
   return _root;
 };
+
+void 
+Graph::addTag(Tag * tag, double tol, double timeFuzz, double maxTime) {
+  auto ot = find(tag); // FIXME: we're only looking for match of the
+  // exact tag values; we really should be doing a tree search
+  // for each node where the tag should be unique but isn't
+  // (i.e. each node with TagPhase(tag, n) where n is the number
+  // of pulses in n
+
+  if (! ot) {
+    // tag not already present, so just add
+    _addTag(tag, tol, timeFuzz, maxTime);
+    return;
+  }
+  // another tag is ambiguous with this one (i.e. pulses from this one
+  // would be detected as an other, existing tag)
+  // Manage the ambiguity by replacing the existing tag with a proxy
+  // that represents it (possibly already a proxy) and the new tag.
+  auto nt = amb.add(ot, tag);
+  _delTag(ot, tol, timeFuzz, maxTime); // delete the previous clone of the tag
+  _addTag(nt, tol, timeFuzz, maxTime); // insert the proxy, representing both clones
+};
+
+void
+Graph::delTag(Tag * tag, double tol, double timeFuzz, double maxTime) {
+  auto p = amb.proxyFor(tag);
+  if (!p) {
+    // tag has not been proxied, so just delete
+    _delTag(tag, tol, timeFuzz, maxTime);
+    return;
+  }
+  // this tag is part of an ambiguity set which has been proxied in the tree
+  // remove this tag from the group, remove the original proxy from the tree,
+  // and replace it with either a new (reduced) proxy, or a real tag if removing
+  // this tag leaves only one other tag in the ambiguity set.
+  auto newp = amb.remove(p, tag);
+  _delTag(p, tol, timeFuzz, maxTime);
+  _addTag(newp, tol, timeFuzz, maxTime);
+};
     
 void 
-Graph::addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
+Graph::_addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   // add the repeated sequence of gaps from a tag, with fractional
   // tolerance tol, starting at phase 0, until adding the next gap
   // would exceed a total elapsed time of maxTime.  The gap is set
@@ -41,12 +81,24 @@ Graph::addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
 
   // NB: gap 0 takes the tag from phase 0 to phase 1, etc.
 
+  // The sequence of n gaps from a tag should be unique.  When we reach
+  // a node with tag T in phase n(T), all paths leading from there only
+  // reach nodes whose tag set is the singleton T, in some phase.
+
+  // To achieve this, we build the tree out to phase n, such that nodes
+  // with phase < n may have other tags in their sets.  After the node at
+  // phase n for T, we build nodes for each phase out to 2 * n - 1,
+  // and then link back to node n. So once a sequence of pulse gaps has
+  // led to a unique tag, subsequent gaps are only accepted if they
+  // are compatible with that tag.
+
   int n = tag->gaps.size();
   insert(TagPhase(tag, 0));
-  // add two cycles of tag.  After the first cycle, the tag should be unique
-  // and so we'll add new edges for skipped bursts
+  // Add a single cycle of gaps for the tag.  After this, the node reached
+  // should only 
   Gap g;
-  for(int i = 0; i < 2 * n - 1; ++i) {
+  int i;
+  for(i = 0; i < 2 * n - 1; ++i ) {
     g = tag->gaps[i % n];
     GapRange gr(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)));
     GapRanges grs;
@@ -57,6 +109,7 @@ Graph::addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
 #endif
   };
 
+  // The tag should be unique by now.  If not, we manage for ambiguity.
   // We want to add two kinds of edges:
   // - "back" edges from the node at phase 2 * n - 1 to the node at phase n
   // corresponding to repetition of bursts.  There should be an edge for gap[n-1]
@@ -87,7 +140,7 @@ Graph::addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
 };    
 
 void 
-Graph::delTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
+Graph::_delTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   // remove the tag which was added with given gaps, tol, and maxTime
 
   int n = tag->gaps.size();
@@ -121,6 +174,20 @@ Graph::delTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   viz();
 #endif
 };
+
+Tag *
+Graph::find(Tag * tag) {
+  Node * n = _root;
+  for (auto g = tag->gaps.begin(); g != tag->gaps.end(); ++g) {
+    n = n->advance(*g);
+    if (! n)
+      return 0;
+  }
+  if (n->s->s.size() > 1)
+    throw std::runtime_error("Graph::find: tag not unique");
+  return n->s->s.begin()->first;
+};
+
 
 void
 Graph::viz() {

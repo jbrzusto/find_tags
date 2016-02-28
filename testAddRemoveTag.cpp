@@ -23,8 +23,13 @@ int main (int argc, char * argv[] ) {
   if (argc > 1)
     maxnt = atoi(argv[1]);
 
+  string fn;
+  if (argc > 1)
+    fn = std::string(argv[1]);
+  else
+    fn = std::string("/sgm/2015_normalized_full_motus_database.sqlite");
 
-  Tag_Database T("/sgm/2015_normalized_full_motus_database.sqlite");
+  Tag_Database T(fn);
 
   auto ts = T.get_tags_at_freq(Nominal_Frequency_kHz(166380));
 

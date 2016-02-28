@@ -30,7 +30,7 @@ public:
 
   void end_batch(); //!< end current batch
 
-  void add_ambiguity(Motus_Tag_ID mid1, Motus_Tag_ID mid2); // indicate that two tags are indistinguishable
+  void add_ambiguity(Motus_Tag_ID proxyID, Motus_Tag_ID mid); // add a motus tag ID to a proxy group, given by proxyID, which is negative
 
 protected:
   // settings
@@ -46,8 +46,6 @@ protected:
   sqlite3_stmt * st_add_prog; //!< add batch program entry
   sqlite3_stmt * st_check_param; //!< check whether parameter value has changed
   sqlite3_stmt * st_add_param; //!< add batch parameter entry
-  sqlite3_stmt * st_find_ambig; //!< add ambiguity entry
-  sqlite3_stmt * st_new_ambig; //!< add ambiguity entry
   sqlite3_stmt * st_add_ambig; //!< add ambiguity entry
 
   string prog_name; //!< name of program, for recording in DB

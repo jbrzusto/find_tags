@@ -3,6 +3,7 @@
 
 #include "find_tags_common.hpp"
 #include "Node.hpp"
+#include "Ambiguity.hpp"
 
 class Graph {
   // the graph representing a DFA for the NDFA full-burst recognition
@@ -25,12 +26,15 @@ protected:
   // nodes get stamped with 0 and the new stamp value is set to 1.
   int stamp;
 
+  Ambiguity amb; // manage tag ambiguity sets
+
 public:
 
   Graph(std::string vizPrefix = "graph");
   Node * root();
-  void addTag(Tag * tag, double tol, double timeFuzz, double maxTime);    
-  void delTag(Tag * tag, double tol, double timeFuzz, double maxTime);
+  void addTag(Tag * tag, double tol, double timeFuzz, double maxTime);  //!< add a tag to the tree, handling ambiguity
+  void delTag(Tag * tag, double tol, double timeFuzz, double maxTime); //!< remove a tag from the tree, handling ambiguity
+  Tag * find(Tag * tag);
   void viz();
   void dumpSetToNode();
   void validateSetToNode();
@@ -78,6 +82,9 @@ protected:
   void eraseRec (GapRanges & gr, TagPhase tpFrom, TagPhase tpTo);
 
   void eraseRec (Node *n, GapRanges & gr, TagPhase tpFrom, TagPhase tpTo);
+
+  void _addTag(Tag * tag, double tol, double timeFuzz, double maxTime);  //!< add a tag to the tree, but no handling of ambiguity
+  void _delTag(Tag * tag, double tol, double timeFuzz, double maxTime); //!< remove a tag from the tree, but no handling of ambiguity
 
 };
 

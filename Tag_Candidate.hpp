@@ -16,6 +16,7 @@
 // forward declaration for include of Tag_Finder.hpp
 class Tag_Candidate;
 class Tag_Finder;
+class Ambiguity;
 
 #include "Tag_Finder.hpp"
 
@@ -58,6 +59,7 @@ protected:
   static DB_Filer * filer;
 
   friend class Tag_Finder;
+  friend class Ambiguity;
 public:
   
   Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse);
