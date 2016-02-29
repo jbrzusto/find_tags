@@ -13,11 +13,31 @@ Node::link() {
 bool
 Node::unlink() {
   -- _numLinks;
-  return -- useCount == 0;
+  -- useCount;
+  if (useCount == 0) {
+    _valid = false;
+  }
+  return ! _valid;
+};
+
+void
+Node::tcLink() {
+  ++ tcUseCount;
+};
+
+void
+Node::tcUnlink() {
+  -- tcUseCount;
+  if (tcUseCount == 0 && useCount == 0)
+    drop();
 };
 
 void
 Node::drop() {
+  if (this == _empty)
+    return;
+  if (tcUseCount != 0)
+    return;
   if (s != Set::empty())
     delete s;
   -- _numNodes;
@@ -44,6 +64,8 @@ Node::advance (Gap dt) {
 void
 Node::ctorCommon() {
   useCount = 0;
+  tcUseCount = 0;
+  _valid = true;
   stamp = 0;
   label = maxLabel++;
   ++ _numNodes;
@@ -128,6 +150,11 @@ Node::dump(bool skipEdges) {
       std::cout << std::endl;
     }
   }
+};
+
+bool
+Node::valid () {
+  return _valid;
 };
 
 int Node::_numNodes = 0;

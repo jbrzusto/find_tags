@@ -19,9 +19,10 @@ protected:
   Set * s;  //!< set of tag phases at this node
   Edges e;  //!< edges to other nodes
   int useCount; //!< number of nodes linking to this one
+  int tcUseCount; //!< number of Tag_Candidates pointing to this state
+  bool _valid;  //!< true iff this node is part of a graph
   int label; //!< unique label for this node, during run
   
-  bool _seen; //!< has this node been visited during an algorithm operating on the graph?
 
   static int _numNodes;  //!< number of allocated nodes not yet deleted
   static int _numLinks; //!< number of links between nodes
@@ -57,6 +58,9 @@ public:
   static int numNodes(); //!< return number of nodes allocated but not deleted
   static int numLinks(); //!< return number of links
   void dump(bool skipEdges=false);
+  bool valid(); //!< is this state still valid (i.e. part of a graph)
+  void tcLink(); //!< indicate a Tag Candidate is pointing to this state
+  void tcUnlink(); //!< indicate a Tag Candidate no longer points to this state
 };
 
 #endif // NODE_HPP

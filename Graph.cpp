@@ -1,3 +1,6 @@
+// FIXME: when doing delTag, need to eliminate candidates for that tag, as their nodePtr
+// is invalid.
+
 #include "find_tags_common.hpp"
 #include "Graph.hpp"
 #include <cmath>
@@ -10,6 +13,7 @@ Graph::Graph(std::string vizPrefix) :
   amb()
 {
   _root = new Node();
+  _root->link();
   mapSet(Set::empty(), Node::empty());
   mapSet(0, _root);
 };
@@ -203,7 +207,10 @@ Graph::viz() {
   for (auto i = setToNode.begin(); i != setToNode.end(); ++i) {
     // define the node, labelled with its TagPhase set
     out << "a" << i->second->label <<
-      "[label=\"a" << i->second->label << i->second->s->s << "\"];\n";
+      "[label=\"a" << i->second->label;
+    for (auto t = i->second->s->s.begin(); t != i->second->s->s.end(); ++t)
+      out << "\\n" << t->first->motusID;
+    out << "\"];\n";
 
     // define each edge, labelled by its interval
     for(auto j = i->second->e.begin(); j != i->second->e.end(); ++j) {

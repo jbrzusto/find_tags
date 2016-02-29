@@ -100,7 +100,7 @@ Tag_Finder::process(Pulse &p) {
 
     for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); /**/ ) {
       
-      if (ci->is_too_old_given_pulse_time(p)) {
+      if (ci->expired(p)) {
         Cand_List::iterator di = ci;
         ++ci;
         cs.erase(di);
@@ -206,7 +206,7 @@ Tag_Finder::process_event(Event e) {
 
   switch (e.code) {
   case Event::E_ACTIVATE:
-      graph.addTag(t, pulse_slop, burst_slop / t->gaps[3], max_skipped_bursts * t->period);
+    graph.addTag(t, pulse_slop, burst_slop / t->gaps[3], max_skipped_bursts * t->period);
     break;
   case Event::E_DEACTIVATE:
     graph.delTag(t, pulse_slop, burst_slop / t->gaps[3], max_skipped_bursts * t->period);

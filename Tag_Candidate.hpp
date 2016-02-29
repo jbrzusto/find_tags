@@ -70,7 +70,7 @@ public:
 
   bool shares_any_pulses(Tag_Candidate &tc);
 
-  bool is_too_old_given_pulse_time(const Pulse &p);
+  bool expired(const Pulse &p); //!< has tag candidate expired, either due to a long time lag or a tag event which has deleted its state?
 
   Node * advance_by_pulse(const Pulse &p);
 
@@ -86,11 +86,9 @@ public:
 
   bool next_pulse_confirms();
 
-  bool at_end_of_burst();
+  //  bool at_end_of_burst();
 
   void clear_pulses();
-
-  void set_true_gaps(std::vector < Gap > & true_gaps);
 
   Burst_Params * calculate_burst_params();
  

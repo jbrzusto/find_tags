@@ -22,4 +22,3 @@ Tag::setCallback (Callback cb, void * cbData) {
   this->cb = cb;
   this->cbData = cbData;
 };
-

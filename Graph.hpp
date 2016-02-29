@@ -34,6 +34,7 @@ public:
   Node * root();
   void addTag(Tag * tag, double tol, double timeFuzz, double maxTime);  //!< add a tag to the tree, handling ambiguity
   void delTag(Tag * tag, double tol, double timeFuzz, double maxTime); //!< remove a tag from the tree, handling ambiguity
+  void renTag(Tag *t1, Tag *t2);//!< "rename" tag t1 to tag t2
   Tag * find(Tag * tag);
   void viz();
   void dumpSetToNode();

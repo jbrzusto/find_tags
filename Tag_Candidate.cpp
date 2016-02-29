@@ -17,6 +17,7 @@ Tag_Candidate::Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse)
   sig_range(sig_slop_dB, pulse.sig)
 {
   pulses[pulse.seq_no] = pulse;
+  state->tcLink();
 };
 
 Tag_Candidate::~Tag_Candidate() {
@@ -41,7 +42,11 @@ bool Tag_Candidate::shares_any_pulses(Tag_Candidate &tc) {
   return false;
 };
 
-bool Tag_Candidate::is_too_old_given_pulse_time(const Pulse &p) {
+bool Tag_Candidate::expired(const Pulse &p) {
+  if (! state->valid()) {
+    state->tcUnlink();
+    return true;
+  }
   return p.ts - last_ts > state->get_max_age();
 };
 
@@ -85,6 +90,10 @@ bool Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     sig_range.clear_bounds();
   else
     sig_range.extend_by(p.sig);
+
+  // adjust use counts for states
+  new_state->tcLink();
+  state->tcUnlink();
 
   state = new_state;
       
@@ -142,9 +151,9 @@ bool Tag_Candidate::next_pulse_confirms() {
   return pulses.size() == pulses_to_confirm_id - 1;
 };
 
-bool Tag_Candidate::at_end_of_burst() {
-  return state->get_phase() % num_pulses == num_pulses - 1;
-};
+// bool Tag_Candidate::at_end_of_burst() {
+//   return state->get_phase() % num_pulses == num_pulses - 1;
+// };
 
 void Tag_Candidate::clear_pulses() {
   // drop pulses from the most recent burst (presumably after
@@ -152,11 +161,6 @@ void Tag_Candidate::clear_pulses() {
 
   for (unsigned int i=0; i < num_pulses; ++i)
     pulses.erase(pulses.begin());
-};
-
-void Tag_Candidate::set_true_gaps(std::vector < Gap > & true_gaps) {
-  this->true_gaps = & * (true_gaps.begin());
-  num_pulses = true_gaps.size();
 };
 
 Burst_Params * Tag_Candidate::calculate_burst_params() {
@@ -186,12 +190,9 @@ Burst_Params * Tag_Candidate::calculate_burst_params() {
 
   Pulses_Iter p  = pulses.begin();
 
-  if (!true_gaps)
-    true_gaps = & * (tag->gaps.begin());
-
   if (last_dumped_ts != BOGUS_TIMESTAMP) {
     Gap g = p->second.ts - last_dumped_ts;
-    burst_par.burst_slop = fmodf(g, true_gaps[n]) - true_gaps[n-1];
+    burst_par.burst_slop = fmodf(g, tag->period) - tag->gaps[n-1];
   } else {
     burst_par.burst_slop = BOGUS_BURST_SLOP;
   }
@@ -204,7 +205,7 @@ Burst_Params * Tag_Candidate::calculate_burst_params() {
     freqsum	  += p->second.dfreq;
     freqsumsq	  += p->second.dfreq * p->second.dfreq;
     if (i > 0) {
-      slop += fabsf( (p->second.ts - pts) - true_gaps[i-1]);
+      slop += fabsf( (p->second.ts - pts) - tag->gaps[i-1]);
     }
     pts = p->second.ts;
   }
