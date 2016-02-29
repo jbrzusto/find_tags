@@ -126,7 +126,6 @@ Ambiguity::newProxy(Tag * t) {
   *nt = *t;
   nt->motusID = nextID--;
   nt->count = 0;
-  nt->setCallback(Ambiguity::detected, reinterpret_cast < void * > (this));
   return nt;
 };
 

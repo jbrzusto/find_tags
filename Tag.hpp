@@ -22,19 +22,10 @@ public:
   long long             count;                          // number of times this tag has been detected during a run of the program;
                                                         // The only use so far is to keep track of whether an Ambiguity Clone can be
                                                         // augmented or reduced without creating a new one.
-
-  Callback              cb;                             // when not null, a function to call each time this tag is detected
-                                                        // The only use so far is to let the Ambiguity object know that a particular
-                                                        // proxy tag has been detected, so that its clone information should be recorded.
-
-  void *                cbData;                         // additional pointer to private data for this tag; typically used by the callback function
-
 public:
   Tag(){};
 
   Tag(Motus_Tag_ID motusID, Frequency_MHz freq, Frequency_Offset_kHz dfreq, const std::vector < Gap > & gaps);
-
-  void setCallback (Callback cb, void * cbData);
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {
@@ -44,8 +35,6 @@ public:
     ar & gaps;
     ar & period;
     ar & count;
-    ar & cb;
-    ar & cbData;
   };
 };
 

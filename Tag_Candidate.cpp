@@ -255,8 +255,8 @@ void Tag_Candidate::dump_bursts(string prefix) {
                    bp->burst_slop
                    );
     ++ tag->count;
-    if (tag->cb)
-      tag->cb(tag);
+    if (tag->count == 1 && tag->motusID < 0)
+      Ambiguity::detected(tag);
     clear_pulses();
   }
 };

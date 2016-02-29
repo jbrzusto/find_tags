@@ -8,17 +8,9 @@ Tag::Tag(Motus_Tag_ID motusID, Frequency_MHz freq, Frequency_Offset_kHz dfreq, c
   freq(freq),
   dfreq(dfreq),
   gaps(gaps),
-  count(0),
-  cb(0),
-  cbData(0)
+  count(0)
 {
   period = 0;
   for (auto i = gaps.begin(); i != gaps.end(); ++i)
     period += *i;
-};
-
-void
-Tag::setCallback (Callback cb, void * cbData) {
-  this->cb = cb;
-  this->cbData = cbData;
 };
