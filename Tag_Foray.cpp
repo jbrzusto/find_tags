@@ -187,6 +187,11 @@ Tag_Foray::pause(const char * filename) {
   oa << Tag_Candidate::pulses_to_confirm_id;
   //  oa << Tag_Candidate::filer; // FIXME: deal with this sensibly
 
+  // Ambiguity
+  oa << Ambiguity::abm;
+  oa << Ambiguity::nextID;
+  
+  // dynamic members of all classes
   oa << this;
 };
 

@@ -9,8 +9,7 @@ Graph::Graph(std::string vizPrefix) :
   vizPrefix(vizPrefix), 
   numViz(0), 
   setToNode(100),
-  stamp(1),
-  amb()
+  stamp(1)
 {
   _root = new Node();
   _root->link();
@@ -57,14 +56,14 @@ Graph::addTag(Tag * tag, double tol, double timeFuzz, double maxTime) {
   // would be detected as an other, existing tag)
   // Manage the ambiguity by replacing the existing tag with a proxy
   // that represents it (possibly already a proxy) and the new tag.
-  auto nt = amb.add(ot, tag);
+  auto nt = Ambiguity::add(ot, tag);
   renTag(ot, nt);
   return std::make_pair(ot, nt);
 };
 
 std::pair < Tag *, Tag * >
 Graph::delTag(Tag * tag, double tol, double timeFuzz, double maxTime) {
-  auto p = amb.proxyFor(tag);
+  auto p = Ambiguity::proxyFor(tag);
   if (!p) {
     // tag has not been proxied, so just delete
     _delTag(tag, tol, timeFuzz, maxTime);
@@ -74,7 +73,7 @@ Graph::delTag(Tag * tag, double tol, double timeFuzz, double maxTime) {
   // remove this tag from the group, remove the original proxy from the tree,
   // and replace it with either a new (reduced) proxy, or a real tag if removing
   // this tag leaves only one other tag in the ambiguity set.
-  auto newp = amb.remove(p, tag);
+  auto newp = Ambiguity::remove(p, tag);
   renTag(p, newp);
   return std::make_pair(p, newp);
 };

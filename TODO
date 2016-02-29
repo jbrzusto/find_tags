@@ -1,3 +1,5 @@
+2016-02-29: use only one graph per nom_freq
+
 2014-10-01
 - allow more flexible run structure:  currently, a tag run must begin
   with a pair of consecutive bursts, because of the 'sanity check'

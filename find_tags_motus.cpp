@@ -318,6 +318,24 @@ usage() {
 	"    in a burst to differ from measured tag values, in milliseconds\n"
 	"    default: 1.5 ms\n\n"
 
+
+        "-r, --resume\n"
+        "    If a table called 'findtagsState' exists in the output database, with columns\n"
+        "       batchID: integer -- ID of batch which was being processed when program paused\n"
+        "       tsData: real -- timestamp (seconds since unix epoch) timestamp\n"
+        "         of last processed line in previous input\n"
+        "       tsRun: real -- timestamp (seconds since unix epoch) timestamp when program\n"
+        "         was paused\n"
+        "       lastLine: text -- text of last line processed (excluding trailing newline)\n"
+        "       state:  blob -- serialized state of findtags\n"
+        "   then the program attempts to resume tag finding where it left off.  This means:\n"
+        "   - lines in the input are skipped until their timestamp exceeds the saved last\n"
+        "     timestamp, or a new line with the same timestamp as was saved\n"
+        "   - any active tag runs and candidates are resumed\n"
+        "   - the database is examined for new events.  If any are found which pre-date\n"
+        "     the last processed line, the program exists with an error. Otherwise, any new\n"
+        "     tag events are added to the history.\n\n"
+
 	"-R, --max_pulse_rate=MAXPULSERATE\n"
 	"    maximum pulse rate (pulses per second) during pulse rate time window;\n"
 	"    Used to prevent exorbitant memory usage and execution time when noise-\n"
@@ -542,7 +560,8 @@ main (int argc, char **argv) {
       Freq_Setting::set_nominal_freqs(tag_db.get_nominal_freqs());
 
       for (;;) {
-        Tag_Foray foray(& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
+        Tag_Foray &foray;
+        (& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
 
         if (test_only) {
           foray.test(); // throws if there's a problem

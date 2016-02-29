@@ -10,7 +10,7 @@ class History {
   friend class Ticker;
 
 public:
-  typedef std::vector < Event > timeline; //!< ordered sequence of events
+  typedef std::vector < Event > Timeline; //!< ordered sequence of events
   typedef int marker; //!< index in timeline
 
   History();
@@ -18,10 +18,11 @@ public:
   Ticker getTicker(); //!< get iterator to history
   void push(Event e); //!< add an event to the end of the history
   Event get (marker m); //!< get event at index m
+  size_t size(); //!< return size of timeline
 
 protected:
   // represent a time-mapped sequence of events
-  timeline q;
+  Timeline q;
 
 public:
 

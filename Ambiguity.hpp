@@ -42,30 +42,21 @@ struct Ambiguity {              //!< manage groups of indistinguishable tags
   typedef boost::bimap < AmbigTags, Tag * > AmbigBimap; 
   typedef AmbigBimap::value_type AmbigSetProxy;
 
-  AmbigBimap abm;                  //!< bimap between sets of indistinguishable real Tags and their proxy Tag
-  int nextID;                      //!< motus_Tag_ID for next proxy created; starts at -1, decremented for each new proxy
+  static AmbigBimap abm;           //!< bimap between sets of indistinguishable real Tags and their proxy Tag
+  static int nextID;               //!< motus_Tag_ID for next proxy created; starts at -1, decremented for each new proxy
 
   // methods
   
-  Ambiguity();                     //!< constructor
+  static void init();              //!< class initializer
 
-  Tag * add(Tag *t1, Tag * t2);    //!< return the proxy tag representing both t1 and t2 (t1 might already be a proxy)
-  Tag * remove(Tag * t1, Tag *t2); //!< return a real or proxy tag representing the proxy tag t1 with any t2 removed
-  Tag * proxyFor(Tag *t);          //!< return the proxy for a tag, if it is ambiguous; otherwise, returns 0;
+  static Tag * add(Tag *t1, Tag * t2);    //!< return the proxy tag representing both t1 and t2 (t1 might already be a proxy)
+  static Tag * remove(Tag * t1, Tag *t2); //!< return a real or proxy tag representing the proxy tag t1 with any t2 removed
+  static Tag * proxyFor(Tag *t);          //!< return the proxy for a tag, if it is ambiguous; otherwise, returns 0;
 
   static void detected(Tag * t);   //!< callback indicating a proxy tag has been detected; used to force recording of the clone information
   
 protected:
-
-  Tag * newProxy(Tag * t);         //!< return a new proxy tag representing tags like t
-
-public:
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int version) {
-    ar & abm;
-    ar & nextID;
-  };
-
+  static Tag * newProxy(Tag * t);         //!< return a new proxy tag representing tags like t
 };
 
 #endif // AMBIGUITY_HPP

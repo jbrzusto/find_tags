@@ -11,7 +11,6 @@ Tag_Candidate::Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse)
   tag(BOGUS_TAG),
   tag_id_level(MULTIPLE),
   hit_count(0),
-  true_gaps(0),
   num_pulses(0),
   freq_range(freq_slop_kHz, pulse.dfreq),
   sig_range(sig_slop_dB, pulse.sig)

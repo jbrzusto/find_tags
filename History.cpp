@@ -15,7 +15,13 @@ History::getTicker() {
 
 Event
 History::get (marker m) {
-  return timeline[m];
+  return q[m];
 };
+
+size_t
+History::size() {
+  return q.size();
+};
+  
 
 

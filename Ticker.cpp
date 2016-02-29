@@ -18,7 +18,7 @@ Ticker::ts() {
 
 Event
 Ticker::get() {
-  if (m == end)
+  if (m >= h->size())
     throw std::runtime_error("Tried to get event past end of history");
   return h->get(m++);
 };

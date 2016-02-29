@@ -44,7 +44,6 @@ protected:
   DB_Filer::Run_ID	run_id;	// ID for the run formed by bursts from this candidate (i.e. consecutive in-phase hits on a tag)
   unsigned int		hit_count;	// counter of bursts output by this tag
 
-  Gap * true_gaps;              // once tag has been identified, this points to the sequence of gaps in the tag database
   unsigned short num_pulses; // number of pulses in burst (once tag has been identified)
 
   Bounded_Range < Frequency_MHz > freq_range; // range of pulse frequency offsets
@@ -118,7 +117,6 @@ public:
     ar & tag_id_level;
     ar & run_id;
     ar & hit_count;
-    ar & true_gaps;
     ar & num_pulses;
     ar & freq_range;
     ar & sig_range;

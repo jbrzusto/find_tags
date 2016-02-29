@@ -2,11 +2,8 @@
 #include "Tag.hpp"
 #include "Tag_Candidate.hpp"
 
-Ambiguity::Ambiguity() : 
-  abm(), 
-  nextID(-1) 
-{
-};
+Ambiguity::AmbigBimap Ambiguity::abm;//  = AmbigMap();
+int Ambiguity::nextID = -1;
   
 Tag *
 Ambiguity::add(Tag *t1, Tag * t2) {
@@ -111,13 +108,10 @@ Ambiguity::proxyFor(Tag *t) {
 
 void
 Ambiguity::detected(Tag * t) {
-  Ambiguity *a = reinterpret_cast < Ambiguity * > (t->cbData);
-  if (t->count == 1) {
-    // first detection, so record this ambiguity group in the DB
-    auto i = a->abm.right.find(t);
-    for (auto j = i->second.begin(); j != i->second.end(); ++j)
-      Tag_Candidate::filer->add_ambiguity(t->motusID, (*j)->motusID);
-  }
+  // first detection, so record this ambiguity group in the DB
+  auto i = abm.right.find(t);
+  for (auto j = i->second.begin(); j != i->second.end(); ++j)
+    Tag_Candidate::filer->add_ambiguity(t->motusID, (*j)->motusID);
 };
 
 Tag * 
@@ -128,4 +122,3 @@ Ambiguity::newProxy(Tag * t) {
   nt->count = 0;
   return nt;
 };
-

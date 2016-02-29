@@ -2,6 +2,7 @@
 #include "Tag.hpp"
 #include "Node.hpp"
 #include "Set.hpp"
+#include "Ambiguity.hpp"
 #include <cmath>
 
 void

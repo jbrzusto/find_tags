@@ -26,8 +26,6 @@ protected:
   // nodes get stamped with 0 and the new stamp value is set to 1.
   int stamp;
 
-  Ambiguity amb; // manage tag ambiguity sets
-
 public:
 
   Graph(std::string vizPrefix = "graph");
@@ -97,7 +95,6 @@ public:
     ar & vizPrefix;
     ar & numViz;
     ar & stamp;
-    ar & amb;
   };
 };
 

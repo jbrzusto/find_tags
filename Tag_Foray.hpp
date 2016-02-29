@@ -19,7 +19,7 @@
 #include <boost/mpl/eval_if.hpp>
 #include <boost/mpl/identity.hpp>
 
-#include <boost/serialization/access.hpp>
+//#include <boost/serialization/access.hpp>
 
 /*
   Tag_Foray - manager a collection of tag finders searching the same
@@ -35,40 +35,44 @@ public:
 
   ~Tag_Foray ();
 
-  long long start(); // begin searching for tags; returns 0 if end of file; returns NN if receives command !NEWBN,NN
-  void test(); // throws an exception if there are indistinguishable tags
-  Tag_Database * tags; // registered tags on all known nominal frequencies
+  long long start();                 // begin searching for tags; returns 0 if end of file; returns NN if receives command
+                                     // !NEWBN,NN
+  void test();                       // throws an exception if there are indistinguishable tags
+  Tag_Database * tags;               // registered tags on all known nominal frequencies
 
   void pause(const char * filename); //!< serialize foray to file
 
 protected:
-  // settings
+                                     // settings
 
-  std::istream * data; // stream from which data records are read
-  Frequency_MHz default_freq; // default listening frequency on a port where no frequency setting has been seen
-  bool force_default_freq; // ignore in-line frequency settings and always use default?
-  float min_dfreq; // minimum allowed pulse offset frequency; pulses with smaller offset frequency are discarded
-  float max_dfreq; // maximum allowed pulse offset frequency; pulses with larger offset frequency are discarded
-  // rate-limiting parameters:
+  std::istream * data;               // stream from which data records are read
+  Frequency_MHz default_freq;        // default listening frequency on a port where no frequency setting has been seen
+  bool force_default_freq;           // ignore in-line frequency settings and always use default?
+  float min_dfreq;                   // minimum allowed pulse offset frequency; pulses with smaller offset frequency are
+                                     // discarded
+  float max_dfreq;                   // maximum allowed pulse offset frequency; pulses with larger offset frequency are
+                                     // discarded rate-limiting parameters:
 
-  float max_pulse_rate; // if non-zero, set a maximum per second pulse rate
-  Gap pulse_rate_window; // number of consecutive seconds over which rate of incoming pulses must exceed max_pulse_rate in order to discard entire window
-  Gap min_bogus_spacing; // when a window of pulses is discarded, we emit a bogus tag with ID 0.; this parameter sets the minimum number of seconds between consecutive emissions of this bogus tag ID
+  float max_pulse_rate;              // if non-zero, set a maximum per second pulse rate
+  Gap pulse_rate_window;             // number of consecutive seconds over which rate of incoming pulses must exceed
+                                     // max_pulse_rate in order to discard entire window
+  Gap min_bogus_spacing;             // when a window of pulses is discarded, we emit a bogus tag with ID 0.; this parameter
+                                     // sets the minimum number of seconds between consecutive emissions of this bogus tag ID
 
-  bool unsigned_dfreq; // if true, ignore any sign on frequency offsets (use absolute value)
+  bool unsigned_dfreq;               // if true, ignore any sign on frequency offsets (use absolute value)
 
   // runtime storage
 
-  // count lines of input seen
-  unsigned long long line_no;
-  
-  // port number can be represented as a short
 
-  typedef short Port_Num;
+  unsigned long long line_no;                    // count lines of input seen
   
-  // keep track of frequency settings on each port
+
+
+  typedef short Port_Num;                        // port number can be represented as a short
   
-  std::map < Port_Num, Freq_Setting > port_freq;
+  
+  std::map < Port_Num, Freq_Setting > port_freq; // keep track of frequency settings on each port
+
 
   // we need a Tag_Finder for each combination of port and nominal frequency
   // we'll use a map
