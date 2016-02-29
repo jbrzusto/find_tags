@@ -37,7 +37,7 @@ Graph::root() {
   return _root;
 };
 
-void 
+std::pair < Tag *, Tag * >
 Graph::addTag(Tag * tag, double tol, double timeFuzz, double maxTime) {
   auto ot = find(tag); // FIXME: we're only looking for match of the
   // exact tag values; we really should be doing a tree search
@@ -45,35 +45,38 @@ Graph::addTag(Tag * tag, double tol, double timeFuzz, double maxTime) {
   // (i.e. each node with TagPhase(tag, n) where n is the number
   // of pulses in n
 
+  // if we renamed a tag in the graph due to ambiguity management,
+  // we return this pair to the caller.  Else, we return (0, 0);
+
   if (! ot) {
     // tag not already present, so just add
     _addTag(tag, tol, timeFuzz, maxTime);
-    return;
+    return std::make_pair((Tag *) 0, (Tag *) 0);
   }
   // another tag is ambiguous with this one (i.e. pulses from this one
   // would be detected as an other, existing tag)
   // Manage the ambiguity by replacing the existing tag with a proxy
   // that represents it (possibly already a proxy) and the new tag.
   auto nt = amb.add(ot, tag);
-  _delTag(ot, tol, timeFuzz, maxTime); // delete the previous clone of the tag
-  _addTag(nt, tol, timeFuzz, maxTime); // insert the proxy, representing both clones
+  renTag(ot, nt);
+  return std::make_pair(ot, nt);
 };
 
-void
+std::pair < Tag *, Tag * >
 Graph::delTag(Tag * tag, double tol, double timeFuzz, double maxTime) {
   auto p = amb.proxyFor(tag);
   if (!p) {
     // tag has not been proxied, so just delete
     _delTag(tag, tol, timeFuzz, maxTime);
-    return;
+    return std::make_pair((Tag *) 0, (Tag *) 0);
   }
   // this tag is part of an ambiguity set which has been proxied in the tree
   // remove this tag from the group, remove the original proxy from the tree,
   // and replace it with either a new (reduced) proxy, or a real tag if removing
   // this tag leaves only one other tag in the ambiguity set.
   auto newp = amb.remove(p, tag);
-  _delTag(p, tol, timeFuzz, maxTime);
-  _addTag(newp, tol, timeFuzz, maxTime);
+  renTag(p, newp);
+  return std::make_pair(p, newp);
 };
     
 void 
@@ -508,6 +511,37 @@ Graph::insertRec (Node *n, GapRanges & grs, TagPhase tFrom, TagPhase tTo) {
     insert(n, grs, tTo);
 };
 
+void
+Graph::renTag(Tag *t1, Tag *t2) {
+  newStamp();
+  renTagRec(_root, t1, t2);
+};
+
+void
+Graph::renTagRec(Node * n, Tag *t1, Tag *t2) {
+  // for any occurence of t1 in the tree, replace it with t2
+
+  n->stamp = stamp;
+
+  // check descendents first
+  for(auto i = n->e.begin(); i != n->e.end(); ++i)
+    if (i->second->stamp != stamp && i->second->s->count(t1))
+      renTagRec(i->second, t1, t2);
+
+  // for this node's set, replace any tagphase having t1
+  // with a tagphase having t2
+  auto s = n->s->s;
+  auto r = s.equal_range(t1);
+  for (auto i = r.first; i != r.second; /**/) {
+    auto j = i;
+    ++j;
+    auto p = i->second;
+    s.erase(i);
+    s.insert(std::make_pair(t1, p));
+    i = j;
+  }
+};
+  
 void 
 Graph::erase (Node *n, GapRanges & grs, TagPhase tp) {
   // for any edges from n at points in the range [lo, hi]

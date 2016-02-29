@@ -114,6 +114,8 @@ public:
 
   void initialize_tag_buffers();
 
+  void rename_tag(std::pair < Tag *, Tag * > tp);
+
   void process_event(Event e); //!< process a tag event; typically adds or removes a tag from the graph of active tags
 
   Gap *get_true_gaps(Tag * tid);

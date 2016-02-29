@@ -284,6 +284,22 @@ Tag_Candidate::set_filer(DB_Filer *dbf) {
 };
 
 
+void
+Tag_Candidate::renTag(Tag * t1, Tag * t2) {
+  if (tag != t1)
+    return;
+  // end the current run for t1
+  if (hit_count > 0) {
+    filer -> end_run(run_id, hit_count);
+  }
+  hit_count = 0;
+  // maintain the current confirmation level and pulse buffer;
+  // subsequent hits will be reported as t2;
+  tag = t2;
+
+
+}
+
 Frequency_Offset_kHz Tag_Candidate::freq_slop_kHz = 2.0;       // (kHz) maximum allowed frequency bandwidth of a burst
 
 float Tag_Candidate::sig_slop_dB = 10;         // (dB) maximum allowed range of signal strengths within a burst

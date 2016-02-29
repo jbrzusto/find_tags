@@ -104,6 +104,8 @@ public:
 
   static void set_filer(DB_Filer *dbf);
 
+  void renTag(Tag * t1, Tag * t2); //!< if this candidate is for tag t1, make it finish any run and start a new one pointing at t2.
+    
 };
 
 #endif // TAG_CANDIDATE_HPP

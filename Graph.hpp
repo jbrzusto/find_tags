@@ -32,8 +32,8 @@ public:
 
   Graph(std::string vizPrefix = "graph");
   Node * root();
-  void addTag(Tag * tag, double tol, double timeFuzz, double maxTime);  //!< add a tag to the tree, handling ambiguity
-  void delTag(Tag * tag, double tol, double timeFuzz, double maxTime); //!< remove a tag from the tree, handling ambiguity
+  std::pair < Tag *, Tag * > addTag(Tag * tag, double tol, double timeFuzz, double maxTime);  //!< add a tag to the tree, handling ambiguity
+  std::pair < Tag *, Tag * >  delTag(Tag * tag, double tol, double timeFuzz, double maxTime); //!< remove a tag from the tree, handling ambiguity
   void renTag(Tag *t1, Tag *t2);//!< "rename" tag t1 to tag t2
   Tag * find(Tag * tag);
   void viz();
@@ -83,6 +83,8 @@ protected:
   void eraseRec (GapRanges & gr, TagPhase tpFrom, TagPhase tpTo);
 
   void eraseRec (Node *n, GapRanges & gr, TagPhase tpFrom, TagPhase tpTo);
+
+  void renTagRec(Node * n, Tag *t1, Tag *t2); //!< rename a tag from t1 to t2, starting at node n, and recursing
 
   void _addTag(Tag * tag, double tol, double timeFuzz, double maxTime);  //!< add a tag to the tree, but no handling of ambiguity
   void _delTag(Tag * tag, double tol, double timeFuzz, double maxTime); //!< remove a tag from the tree, but no handling of ambiguity

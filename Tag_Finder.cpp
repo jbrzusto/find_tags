@@ -199,6 +199,17 @@ Tag_Finder::dump_bogus_burst(Pulse &p) {
 };
 
 void
+Tag_Finder::rename_tag(std::pair < Tag *, Tag * > tp) {
+  if (! tp.first)
+    return;
+  for (int i = 0; i < 2; ++i) {
+    Cand_List & cs = cands[i];
+    for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); ++ci )
+      ci->renTag(tp.first, tp.second);
+  }
+};
+
+void
 Tag_Finder::process_event(Event e) {
   auto t = e.tag;
   if (Freq_Setting::as_Nominal_Frequency_kHz(t->freq) != nom_freq)
@@ -206,10 +217,16 @@ Tag_Finder::process_event(Event e) {
 
   switch (e.code) {
   case Event::E_ACTIVATE:
-    graph.addTag(t, pulse_slop, burst_slop / t->gaps[3], max_skipped_bursts * t->period);
+    {
+      auto rv = graph.addTag(t, pulse_slop, burst_slop / t->gaps[3], max_skipped_bursts * t->period);
+      rename_tag(rv);
+    }
     break;
   case Event::E_DEACTIVATE:
-    graph.delTag(t, pulse_slop, burst_slop / t->gaps[3], max_skipped_bursts * t->period);
+    {
+      auto rv = graph.delTag(t, pulse_slop, burst_slop / t->gaps[3], max_skipped_bursts * t->period);
+      rename_tag(rv);
+    }
     break;
   default:
     std::cerr << "Warning: Unknown event code " << e.code << " for tag " << t->motusID << std::endl;
