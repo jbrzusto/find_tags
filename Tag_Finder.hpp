@@ -121,6 +121,26 @@ public:
   Gap *get_true_gaps(Tag * tid);
 
   void dump_bogus_burst(Pulse &p);
+
+public:
+  
+  // public serialize function.
+  
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version)
+  {
+    ar & owner;
+    ar & graph;
+    ar & cands;
+    ar & pulse_slop;
+    ar & burst_slop;
+    ar & burst_slop_expansion;
+    ar & max_skipped_bursts;
+    
+    ar & cron;
+    ar & prefix;
+    
+  };
 };
 
 

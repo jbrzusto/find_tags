@@ -58,6 +58,14 @@ struct Ambiguity {              //!< manage groups of indistinguishable tags
 protected:
 
   Tag * newProxy(Tag * t);         //!< return a new proxy tag representing tags like t
+
+public:
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version) {
+    ar & abm;
+    ar & nextID;
+  };
+
 };
 
 #endif // AMBIGUITY_HPP

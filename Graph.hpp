@@ -89,6 +89,16 @@ protected:
   void _addTag(Tag * tag, double tol, double timeFuzz, double maxTime);  //!< add a tag to the tree, but no handling of ambiguity
   void _delTag(Tag * tag, double tol, double timeFuzz, double maxTime); //!< remove a tag from the tree, but no handling of ambiguity
 
+public: 
+  
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version) {
+    ar & _root;
+    ar & vizPrefix;
+    ar & numViz;
+    ar & stamp;
+    ar & amb;
+  };
 };
 
 #endif // GRAPH_HPP

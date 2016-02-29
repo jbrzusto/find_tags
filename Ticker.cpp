@@ -2,23 +2,23 @@
 
 Ticker::Ticker(){};
 
-Ticker::Ticker(History::marker begin, History::marker end) :
-  m(begin),
-  end(end)
+Ticker::Ticker(History * h, History::marker begin) :
+  h(h),
+  m(begin)
 {};
 
 
 Timestamp
 Ticker::ts() {
-  if (m == end)
+  if (m >= h->size())
     return +1.0 / 0.0;
   else 
-    return m->ts;
+    return h->get(m).ts;
 };
 
 Event
 Ticker::get() {
   if (m == end)
     throw std::runtime_error("Tried to get event past end of history");
-  return *m++;
+  return h->get(m++);
 };

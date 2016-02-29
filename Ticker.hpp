@@ -9,14 +9,22 @@
 class Ticker {
   
 protected:
+  History * h;
   History::marker m;
-  History::marker end;
 
 public:
   Ticker();
-  Ticker(History::marker begin, History::marker end);
+  Ticker(History * h, History::marker begin);
   Timestamp ts(); //!< return the timestamp for the next event; if no events left, return +Inf
   Event get(); //!< return the event at marker, and increment marker; throws if no events left
+
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version)
+  {
+    ar & h;
+    ar & m;
+  };
+
 };
 
 #endif // TICKER_HPP

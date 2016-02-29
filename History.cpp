@@ -5,10 +5,17 @@ History::History() : q() {};
 
 void
 History::push(Event e) {
-  q.insert(q.end(), e); // hinted insert since built in chrono order
+  q.push_back(e);
 };
 
 Ticker
 History::getTicker() {
-  return Ticker(q.begin(), q.end());
+  return Ticker(this, 0);
 };
+
+Event
+History::get (marker m) {
+  return timeline[m];
+};
+
+

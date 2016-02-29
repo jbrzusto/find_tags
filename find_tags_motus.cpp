@@ -550,8 +550,10 @@ main (int argc, char **argv) {
           exit(0);
         }
         long long newbn = foray.start();
-        if (newbn == 0)
+        if (newbn == 0) {
+          foray.pause("ftm_out.txt");
           break;
+        }
         dbf.end_batch();
         dbf.begin_batch(newbn);
       }

@@ -14,6 +14,7 @@ class Set {
   friend class Graph;
   friend class hashSet;
   friend class SetEqual;
+  friend class Tag_Foray;
 
 protected:
   TagPhaseSet s;
@@ -61,6 +62,15 @@ public:
 
 private:
   static TagPhaseSetHash hashTP (TagPhase tp);
+
+public:
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version) {
+    ar & s;
+    ar & _label;
+    ar & hash;
+  };
+
 };
 
 struct hashSet {

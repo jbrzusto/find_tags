@@ -37,6 +37,17 @@ public:
   static Pulse make(double ts, Frequency_Offset_kHz dfreq, float sig, float noise, Frequency_MHz ant_freq);
 
   void dump();
+
+  template < class Archive >
+  void serialize(Archive & ar, const unsigned int version) {
+    ar & ts;
+    ar & dfreq;
+    ar & ant_freq;
+    ar & sig;
+    ar & noise;
+    ar & seq_no;
+  };
+
 };
 
 typedef std::map < Pulse::Seq_No, Pulse > Pulse_Buffer;

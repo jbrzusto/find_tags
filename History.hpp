@@ -10,17 +10,26 @@ class History {
   friend class Ticker;
 
 public:
-  typedef std::set < Event > timeline; //!< ordered sequence of events
-  typedef timeline::iterator marker; //!< pointer to a location in history
+  typedef std::vector < Event > timeline; //!< ordered sequence of events
+  typedef int marker; //!< index in timeline
 
   History();
 
   Ticker getTicker(); //!< get iterator to history
   void push(Event e); //!< add an event to the end of the history
+  Event get (marker m); //!< get event at index m
 
 protected:
   // represent a time-mapped sequence of events
   timeline q;
+
+public:
+
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version) {
+    ar & q;
+  };
+
 };
 
 #endif // HISTORY_HPP

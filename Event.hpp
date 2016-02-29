@@ -21,6 +21,13 @@ struct Event {
   {
     return ts < right.ts || (ts == right.ts && tag->motusID < right.tag->motusID);
   };
+
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version) {
+    ar & ts;
+    ar & tag;
+    ar & code;
+  };
 };
 
 

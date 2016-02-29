@@ -34,6 +34,16 @@ public:
   TagSet * get_tags_at_freq(Nominal_Frequency_kHz freq);
 
   History * get_history();
+
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version)
+  {
+    ar & tags;
+    ar & nominal_freqs;
+    ar & motusIDToPtr;
+    ar & h;
+  };
+
 };
 
 #endif // TAG_DATABASE_HPP

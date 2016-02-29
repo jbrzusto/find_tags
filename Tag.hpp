@@ -35,6 +35,18 @@ public:
   Tag(Motus_Tag_ID motusID, Frequency_MHz freq, Frequency_Offset_kHz dfreq, const std::vector < Gap > & gaps);
 
   void setCallback (Callback cb, void * cbData);
+
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version) {
+    ar & motusID;
+    ar & freq;
+    ar & dfreq;
+    ar & gaps;
+    ar & period;
+    ar & count;
+    ar & cb;
+    ar & cbData;
+  };
 };
 
 #endif // TAG_HPP

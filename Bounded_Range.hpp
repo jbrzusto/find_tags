@@ -6,6 +6,8 @@ template < class VALTYPE > class  Bounded_Range {
   // class template for bounded ranges
   // VALTYPE must be an ordered class closed under substraction
 
+  friend class Tag_Foray;
+
 private:
   VALTYPE low;
   VALTYPE high;
@@ -92,6 +94,15 @@ public:
       return true;
     }
   };
-};
 
+  template < class Archive >
+  void serialize(Archive & ar, const unsigned int version) {
+    ar & low;
+    ar & high;
+    ar & width;
+    ar & have_bounds;
+  };
+
+};
+  
 #endif // BOUNDED_RANGE_HPP

@@ -8,7 +8,11 @@
 // A set of nominal receiver frequences
 typedef std::set < Nominal_Frequency_kHz > Freq_Set;
 
+class Tag_Foray;
+
 class Freq_Setting {
+
+  friend class Tag_Foray;
 
  public:
   Frequency_MHz		f_MHz;
@@ -25,6 +29,14 @@ class Freq_Setting {
   static Frequency_MHz as_Frequency_MHz(Nominal_Frequency_kHz x);
   static Nominal_Frequency_kHz get_closest_nominal_freq(Frequency_MHz freq);
   static void set_nominal_freqs(const Freq_Set & nominal_freqs);
+
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version) {
+    ar & f_MHz;
+    ar & f_kHz;
+    ar & ts;
+  };
+
 };
 
 #endif // FREQ_SETTING_HPP

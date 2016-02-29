@@ -152,6 +152,41 @@ Tag_Foray::~Tag_Foray () {
     delete (tfi->second);
 }
   
+void
+Tag_Foray::pause(const char * filename) {
+  // make an archive;
+  // this is the top-level of the serializer,
+  // so we dump class static members from here.
+  std::ofstream ofs(filename);
+  boost::archive::text_oarchive oa(ofs);
 
+  // Tag_Finder
+  oa << Tag_Finder::default_pulse_slop;
+  oa << Tag_Finder::default_burst_slop;
+  oa << Tag_Finder::default_burst_slop_expansion;
+  oa << Tag_Finder::default_max_skipped_bursts;
 
+  // Freq_Setting
+  oa << Freq_Setting::nominal_freqs;
+
+  // Node 
+  oa << Node::_numNodes;
+  oa << Node::_numLinks;
+  oa << Node::maxLabel;
+  oa << Node::_empty;
+
+  // Set
+  oa << Set::_numSets;
+  oa << Set::maxLabel;
+  oa << Set::_empty;
+  oa << Set::allSets;
+
+  // Tag_Candidate
+  oa << Tag_Candidate::freq_slop_kHz;
+  oa << Tag_Candidate::sig_slop_dB;
+  oa << Tag_Candidate::pulses_to_confirm_id;
+  //  oa << Tag_Candidate::filer; // FIXME: deal with this sensibly
+
+  oa << this;
+};
 

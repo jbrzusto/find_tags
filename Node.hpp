@@ -12,6 +12,7 @@ class Node {
 
   friend class Graph;
   friend class Tag_Finder;
+  friend class Tag_Foray;
 
   typedef std::map < Gap, Node * > Edges;
 
@@ -61,6 +62,17 @@ public:
   bool valid(); //!< is this state still valid (i.e. part of a graph)
   void tcLink(); //!< indicate a Tag Candidate is pointing to this state
   void tcUnlink(); //!< indicate a Tag Candidate no longer points to this state
+
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version) {
+    ar & s;
+    ar & e;
+    ar & useCount;
+    ar & tcUseCount;
+    ar & _valid;
+    ar & label;
+  };
+
 };
 
 #endif // NODE_HPP

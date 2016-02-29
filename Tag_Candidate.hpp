@@ -24,6 +24,7 @@ class Tag_Candidate {
 
   /* an automaton walking the DFA graph, recording the pulses it has accepted
      and looking for the first valid burst */
+  friend class Tag_Foray;
 
 public:
 
@@ -105,7 +106,23 @@ public:
   static void set_filer(DB_Filer *dbf);
 
   void renTag(Tag * t1, Tag * t2); //!< if this candidate is for tag t1, make it finish any run and start a new one pointing at t2.
-    
+
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version) {
+    ar & owner;
+    ar & state;
+    ar & pulses;
+    ar & last_ts;
+    ar & last_dumped_ts;
+    ar & tag;
+    ar & tag_id_level;
+    ar & run_id;
+    ar & hit_count;
+    ar & true_gaps;
+    ar & num_pulses;
+    ar & freq_range;
+    ar & sig_range;
+  }
 };
 
 #endif // TAG_CANDIDATE_HPP
