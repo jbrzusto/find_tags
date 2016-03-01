@@ -14,16 +14,47 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, std::istream *data, Frequency_MHz def
   pulse_rate_window(pulse_rate_window),
   min_bogus_spacing(min_bogus_spacing),
   unsigned_dfreq(unsigned_dfreq),
-  line_no(0)
+  line_no(0),
+  pulse_slop(default_pulse_slop),
+  burst_slop(default_burst_slop),
+  burst_slop_expansion(default_burst_slop_expansion),
+  max_skipped_bursts(default_max_skipped_bursts),
+  hist(tags->get_history()),
+  cron(hist->getTicker())
 {
+  // create one empty graph for each nominal frequency
+  auto fs = tags->get_nominal_freqs();
+  for (auto i = fs.begin(); i != fs.end(); ++i)
+    graphs.insert(std::make_pair(*i, new Graph()));
 };
+
+
+void
+Tag_Foray::set_default_pulse_slop_ms(float pulse_slop_ms) {
+  default_pulse_slop = pulse_slop_ms / 1000.0;	// stored as seconds
+};
+
+void
+Tag_Foray::set_default_burst_slop_ms(float burst_slop_ms) {
+  default_burst_slop = burst_slop_ms / 1000.0;	// stored as seconds
+};
+
+void
+Tag_Foray::set_default_burst_slop_expansion_ms(float burst_slop_expansion_ms) {
+  default_burst_slop_expansion = burst_slop_expansion_ms / 1000.0;   // stored as seconds
+};
+
+void
+Tag_Foray::set_default_max_skipped_bursts(unsigned int skip) {
+  default_max_skipped_bursts = skip;
+};
+
 
 
 long long
 Tag_Foray::start() {
   long long bn = 0;
   double ts;
-  History *hist = tags->get_history();
 
   while (! bn) {
       // read and parse a line from a SensorGnome file
@@ -91,10 +122,9 @@ Tag_Foray::start() {
             std::ostringstream prefix;
             prefix << port_num << ",";
             if (max_pulse_rate > 0)
-              newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix.str());
+              newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix.str());
             else
-              newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), prefix.str());
-            newtf->init(hist);
+              newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], prefix.str());
             tag_finders[key] = newtf;
 #if 0
             //#ifdef FIND_TAGS_DEBUG
@@ -108,6 +138,12 @@ Tag_Foray::start() {
             dfreq = - dfreq;
 
           Pulse p = Pulse::make(ts, dfreq, sig, noise, port_freq[port_num].f_MHz);
+          
+          
+          // process any tag events up to this point in time
+          
+          while (cron.ts() <= p.ts)
+            process_event(cron.get());
 							       
           tag_finders[key]->process(p);
         }
@@ -127,6 +163,32 @@ Tag_Foray::start() {
   return bn;
 };
 
+void
+Tag_Foray::process_event(Event e) {
+  auto t = e.tag;
+  auto fs = Freq_Setting::as_Nominal_Frequency_kHz(t->freq);
+  Graph * g = graphs[fs];
+  switch (e.code) {
+  case Event::E_ACTIVATE:
+    {
+      auto rv = g->addTag(t, pulse_slop, burst_slop / t->gaps[3], max_skipped_bursts * t->period);
+      for (auto i = tag_finders.begin(); i != tag_finders.end(); ++i)
+        if (i->first.second == fs)
+          i->second->rename_tag(rv);
+    }
+    break;
+  case Event::E_DEACTIVATE:
+    {
+      auto rv = g->delTag(t, pulse_slop, burst_slop / t->gaps[3], max_skipped_bursts * t->period);
+      for (auto i = tag_finders.begin(); i != tag_finders.end(); ++i)
+        if (i->first.second == fs)
+          i->second->rename_tag(rv);
+    }
+    break;
+  default:
+    std::cerr << "Warning: Unknown event code " << e.code << " for tag " << t->motusID << std::endl;
+  };
+}
 
 void
 Tag_Foray::test() {
@@ -140,17 +202,23 @@ Tag_Foray::test() {
     Tag_Finder *newtf;
     port_freq[0] = Freq_Setting(*it / 1000.0);
     if (max_pulse_rate > 0)
-      newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix);
+      newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[*it], pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix);
     else
-      newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), prefix);
-    newtf->init(tags->get_history());
+      newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[*it], prefix);
+    // FIXME: do something to check database validity
+    delete newtf;
   }
 }
 
 Tag_Foray::~Tag_Foray () {
   for (auto tfi = tag_finders.begin(); tfi != tag_finders.end(); ++tfi)
     delete (tfi->second);
-}
+};
+
+Gap Tag_Foray::default_pulse_slop = 0.0015; // 1.5 ms
+Gap Tag_Foray::default_burst_slop = 0.010; // 10 ms
+Gap Tag_Foray::default_burst_slop_expansion = 0.001; // 1ms = 1 part in 10000 for 10s BI
+unsigned int Tag_Foray::default_max_skipped_bursts = 60;
   
 void
 Tag_Foray::pause(const char * filename) {
@@ -160,11 +228,11 @@ Tag_Foray::pause(const char * filename) {
   std::ofstream ofs(filename);
   boost::archive::text_oarchive oa(ofs);
 
-  // Tag_Finder
-  oa << Tag_Finder::default_pulse_slop;
-  oa << Tag_Finder::default_burst_slop;
-  oa << Tag_Finder::default_burst_slop_expansion;
-  oa << Tag_Finder::default_max_skipped_bursts;
+  // Tag_Foray
+  oa << Tag_Foray::default_pulse_slop;
+  oa << Tag_Foray::default_burst_slop;
+  oa << Tag_Foray::default_burst_slop_expansion;
+  oa << Tag_Foray::default_max_skipped_bursts;
 
   // Freq_Setting
   oa << Freq_Setting::nominal_freqs;

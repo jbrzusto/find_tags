@@ -37,10 +37,20 @@ public:
 
   long long start();                 // begin searching for tags; returns 0 if end of file; returns NN if receives command
                                      // !NEWBN,NN
+  void process_event(Event e);       // !< process a tag add/remove event
+
   void test();                       // throws an exception if there are indistinguishable tags
   Tag_Database * tags;               // registered tags on all known nominal frequencies
 
   void pause(const char * filename); //!< serialize foray to file
+
+  static void set_default_pulse_slop_ms(float pulse_slop_ms);
+
+  static void set_default_burst_slop_ms(float burst_slop_ms);
+
+  static void set_default_burst_slop_expansion_ms(float burst_slop_expansion_ms);
+
+  static void set_default_max_skipped_bursts(unsigned int skip);
 
 protected:
                                      // settings
@@ -82,6 +92,43 @@ protected:
 
   Tag_Finder_Map tag_finders;
 
+  std::map < Nominal_Frequency_kHz, Graph * > graphs;
+
+  Gap pulse_slop;	// (seconds) allowed slop in timing between
+			// burst pulses,
+  // in seconds for each pair of
+  // consecutive pulses in a burst, this
+  // is the maximum amount by which the
+  // gap between the pair can differ
+  // from the gap between the
+  // corresponding pair in a registered
+  // tag, and still match the tag.
+
+  static Gap default_pulse_slop;
+
+  Gap burst_slop;	// (seconds) allowed slop in timing between
+                        // consecutive tag bursts, in seconds this is
+                        // meant to allow for measurement error at tag
+                        // registration and detection times
+
+  static Gap default_burst_slop;
+
+
+  Gap burst_slop_expansion; // (seconds) how much slop in timing
+			    // between tag bursts increases with each
+  // skipped pulse; this is meant to allow for clock drift between
+  // the tag and the receiver.
+  static Gap default_burst_slop_expansion;
+
+  // how many consecutive bursts can be missing without terminating a
+  // run?
+
+  unsigned int max_skipped_bursts;
+  static unsigned int default_max_skipped_bursts;
+
+  History *hist;
+  Ticker cron;
+
 public:
 
   // public serialize function.
@@ -101,6 +148,10 @@ public:
     ar & line_no;
     ar & port_freq;
     ar & tag_finders;
+    ar & pulse_slop;
+    ar & burst_slop;
+    ar & burst_slop_expansion;
+    ar & max_skipped_bursts;
   };  
 };
 

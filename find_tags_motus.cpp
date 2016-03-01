@@ -506,10 +506,10 @@ main (int argc, char **argv) {
       usage();
       exit(1);
     }
-    Tag_Finder::set_default_pulse_slop_ms(pulse_slop);
-    Tag_Finder::set_default_burst_slop_ms(burst_slop);
-    Tag_Finder::set_default_burst_slop_expansion_ms(burst_slop_expansion);
-    Tag_Finder::set_default_max_skipped_bursts(max_skipped_bursts);
+    Tag_Foray::set_default_pulse_slop_ms(pulse_slop);
+    Tag_Foray::set_default_burst_slop_ms(burst_slop);
+    Tag_Foray::set_default_burst_slop_expansion_ms(burst_slop_expansion);
+    Tag_Foray::set_default_max_skipped_bursts(max_skipped_bursts);
     Tag_Candidate::set_pulses_to_confirm_id(pulses_to_confirm);
     Tag_Candidate::set_sig_slop_dB(sig_slop_dB);
     Tag_Candidate::set_freq_slop_kHz(freq_slop_kHz);

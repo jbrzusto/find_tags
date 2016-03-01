@@ -1,42 +1,13 @@
 #include "Tag_Finder.hpp"
 
-Tag_Finder::Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, TagSet *tags, string prefix) :
+Tag_Finder::Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, TagSet *tags, Graph * g, string prefix) :
   owner(owner),
   nom_freq(nom_freq),
   tags(tags),
-  graph(),
+  graph(g),
   cands(NUM_CAND_LISTS),
-  pulse_slop(default_pulse_slop),
-  burst_slop(default_burst_slop),
-  burst_slop_expansion(default_burst_slop_expansion),
-  max_skipped_bursts(default_max_skipped_bursts),
   prefix(prefix)
 {
-};
-
-void
-Tag_Finder::set_default_pulse_slop_ms(float pulse_slop_ms) {
-  default_pulse_slop = pulse_slop_ms / 1000.0;	// stored as seconds
-};
-
-void
-Tag_Finder::set_default_burst_slop_ms(float burst_slop_ms) {
-  default_burst_slop = burst_slop_ms / 1000.0;	// stored as seconds
-};
-
-void
-Tag_Finder::set_default_burst_slop_expansion_ms(float burst_slop_expansion_ms) {
-  default_burst_slop_expansion = burst_slop_expansion_ms / 1000.0;   // stored as seconds
-};
-
-void
-Tag_Finder::set_default_max_skipped_bursts(unsigned int skip) {
-  default_max_skipped_bursts = skip;
-};
-
-void
-Tag_Finder::init(History *h) {
-  cron = h->getTicker();
 };
 
 void
@@ -71,12 +42,6 @@ Tag_Finder::process(Pulse &p) {
      - if this pulse didn't confirm any candidate, then start a new
      Tag_Candidate at this pulse.
   */
-
-
-  // process any tag events up to this point in time
-
-  while (cron.ts() <= p.ts)
-    process_event(cron.get());
 
   // the clone list 
   Cand_List & cloned_candidates = cands[3];
@@ -159,7 +124,7 @@ Tag_Finder::process(Pulse &p) {
   }
   // maybe start a new Tag_Candidate with this pulse 
   if (! confirmed_acceptance) {
-    cands[2].push_back(Tag_Candidate(this, graph.root(), p));
+    cands[2].push_back(Tag_Candidate(this, graph->root(), p));
   }
 };
 
@@ -198,33 +163,3 @@ Tag_Finder::rename_tag(std::pair < Tag *, Tag * > tp) {
       ci->renTag(tp.first, tp.second);
   }
 };
-
-void
-Tag_Finder::process_event(Event e) {
-  auto t = e.tag;
-  if (Freq_Setting::as_Nominal_Frequency_kHz(t->freq) != nom_freq)
-    return; // skip tags not on this finder's frequency
-
-  switch (e.code) {
-  case Event::E_ACTIVATE:
-    {
-      auto rv = graph.addTag(t, pulse_slop, burst_slop / t->gaps[3], max_skipped_bursts * t->period);
-      rename_tag(rv);
-    }
-    break;
-  case Event::E_DEACTIVATE:
-    {
-      auto rv = graph.delTag(t, pulse_slop, burst_slop / t->gaps[3], max_skipped_bursts * t->period);
-      rename_tag(rv);
-    }
-    break;
-  default:
-    std::cerr << "Warning: Unknown event code " << e.code << " for tag " << t->motusID << std::endl;
-  };
-};
-
-
-Gap Tag_Finder::default_pulse_slop = 0.0015; // 1.5 ms
-Gap Tag_Finder::default_burst_slop = 0.010; // 10 ms
-Gap Tag_Finder::default_burst_slop_expansion = 0.001; // 1ms = 1 part in 10000 for 10s BI
-unsigned int Tag_Finder::default_max_skipped_bursts = 60;

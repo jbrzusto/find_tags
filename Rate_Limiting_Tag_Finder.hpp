@@ -7,6 +7,7 @@
 #include "find_tags_common.hpp"
 #include "Pulse.hpp"
 #include "Tag_Finder.hpp"
+#include "Graph.hpp"
 
 #include <list>
 
@@ -25,7 +26,7 @@ private:
 public:
   Rate_Limiting_Tag_Finder(Tag_Foray *owner);
 
-  Rate_Limiting_Tag_Finder (Tag_Foray *owner, Nominal_Frequency_kHz nom_freq, TagSet * tags, Gap rate_window, float max_rate, Gap min_bogus_spacing, string prefix="");
+  Rate_Limiting_Tag_Finder (Tag_Foray *owner, Nominal_Frequency_kHz nom_freq, TagSet * tags, Graph * g, Gap rate_window, float max_rate, Gap min_bogus_spacing, string prefix="");
 
   virtual ~Rate_Limiting_Tag_Finder();
 

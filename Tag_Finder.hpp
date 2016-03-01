@@ -44,49 +44,14 @@ public:
   // - internal representation of tag database
   // the set of tags at a single nominal frequency is a "TagSet"
 
-  TagSet *tags;
+  TagSet * tags;
 
-  Graph graph;
+  Graph * graph;
 
   Cand_List_Vec	cands;
 
   // algorithmic parameters
 
-
-  Gap pulse_slop;	// (seconds) allowed slop in timing between
-			// burst pulses,
-  // in seconds for each pair of
-  // consecutive pulses in a burst, this
-  // is the maximum amount by which the
-  // gap between the pair can differ
-  // from the gap between the
-  // corresponding pair in a registered
-  // tag, and still match the tag.
-
-  static Gap default_pulse_slop;
-
-  Gap burst_slop;	// (seconds) allowed slop in timing between
-                        // consecutive tag bursts, in seconds this is
-                        // meant to allow for measurement error at tag
-                        // registration and detection times
-
-  static Gap default_burst_slop;
-
-
-  Gap burst_slop_expansion; // (seconds) how much slop in timing
-			    // between tag bursts increases with each
-  // skipped pulse; this is meant to allow for clock drift between
-  // the tag and the receiver.
-  static Gap default_burst_slop_expansion;
-
-  // how many consecutive bursts can be missing without terminating a
-  // run?
-
-  unsigned int max_skipped_bursts;
-  static unsigned int default_max_skipped_bursts;
-
-
-  Ticker cron; //!< iterator through history
 
   // output parameters
 
@@ -94,31 +59,19 @@ public:
 
   Tag_Finder(Tag_Foray * owner) {};
 
-  Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, TagSet * tags, string prefix="");
+  Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, TagSet * tags, Graph * g, string prefix="");
 
   virtual ~Tag_Finder();
 
-  static void set_default_pulse_slop_ms(float pulse_slop_ms);
-
-  static void set_default_burst_slop_ms(float burst_slop_ms);
-
-  static void set_default_burst_slop_expansion_ms(float burst_slop_expansion_ms);
-
-  static void set_default_max_skipped_bursts(unsigned int skip);
-
-  void init(History *h);
-
   virtual void process (Pulse &p);
-
-  void initialize_tag_buffers();
-
-  void rename_tag(std::pair < Tag *, Tag * > tp);
 
   void process_event(Event e); //!< process a tag event; typically adds or removes a tag from the graph of active tags
 
   Gap *get_true_gaps(Tag * tid);
 
   void dump_bogus_burst(Pulse &p);
+
+  void rename_tag(std::pair < Tag *, Tag * > tp);
 
 public:
   
@@ -130,12 +83,6 @@ public:
     ar & owner;
     ar & graph;
     ar & cands;
-    ar & pulse_slop;
-    ar & burst_slop;
-    ar & burst_slop_expansion;
-    ar & max_skipped_bursts;
-    
-    ar & cron;
     ar & prefix;
     
   };
