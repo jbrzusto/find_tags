@@ -15,16 +15,6 @@ Tag_Finder::Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, TagSe
 };
 
 void
-Tag_Finder::setup_graph() {
-  // Create the DFA graph for the database of registered tags
-
-  // add each tag to the graph.
-
-  for (auto i = tags->begin(); i != tags->end(); ++i)
-    graph.addTag(*i, pulse_slop, burst_slop / (*i)->gaps[3], max_skipped_bursts * (*i)->period);
-};
-
-void
 Tag_Finder::set_default_pulse_slop_ms(float pulse_slop_ms) {
   default_pulse_slop = pulse_slop_ms / 1000.0;	// stored as seconds
 };

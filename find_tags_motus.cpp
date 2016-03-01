@@ -560,8 +560,7 @@ main (int argc, char **argv) {
       Freq_Setting::set_nominal_freqs(tag_db.get_nominal_freqs());
 
       for (;;) {
-        Tag_Foray &foray;
-        (& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
+        Tag_Foray foray(& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
 
         if (test_only) {
           foray.test(); // throws if there's a problem

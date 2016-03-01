@@ -98,8 +98,6 @@ public:
 
   virtual ~Tag_Finder();
 
-  void setup_graph();
-
   static void set_default_pulse_slop_ms(float pulse_slop_ms);
 
   static void set_default_burst_slop_ms(float burst_slop_ms);

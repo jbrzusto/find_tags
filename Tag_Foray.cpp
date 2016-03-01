@@ -194,4 +194,3 @@ Tag_Foray::pause(const char * filename) {
   // dynamic members of all classes
   oa << this;
 };
-
