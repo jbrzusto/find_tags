@@ -57,6 +57,8 @@ public:
 
   string prefix;   // prefix before each tag record (e.g. port number then comma)
 
+  Tag_Finder() {}; //!< default ctor for deserialization
+
   Tag_Finder(Tag_Foray * owner) {};
 
   Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, TagSet * tags, Graph * g, string prefix="");

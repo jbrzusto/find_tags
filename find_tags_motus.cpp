@@ -388,6 +388,7 @@ main (int argc, char **argv) {
 	OPT_MAX_DFREQ            = 'M',
         OPT_BOOT_NUM             = 'n',
         OPT_PULSE_SLOP	         = 'p',
+        OPT_RESUME               = 'r',
 	OPT_MAX_PULSE_RATE       = 'R',
 	OPT_FREQ_SLOP	         = 's',
 	OPT_MAX_SKIPPED_BURSTS   = 'S',
@@ -396,7 +397,7 @@ main (int argc, char **argv) {
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:ef:Fhi:l:m:M:p:R:s:S:tw:";
+    static const char short_options[] = "b:B:c:ef:Fhi:l:m:M:p:rR:s:S:tw:";
     static const struct option long_options[] = {
         {"burst_slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst_slop_expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
@@ -410,6 +411,7 @@ main (int argc, char **argv) {
 	{"min_dfreq"               , 1, 0, OPT_MIN_DFREQ},
 	{"max_dfreq"               , 1, 0, OPT_MAX_DFREQ},
         {"pulse_slop"		   , 1, 0, OPT_PULSE_SLOP},
+        {"resume"                  , 0, 0, OPT_RESUME},
 	{"max_pulse_rate"          , 1, 0, OPT_MAX_PULSE_RATE},
         {"frequency_slop"	   , 1, 0, OPT_FREQ_SLOP},
 	{"max_skipped_bursts"      , 1, 0, OPT_MAX_SKIPPED_BURSTS},
@@ -428,6 +430,7 @@ main (int argc, char **argv) {
     bool use_events = false;
     bool force_default_freq = false;
     bool test_only = false;
+    bool resume = false;
     // rate-limiting buffer parameters
 
     float max_pulse_rate = 0;    // no rate-limiting
@@ -482,6 +485,9 @@ main (int argc, char **argv) {
         case OPT_PULSE_SLOP:
           pulse_slop = atof(optarg);
 	  break;
+        case OPT_RESUME:
+          resume = true;
+          break;
 	case OPT_MAX_PULSE_RATE:
 	  max_pulse_rate = atof(optarg);
 	  break;
@@ -559,9 +565,15 @@ main (int argc, char **argv) {
       // Freq_Setting needs to know the set of nominal frequencies
       Freq_Setting::set_nominal_freqs(tag_db.get_nominal_freqs());
 
+      Tag_Foray foray;
+      
       for (;;) {
-        Tag_Foray foray(& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
-
+        if (resume) {
+          Tag_Foray::resume(foray);
+          resume = false; // don't resume if we hit a new bootnum
+        } else {
+          foray = Tag_Foray(& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
+        }
         if (test_only) {
           foray.test(); // throws if there's a problem
           std::cerr << "Ok\n";
@@ -569,7 +581,7 @@ main (int argc, char **argv) {
         }
         long long newbn = foray.start();
         if (newbn == 0) {
-          foray.pause("ftm_out.txt");
+          foray.pause();
           break;
         }
         dbf.end_batch();
@@ -581,4 +593,3 @@ main (int argc, char **argv) {
       exit(2);
     }
 }
-

@@ -1,4 +1,7 @@
-2016-02-29: use only one graph per nom_freq
+2016-03-01: make DB_Filer object owned by Tag_Foray, not
+   Tag_Candidate.
+
+2016-02-29: DONE: use only one graph per nom_freq
 
 2014-10-01
 - allow more flexible run structure:  currently, a tag run must begin

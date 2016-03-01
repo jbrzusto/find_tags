@@ -32,6 +32,10 @@ public:
 
   void add_ambiguity(Motus_Tag_ID proxyID, Motus_Tag_ID mid); // add a motus tag ID to a proxy group, given by proxyID, which is negative
 
+  void save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string lastLine, std::string state);
+
+  bool load_findtags_state(Timestamp & tsData, Timestamp & tsRun, std::string & lastLine, std::string & state);
+
 protected:
   // settings
 
@@ -47,6 +51,8 @@ protected:
   sqlite3_stmt * st_check_param; //!< check whether parameter value has changed
   sqlite3_stmt * st_add_param; //!< add batch parameter entry
   sqlite3_stmt * st_add_ambig; //!< add ambiguity entry
+  sqlite3_stmt * st_save_findtags_state; //!< save state of running findtags, for pause
+  sqlite3_stmt * st_load_findtags_state; //!< load state of paused findtags, for resume
 
   string prog_name; //!< name of program, for recording in DB
 

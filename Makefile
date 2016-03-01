@@ -19,8 +19,10 @@ PROGRAM_BUILD_TS=$(shell date +%s)
 
 all: find_tags_unifile
 
+OBJS=Ambiguity.o  find_tags_motus.o  Freq_Setting.o  History.o  Pulse.o Set.o Tag_Candidate.o  Tag_Finder.o  Tag.o Ticker.o DB_Filer.o Freq_History.o Graph.o Node.o Rate_Limiting_Tag_Finder.o Tag_Database.o Tag_Foray.o testAddRemoveTag.o
+
 clean:
-	rm -f *.o find_tags find_tags_unifile find_tags_motus
+	rm -f $(OBJS) find_tags find_tags_unifile find_tags_motus
 
 DB_Filer.o: DB_Filer.cpp DB_Filer.hpp find_tags_common.hpp
 

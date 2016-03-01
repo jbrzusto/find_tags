@@ -61,6 +61,8 @@ protected:
   friend class Tag_Finder;
   friend class Ambiguity;
 public:
+
+  Tag_Candidate() {}; // default ctor for deserialization
   
   Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse);
 

@@ -2,6 +2,8 @@
 #include <sqlite3.h>
 #include <math.h>
 
+Tag_Database::Tag_Database () {};
+
 Tag_Database::Tag_Database (string filename, bool get_history)
   : h(0)
 {

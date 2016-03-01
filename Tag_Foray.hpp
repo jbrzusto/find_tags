@@ -8,8 +8,8 @@
 #include "Tag_Finder.hpp"
 #include "Rate_Limiting_Tag_Finder.hpp"
 #include <sqlite3.h>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/xml_iarchive.hpp>
+#include <boost/archive/xml_oarchive.hpp>
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/list.hpp>
 #include <boost/serialization/map.hpp>
@@ -30,6 +30,8 @@
 class Tag_Foray {
 
 public:
+
+  Tag_Foray (); //!< default ctor to give object into which resume() deserializes
   
   Tag_Foray (Tag_Database * tags, std::istream * data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq=false);
 
@@ -42,7 +44,9 @@ public:
   void test();                       // throws an exception if there are indistinguishable tags
   Tag_Database * tags;               // registered tags on all known nominal frequencies
 
-  void pause(const char * filename); //!< serialize foray to file
+  void pause(); //!< serialize foray to output database
+  static bool resume(Tag_Foray &tf); //!< resume foray from state saved in output database
+  // returns true if successful
 
   static void set_default_pulse_slop_ms(float pulse_slop_ms);
 
@@ -129,6 +133,9 @@ protected:
   History *hist;
   Ticker cron;
 
+  std::string lastLine; // last line processed from input
+  double ts; // last timestamp parsed from input file
+
 public:
 
   // public serialize function.
@@ -136,7 +143,6 @@ public:
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
   {
-    ar & tags;
     ar & default_freq;
     ar & force_default_freq;
     ar & min_dfreq;
@@ -148,6 +154,8 @@ public:
     ar & line_no;
     ar & port_freq;
     ar & tag_finders;
+    ar & tags;
+    ar & graphs;
     ar & pulse_slop;
     ar & burst_slop;
     ar & burst_slop_expansion;
@@ -160,7 +168,7 @@ public:
 
 template< class Member >
 void serialize(
-               boost::archive::text_oarchive &ar,
+               boost::archive::xml_oarchive &ar,
                std::unordered_set < Member > &s,
                const unsigned int file_version
                ){
@@ -169,7 +177,7 @@ void serialize(
 
 template< class Member >
 void serialize(
-               boost::archive::text_iarchive &ar,
+               boost::archive::xml_iarchive &ar,
                std::unordered_set < Member > &s,
                const unsigned int file_version
                ){
@@ -177,7 +185,7 @@ void serialize(
 };
 
 template< class Member >
-void save(boost::archive::text_oarchive & ar, std::unordered_set < Member > & s, const unsigned int version) {
+void save(boost::archive::xml_oarchive & ar, std::unordered_set < Member > & s, const unsigned int version) {
   
   size_t n = s.size();
   ar & n;
@@ -201,7 +209,7 @@ void load(Archive & ar, std::unordered_set < Member > & s, const unsigned int ve
 
 template< class Member >
 void serialize(
-               boost::archive::text_oarchive &ar,
+               boost::archive::xml_oarchive &ar,
                std::unordered_multiset < Member > &s,
                const unsigned int file_version
                ){
@@ -210,7 +218,7 @@ void serialize(
 
 template< class Member >
 void serialize(
-               boost::archive::text_iarchive &ar,
+               boost::archive::xml_iarchive &ar,
                std::unordered_multiset < Member > &s,
                const unsigned int file_version
                ){
@@ -219,7 +227,7 @@ void serialize(
 
 
 template< class Member >
-void save(boost::archive::text_oarchive & ar, std::unordered_multiset < Member > & s, const unsigned int version) {
+void save(boost::archive::xml_oarchive & ar, std::unordered_multiset < Member > & s, const unsigned int version) {
   
   size_t n = s.size();
   ar & n;
@@ -243,7 +251,7 @@ void load(Archive & ar, std::unordered_multiset < Member > & s, const unsigned i
 
 template< class Key, class Value >
 void serialize(
-               boost::archive::text_oarchive &ar,
+               boost::archive::xml_oarchive &ar,
                std::unordered_multimap < Key, Value > &s,
                const unsigned int file_version
                ){
@@ -252,7 +260,7 @@ void serialize(
 
 template< class Key, class Value >
 void serialize(
-               boost::archive::text_iarchive &ar,
+               boost::archive::xml_iarchive &ar,
                std::unordered_multimap < Key, Value > &s,
                const unsigned int file_version
                ){
@@ -261,7 +269,7 @@ void serialize(
 
 
 template< class Key, class Value >
-void save(boost::archive::text_oarchive & ar, std::unordered_multimap < Key, Value > & s, const unsigned int version) {
+void save(boost::archive::xml_oarchive & ar, std::unordered_multimap < Key, Value > & s, const unsigned int version) {
   
   size_t n = s.size();
   ar & n;

@@ -23,6 +23,8 @@ private:
   History *h;
   
 public:
+  Tag_Database (); //!< default ctor for deserializing into
+
   Tag_Database (string filename, bool get_history = false);
 
   void populate_from_csv_file(string filename);

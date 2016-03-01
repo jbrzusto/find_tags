@@ -2,6 +2,9 @@
 
 #include <string.h>
 #include <sstream>
+#include <time.h>
+
+Tag_Foray::Tag_Foray () {}; // default ctor for deserializing into
 
 Tag_Foray::Tag_Foray (Tag_Database * tags, std::istream *data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq) :
   tags(tags),
@@ -54,12 +57,11 @@ Tag_Foray::set_default_max_skipped_bursts(unsigned int skip) {
 long long
 Tag_Foray::start() {
   long long bn = 0;
-  double ts;
+  char buf[MAX_LINE_SIZE + 1]; // input buffer
 
   while (! bn) {
       // read and parse a line from a SensorGnome file
 
-      char buf[MAX_LINE_SIZE + 1];
       if (! data->getline(buf, MAX_LINE_SIZE)) {
         if (data->eof())
           break;
@@ -72,6 +74,7 @@ Tag_Foray::start() {
       //	break;
 
       ++line_no;
+      lastLine = std::string(buf);
 
       switch (buf[0]) {
       case 'S':
@@ -80,7 +83,6 @@ Tag_Foray::start() {
              S,1366227448.192,5,-m,166.376,0,
              is S, timestamp, port_num, param flag, value, return code, other error
           */
-          double ts;
           short port_num;
           char param_flag[16];
           double param_value;
@@ -221,44 +223,110 @@ Gap Tag_Foray::default_burst_slop_expansion = 0.001; // 1ms = 1 part in 10000 fo
 unsigned int Tag_Foray::default_max_skipped_bursts = 60;
   
 void
-Tag_Foray::pause(const char * filename) {
+Tag_Foray::pause() {
   // make an archive;
   // this is the top-level of the serializer,
   // so we dump class static members from here.
-  std::ofstream ofs(filename);
-  boost::archive::text_oarchive oa(ofs);
+  std::ostringstream ofs;
+  {
+    // block to ensure oa dtor is called
+    boost::archive::xml_oarchive oa(ofs);
+
+    // Tag_Foray
+    oa << Tag_Foray::default_pulse_slop;
+    oa << Tag_Foray::default_burst_slop;
+    oa << Tag_Foray::default_burst_slop_expansion;
+    oa << Tag_Foray::default_max_skipped_bursts;
+
+    // Freq_Setting
+    oa << Freq_Setting::nominal_freqs;
+
+    // Node 
+    oa << Node::_numNodes;
+    oa << Node::_numLinks;
+    oa << Node::maxLabel;
+    oa << Node::_empty;
+
+    // Set
+    oa << Set::_numSets;
+    oa << Set::maxLabel;
+    oa << Set::_empty;
+    oa << Set::allSets;
+
+    // Tag_Candidate
+    oa << Tag_Candidate::freq_slop_kHz;
+    oa << Tag_Candidate::sig_slop_dB;
+    oa << Tag_Candidate::pulses_to_confirm_id;
+
+    // Ambiguity (a singleton class)
+    oa << Ambiguity::abm;
+    oa << Ambiguity::nextID;
+  
+    // dynamic members of all classes
+    serialize(oa, 1);
+  }
+  // record this state
+  struct timespec tsp;
+  clock_gettime(CLOCK_REALTIME, & tsp);
+
+  Tag_Candidate::filer->
+    save_findtags_state( tsp.tv_sec + 1e-9 * tsp.tv_nsec, // time now
+                         ts,                            // last timestamp parsed from input
+                         lastLine,              // last line read from input
+                         ofs.str()                      // serialized state
+                         );
+
+};
+
+bool
+Tag_Foray::resume(Tag_Foray &tf) {
+  Timestamp paused;
+  Timestamp lastLineTS;
+  std::string blob;
+  
+  Tag_Candidate::filer->
+    load_findtags_state( paused,
+                         lastLineTS,
+                         tf.lastLine,
+                         blob                      // serialized state
+                         );
+
+  std::istringstream ifs (blob);
+  boost::archive::xml_iarchive ia(ifs);
 
   // Tag_Foray
-  oa << Tag_Foray::default_pulse_slop;
-  oa << Tag_Foray::default_burst_slop;
-  oa << Tag_Foray::default_burst_slop_expansion;
-  oa << Tag_Foray::default_max_skipped_bursts;
+  ia >> Tag_Foray::default_pulse_slop;
+  ia >> Tag_Foray::default_burst_slop;
+  ia >> Tag_Foray::default_burst_slop_expansion;
+  ia >> Tag_Foray::default_max_skipped_bursts;
 
   // Freq_Setting
-  oa << Freq_Setting::nominal_freqs;
+  ia >> Freq_Setting::nominal_freqs;
 
   // Node 
-  oa << Node::_numNodes;
-  oa << Node::_numLinks;
-  oa << Node::maxLabel;
-  oa << Node::_empty;
+  ia >> Node::_numNodes;
+  ia >> Node::_numLinks;
+  ia >> Node::maxLabel;
+  ia >> Node::_empty;
 
   // Set
-  oa << Set::_numSets;
-  oa << Set::maxLabel;
-  oa << Set::_empty;
-  oa << Set::allSets;
+  ia >> Set::_numSets;
+  ia >> Set::maxLabel;
+  ia >> Set::_empty;
+  ia >> Set::allSets;
 
   // Tag_Candidate
-  oa << Tag_Candidate::freq_slop_kHz;
-  oa << Tag_Candidate::sig_slop_dB;
-  oa << Tag_Candidate::pulses_to_confirm_id;
-  //  oa << Tag_Candidate::filer; // FIXME: deal with this sensibly
+  ia >> Tag_Candidate::freq_slop_kHz;
+  ia >> Tag_Candidate::sig_slop_dB;
+  ia >> Tag_Candidate::pulses_to_confirm_id;
 
-  // Ambiguity
-  oa << Ambiguity::abm;
-  oa << Ambiguity::nextID;
+  // Ambiguity (a singleton class)
+  ia >> Ambiguity::abm;
+  ia >> Ambiguity::nextID;
   
   // dynamic members of all classes
-  oa << this;
+  tf.serialize(ia, 1);
+  return true;
 };
+
+  
