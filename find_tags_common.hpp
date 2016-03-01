@@ -7,6 +7,8 @@
 #include <map>
 #include <unordered_map>
 #include <cmath>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 
 const static unsigned int PULSES_PER_BURST = 4;	// pulses in a burst (Lotek VHF tags)
 const static unsigned int MAX_LINE_SIZE = 512;	// characters in a .CSV file line

@@ -110,18 +110,18 @@ public:
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {
-    ar & owner;
-    ar & state;
-    ar & pulses;
-    ar & last_ts;
-    ar & last_dumped_ts;
-    ar & tag;
-    ar & tag_id_level;
-    ar & run_id;
-    ar & hit_count;
-    ar & num_pulses;
-    ar & freq_range;
-    ar & sig_range;
+    ar & BOOST_SERIALIZATION_NVP( owner );
+    ar & BOOST_SERIALIZATION_NVP( state );
+    ar & BOOST_SERIALIZATION_NVP( pulses );
+    ar & BOOST_SERIALIZATION_NVP( last_ts );
+    ar & BOOST_SERIALIZATION_NVP( last_dumped_ts );
+    ar & BOOST_SERIALIZATION_NVP( tag );
+    ar & BOOST_SERIALIZATION_NVP( tag_id_level );
+    ar & BOOST_SERIALIZATION_NVP( run_id );
+    ar & BOOST_SERIALIZATION_NVP( hit_count );
+    ar & BOOST_SERIALIZATION_NVP( num_pulses );
+    ar & BOOST_SERIALIZATION_NVP( freq_range );
+    ar & BOOST_SERIALIZATION_NVP( sig_range );
   }
 };
 

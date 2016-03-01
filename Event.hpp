@@ -24,9 +24,9 @@ struct Event {
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {
-    ar & ts;
-    ar & tag;
-    ar & code;
+    ar & BOOST_SERIALIZATION_NVP( ts );
+    ar & BOOST_SERIALIZATION_NVP( tag );
+    ar & BOOST_SERIALIZATION_NVP( code );
   };
 };
 

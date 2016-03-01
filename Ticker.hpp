@@ -21,8 +21,8 @@ public:
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
   {
-    ar & h;
-    ar & m;
+    ar & BOOST_SERIALIZATION_NVP( h );
+    ar & BOOST_SERIALIZATION_NVP( m );
   };
 
 };

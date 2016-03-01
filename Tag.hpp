@@ -29,12 +29,12 @@ public:
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {
-    ar & motusID;
-    ar & freq;
-    ar & dfreq;
-    ar & gaps;
-    ar & period;
-    ar & count;
+    ar & BOOST_SERIALIZATION_NVP( motusID );
+    ar & BOOST_SERIALIZATION_NVP( freq );
+    ar & BOOST_SERIALIZATION_NVP( dfreq );
+    ar & BOOST_SERIALIZATION_NVP( gaps );
+    ar & BOOST_SERIALIZATION_NVP( period );
+    ar & BOOST_SERIALIZATION_NVP( count );
   };
 };
 

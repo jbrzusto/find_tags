@@ -32,9 +32,9 @@ class Freq_Setting {
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {
-    ar & f_MHz;
-    ar & f_kHz;
-    ar & ts;
+    ar & BOOST_SERIALIZATION_NVP(f_MHz);
+    ar & BOOST_SERIALIZATION_NVP( f_kHz );
+    ar & BOOST_SERIALIZATION_NVP( ts );
   };
 
 };

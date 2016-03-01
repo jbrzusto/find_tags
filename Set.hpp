@@ -66,9 +66,9 @@ private:
 public:
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {
-    ar & s;
-    ar & _label;
-    ar & hash;
+    ar & BOOST_SERIALIZATION_NVP( s );
+    ar & BOOST_SERIALIZATION_NVP( _label );
+    ar & BOOST_SERIALIZATION_NVP( hash );
   };
 
 };

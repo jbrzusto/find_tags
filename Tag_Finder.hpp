@@ -82,10 +82,10 @@ public:
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
   {
-    ar & owner;
-    ar & graph;
-    ar & cands;
-    ar & prefix;
+    ar & BOOST_SERIALIZATION_NVP( owner );
+    ar & BOOST_SERIALIZATION_NVP( graph );
+    ar & BOOST_SERIALIZATION_NVP( cands );
+    ar & BOOST_SERIALIZATION_NVP( prefix );
     
   };
 };

@@ -65,12 +65,12 @@ public:
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {
-    ar & s;
-    ar & e;
-    ar & useCount;
-    ar & tcUseCount;
-    ar & _valid;
-    ar & label;
+    ar & BOOST_SERIALIZATION_NVP( s );
+    ar & BOOST_SERIALIZATION_NVP( e );
+    ar & BOOST_SERIALIZATION_NVP( useCount );
+    ar & BOOST_SERIALIZATION_NVP( tcUseCount );
+    ar & BOOST_SERIALIZATION_NVP( _valid );
+    ar & BOOST_SERIALIZATION_NVP( label );
   };
 
 };

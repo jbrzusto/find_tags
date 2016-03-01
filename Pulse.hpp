@@ -40,12 +40,12 @@ public:
 
   template < class Archive >
   void serialize(Archive & ar, const unsigned int version) {
-    ar & ts;
-    ar & dfreq;
-    ar & ant_freq;
-    ar & sig;
-    ar & noise;
-    ar & seq_no;
+    ar & BOOST_SERIALIZATION_NVP( ts );
+    ar & BOOST_SERIALIZATION_NVP( dfreq );
+    ar & BOOST_SERIALIZATION_NVP( ant_freq );
+    ar & BOOST_SERIALIZATION_NVP( sig );
+    ar & BOOST_SERIALIZATION_NVP( noise );
+    ar & BOOST_SERIALIZATION_NVP( seq_no );
   };
 
 };

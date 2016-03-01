@@ -97,10 +97,10 @@ public:
 
   template < class Archive >
   void serialize(Archive & ar, const unsigned int version) {
-    ar & low;
-    ar & high;
-    ar & width;
-    ar & have_bounds;
+    ar & BOOST_SERIALIZATION_NVP( low );
+    ar & BOOST_SERIALIZATION_NVP( high );
+    ar & BOOST_SERIALIZATION_NVP( width );
+    ar & BOOST_SERIALIZATION_NVP( have_bounds );
   };
 
 };

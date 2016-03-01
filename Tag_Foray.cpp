@@ -228,39 +228,40 @@ Tag_Foray::pause() {
   // this is the top-level of the serializer,
   // so we dump class static members from here.
   std::ostringstream ofs;
+
   {
     // block to ensure oa dtor is called
-    boost::archive::xml_oarchive oa(ofs);
+    boost::archive::binary_oarchive oa(ofs);
 
     // Tag_Foray
-    oa << Tag_Foray::default_pulse_slop;
-    oa << Tag_Foray::default_burst_slop;
-    oa << Tag_Foray::default_burst_slop_expansion;
-    oa << Tag_Foray::default_max_skipped_bursts;
+    oa << make_nvp("default_pulse_slop", Tag_Foray::default_pulse_slop);
+    oa << make_nvp("default_burst_slop", Tag_Foray::default_burst_slop);
+    oa << make_nvp("default_burst_slop_expansion", Tag_Foray::default_burst_slop_expansion);
+    oa << make_nvp("default_max_skipped_bursts", Tag_Foray::default_max_skipped_bursts);
 
     // Freq_Setting
-    oa << Freq_Setting::nominal_freqs;
+    oa << make_nvp("nominal_freqs", Freq_Setting::nominal_freqs);
 
     // Node 
-    oa << Node::_numNodes;
-    oa << Node::_numLinks;
-    oa << Node::maxLabel;
-    oa << Node::_empty;
+    oa << make_nvp("_numNodes", Node::_numNodes);
+    oa << make_nvp("_numLinks", Node::_numLinks);
+    oa << make_nvp("maxLabel", Node::maxLabel);
+    oa << make_nvp("_empty", Node::_empty);
 
     // Set
-    oa << Set::_numSets;
-    oa << Set::maxLabel;
-    oa << Set::_empty;
-    oa << Set::allSets;
+    oa << make_nvp("_numSets", Set::_numSets);
+    oa << make_nvp("maxLabel", Set::maxLabel);
+    oa << make_nvp("_empty", Set::_empty);
+    oa << make_nvp("allSets", Set::allSets);
 
     // Tag_Candidate
-    oa << Tag_Candidate::freq_slop_kHz;
-    oa << Tag_Candidate::sig_slop_dB;
-    oa << Tag_Candidate::pulses_to_confirm_id;
+    oa << make_nvp("freq_slop_kHz", Tag_Candidate::freq_slop_kHz);
+    oa << make_nvp("sig_slop_dB", Tag_Candidate::sig_slop_dB);
+    oa << make_nvp("pulses_to_confirm_id", Tag_Candidate::pulses_to_confirm_id);
 
     // Ambiguity (a singleton class)
-    oa << Ambiguity::abm;
-    oa << Ambiguity::nextID;
+    oa << make_nvp("abm", Ambiguity::abm);
+    oa << make_nvp("nextID", Ambiguity::nextID);
   
     // dynamic members of all classes
     serialize(oa, 1);
@@ -270,8 +271,8 @@ Tag_Foray::pause() {
   clock_gettime(CLOCK_REALTIME, & tsp);
 
   Tag_Candidate::filer->
-    save_findtags_state( tsp.tv_sec + 1e-9 * tsp.tv_nsec, // time now
-                         ts,                            // last timestamp parsed from input
+    save_findtags_state( ts,                            // last timestamp parsed from input
+                         tsp.tv_sec + 1e-9 * tsp.tv_nsec, // time now
                          lastLine,              // last line read from input
                          ofs.str()                      // serialized state
                          );
@@ -292,41 +293,46 @@ Tag_Foray::resume(Tag_Foray &tf) {
                          );
 
   std::istringstream ifs (blob);
-  boost::archive::xml_iarchive ia(ifs);
+  boost::archive::binary_iarchive ia(ifs);
 
   // Tag_Foray
-  ia >> Tag_Foray::default_pulse_slop;
-  ia >> Tag_Foray::default_burst_slop;
-  ia >> Tag_Foray::default_burst_slop_expansion;
-  ia >> Tag_Foray::default_max_skipped_bursts;
+  ia >> make_nvp("default_pulse_slop", Tag_Foray::default_pulse_slop);
+  ia >> make_nvp("default_burst_slop", Tag_Foray::default_burst_slop);
+  ia >> make_nvp("default_burst_slop_expansion", Tag_Foray::default_burst_slop_expansion);
+  ia >> make_nvp("default_max_skipped_bursts", Tag_Foray::default_max_skipped_bursts);
 
   // Freq_Setting
-  ia >> Freq_Setting::nominal_freqs;
+  ia >> make_nvp("nominal_freqs", Freq_Setting::nominal_freqs);
 
   // Node 
-  ia >> Node::_numNodes;
-  ia >> Node::_numLinks;
-  ia >> Node::maxLabel;
-  ia >> Node::_empty;
+  ia >> make_nvp("_numNodes", Node::_numNodes);
+  ia >> make_nvp("_numLinks", Node::_numLinks);
+  ia >> make_nvp("maxLabel", Node::maxLabel);
+  ia >> make_nvp("_empty", Node::_empty);
 
   // Set
-  ia >> Set::_numSets;
-  ia >> Set::maxLabel;
-  ia >> Set::_empty;
-  ia >> Set::allSets;
+  ia >> make_nvp("_numSets", Set::_numSets);
+  ia >> make_nvp("maxLabel", Set::maxLabel);
+  ia >> make_nvp("_empty", Set::_empty);
+  ia >> make_nvp("allSets", Set::allSets);
 
   // Tag_Candidate
-  ia >> Tag_Candidate::freq_slop_kHz;
-  ia >> Tag_Candidate::sig_slop_dB;
-  ia >> Tag_Candidate::pulses_to_confirm_id;
+  ia >> make_nvp("freq_slop_kHz", Tag_Candidate::freq_slop_kHz);
+  ia >> make_nvp("sig_slop_dB", Tag_Candidate::sig_slop_dB);
+  ia >> make_nvp("pulses_to_confirm_id", Tag_Candidate::pulses_to_confirm_id);
 
   // Ambiguity (a singleton class)
-  ia >> Ambiguity::abm;
-  ia >> Ambiguity::nextID;
+  ia >> make_nvp("abm", Ambiguity::abm);
+  ia >> make_nvp("nextID", Ambiguity::nextID);
   
   // dynamic members of all classes
   tf.serialize(ia, 1);
   return true;
+};
+
+void
+Tag_Foray::set_data (std::istream * d) {
+  data = d;
 };
 
   

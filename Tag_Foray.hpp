@@ -8,8 +8,6 @@
 #include "Tag_Finder.hpp"
 #include "Rate_Limiting_Tag_Finder.hpp"
 #include <sqlite3.h>
-#include <boost/archive/xml_iarchive.hpp>
-#include <boost/archive/xml_oarchive.hpp>
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/list.hpp>
 #include <boost/serialization/map.hpp>
@@ -19,7 +17,7 @@
 #include <boost/mpl/eval_if.hpp>
 #include <boost/mpl/identity.hpp>
 
-//#include <boost/serialization/access.hpp>
+using boost::serialization::make_nvp;
 
 /*
   Tag_Foray - manager a collection of tag finders searching the same
@@ -55,6 +53,8 @@ public:
   static void set_default_burst_slop_expansion_ms(float burst_slop_expansion_ms);
 
   static void set_default_max_skipped_bursts(unsigned int skip);
+
+  void set_data (std::istream * d);       // !< set the input data stream
 
 protected:
                                      // settings
@@ -143,23 +143,23 @@ public:
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
   {
-    ar & default_freq;
-    ar & force_default_freq;
-    ar & min_dfreq;
-    ar & max_dfreq;
-    ar & max_pulse_rate;
-    ar & pulse_rate_window;
-    ar & min_bogus_spacing;
-    ar & unsigned_dfreq;
-    ar & line_no;
-    ar & port_freq;
-    ar & tag_finders;
-    ar & tags;
-    ar & graphs;
-    ar & pulse_slop;
-    ar & burst_slop;
-    ar & burst_slop_expansion;
-    ar & max_skipped_bursts;
+    ar & BOOST_SERIALIZATION_NVP( default_freq );
+    ar & BOOST_SERIALIZATION_NVP( force_default_freq );
+    ar & BOOST_SERIALIZATION_NVP( min_dfreq );
+    ar & BOOST_SERIALIZATION_NVP( max_dfreq );
+    ar & BOOST_SERIALIZATION_NVP( max_pulse_rate );
+    ar & BOOST_SERIALIZATION_NVP( pulse_rate_window );
+    ar & BOOST_SERIALIZATION_NVP( min_bogus_spacing );
+    ar & BOOST_SERIALIZATION_NVP( unsigned_dfreq );
+    ar & BOOST_SERIALIZATION_NVP( line_no );
+    ar & BOOST_SERIALIZATION_NVP( port_freq );
+    ar & BOOST_SERIALIZATION_NVP( tag_finders );
+    ar & BOOST_SERIALIZATION_NVP( tags );
+    ar & BOOST_SERIALIZATION_NVP( graphs );
+    ar & BOOST_SERIALIZATION_NVP( pulse_slop );
+    ar & BOOST_SERIALIZATION_NVP( burst_slop );
+    ar & BOOST_SERIALIZATION_NVP( burst_slop_expansion );
+    ar & BOOST_SERIALIZATION_NVP( max_skipped_bursts );
   };  
 };
 
@@ -168,7 +168,7 @@ public:
 
 template< class Member >
 void serialize(
-               boost::archive::xml_oarchive &ar,
+               boost::archive::binary_oarchive &ar,
                std::unordered_set < Member > &s,
                const unsigned int file_version
                ){
@@ -177,7 +177,7 @@ void serialize(
 
 template< class Member >
 void serialize(
-               boost::archive::xml_iarchive &ar,
+               boost::archive::binary_iarchive &ar,
                std::unordered_set < Member > &s,
                const unsigned int file_version
                ){
@@ -185,22 +185,22 @@ void serialize(
 };
 
 template< class Member >
-void save(boost::archive::xml_oarchive & ar, std::unordered_set < Member > & s, const unsigned int version) {
+void save(boost::archive::binary_oarchive & ar, std::unordered_set < Member > & s, const unsigned int version) {
   
   size_t n = s.size();
-  ar & n;
+  ar & BOOST_SERIALIZATION_NVP( n );
   for (auto i = s.begin(); i != s.end(); ++i)
-    ar & *i;
+    ar & make_nvp("m", *i);
 };
 
 template<class Archive, class Member>
 void load(Archive & ar, std::unordered_set < Member > & s, const unsigned int version) {
 
   size_t n;
-  ar & n;
+  ar & BOOST_SERIALIZATION_NVP( n );
   for (size_t i = 0; i < n; ++i) {
     Member m;
-    ar & m;
+    ar & BOOST_SERIALIZATION_NVP( m );
     s.insert(m);
   }
 };
@@ -209,7 +209,7 @@ void load(Archive & ar, std::unordered_set < Member > & s, const unsigned int ve
 
 template< class Member >
 void serialize(
-               boost::archive::xml_oarchive &ar,
+               boost::archive::binary_oarchive &ar,
                std::unordered_multiset < Member > &s,
                const unsigned int file_version
                ){
@@ -218,7 +218,7 @@ void serialize(
 
 template< class Member >
 void serialize(
-               boost::archive::xml_iarchive &ar,
+               boost::archive::binary_iarchive &ar,
                std::unordered_multiset < Member > &s,
                const unsigned int file_version
                ){
@@ -227,22 +227,22 @@ void serialize(
 
 
 template< class Member >
-void save(boost::archive::xml_oarchive & ar, std::unordered_multiset < Member > & s, const unsigned int version) {
+void save(boost::archive::binary_oarchive & ar, std::unordered_multiset < Member > & s, const unsigned int version) {
   
   size_t n = s.size();
-  ar & n;
+  ar & BOOST_SERIALIZATION_NVP( n );
   for (auto i = s.begin(); i != s.end(); ++i)
-    ar & *i;
+    ar & make_nvp("m", *i);
 };
 
 template<class Archive, class Member>
 void load(Archive & ar, std::unordered_multiset < Member > & s, const unsigned int version) {
 
   size_t n;
-  ar & n;
+  ar & BOOST_SERIALIZATION_NVP( n );
   for (size_t i = 0; i < n; ++i) {
     Member m;
-    ar & m;
+    ar & BOOST_SERIALIZATION_NVP( m );
     s.insert(m);
   }
 };
@@ -251,7 +251,7 @@ void load(Archive & ar, std::unordered_multiset < Member > & s, const unsigned i
 
 template< class Key, class Value >
 void serialize(
-               boost::archive::xml_oarchive &ar,
+               boost::archive::binary_oarchive &ar,
                std::unordered_multimap < Key, Value > &s,
                const unsigned int file_version
                ){
@@ -260,7 +260,7 @@ void serialize(
 
 template< class Key, class Value >
 void serialize(
-               boost::archive::xml_iarchive &ar,
+               boost::archive::binary_iarchive &ar,
                std::unordered_multimap < Key, Value > &s,
                const unsigned int file_version
                ){
@@ -269,13 +269,13 @@ void serialize(
 
 
 template< class Key, class Value >
-void save(boost::archive::xml_oarchive & ar, std::unordered_multimap < Key, Value > & s, const unsigned int version) {
+void save(boost::archive::binary_oarchive & ar, std::unordered_multimap < Key, Value > & s, const unsigned int version) {
   
   size_t n = s.size();
-  ar & n;
+  ar & BOOST_SERIALIZATION_NVP( n );
   for (auto i = s.begin(); i != s.end(); ++i) {
-    ar & i->first;
-    ar & i->second;
+    ar & make_nvp("k", i->first);
+    ar & make_nvp("v", i->second);
   };
 
 };
@@ -284,12 +284,12 @@ template<class Archive, class Key, class Value>
 void load(Archive & ar, std::unordered_multimap < Key, Value > & s, const unsigned int version) {
 
   size_t n;
-  ar & n;
+  ar & BOOST_SERIALIZATION_NVP( n );
   for (size_t i = 0; i < n; ++i) {
     Key k;
     Value v;
-    ar & k;
-    ar & v;
+    ar & BOOST_SERIALIZATION_NVP( k );
+    ar & BOOST_SERIALIZATION_NVP( v );
     s.insert(std::make_pair(k, v));
   }
 };
