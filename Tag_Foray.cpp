@@ -74,7 +74,6 @@ Tag_Foray::start() {
       //	break;
 
       ++line_no;
-      lastLine = std::string(buf);
 
       switch (buf[0]) {
       case 'S':
@@ -273,7 +272,6 @@ Tag_Foray::pause() {
   Tag_Candidate::filer->
     save_findtags_state( ts,                            // last timestamp parsed from input
                          tsp.tv_sec + 1e-9 * tsp.tv_nsec, // time now
-                         lastLine,              // last line read from input
                          ofs.str()                      // serialized state
                          );
 
@@ -288,7 +286,6 @@ Tag_Foray::resume(Tag_Foray &tf) {
   Tag_Candidate::filer->
     load_findtags_state( paused,
                          lastLineTS,
-                         tf.lastLine,
                          blob                      // serialized state
                          );
 

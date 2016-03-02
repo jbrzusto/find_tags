@@ -32,9 +32,9 @@ public:
 
   void add_ambiguity(Motus_Tag_ID proxyID, Motus_Tag_ID mid); // add a motus tag ID to a proxy group, given by proxyID, which is negative
 
-  void save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string lastLine, std::string state);
+  void save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string state);
 
-  bool load_findtags_state(Timestamp & tsData, Timestamp & tsRun, std::string & lastLine, std::string & state);
+  bool load_findtags_state(Timestamp & tsData, Timestamp & tsRun, std::string & state);
 
 protected:
   // settings

@@ -123,7 +123,6 @@ protected:
   History *hist;
   Ticker cron;
 
-  std::string lastLine; // last line processed from input
   double ts; // last timestamp parsed from input file
 
   static Gap default_pulse_slop;
