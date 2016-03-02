@@ -9,6 +9,7 @@
 #include "Event.hpp"
 #include "History.hpp"
 #include "Ticker.hpp"
+#include <boost/serialization/list.hpp>
 
 class Tag_Foray;
 
