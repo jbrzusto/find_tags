@@ -55,7 +55,8 @@ protected:
   static float sig_slop_dB; // maximum width of signal range of pulses, in dB
 
   static unsigned int	pulses_to_confirm_id;	// how many pulses must be seen before an ID level moves to confirmed?
-  
+
+  static bool ending_batch; //!< true iff we're ending a batch; tells dtor whether to end run or not.
   static DB_Filer * filer;
 
   friend class Tag_Finder;
@@ -68,9 +69,9 @@ public:
 
   ~Tag_Candidate();
 
-  bool has_same_id_as(Tag_Candidate &tc);
+  bool has_same_id_as(Tag_Candidate *tc);
 
-  bool shares_any_pulses(Tag_Candidate &tc);
+  bool shares_any_pulses(Tag_Candidate *tc);
 
   bool expired(const Pulse &p); //!< has tag candidate expired, either due to a long time lag or a tag event which has deleted its state?
 

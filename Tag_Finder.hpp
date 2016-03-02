@@ -22,7 +22,7 @@ class Tag_Finder;
 #include "Tag_Candidate.hpp"
 
 // Set of running DFAs representing possible tags burst sequences
-typedef std::list < Tag_Candidate > Cand_List;
+typedef std::list < Tag_Candidate * > Cand_List;
 
 typedef std::vector < Cand_List > Cand_List_Vec;
 

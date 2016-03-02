@@ -54,28 +54,29 @@ Tag_Finder::process(Pulse &p) {
     Cand_List & cs = cands[i];
 
     for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); /**/ ) {
-      
-      if (ci->expired(p)) {
+      if ((*ci)->expired(p)) {
         Cand_List::iterator di = ci;
         ++ci;
+        delete *di;
         cs.erase(di);
         continue;
       }
 
       // see whether this Tag Candidate can accept this pulse
-      Node * next_state = ci->advance_by_pulse(p);
+      Node * next_state = (*ci)->advance_by_pulse(p);
       
       if (!next_state) {
         ++ci;
         continue;
       }
 
-      if (! ci->is_confirmed() && ! ci->next_pulse_confirms()) {
+      if (! (*ci)->is_confirmed() && ! (*ci)->next_pulse_confirms()) {
         // clone the candidate, but without the added pulse
-        cloned_candidates.push_back(*ci);
+        Tag_Candidate * clone = new Tag_Candidate(**ci);
+        cloned_candidates.push_back(clone);
       }
   
-      if (ci->add_pulse(p, next_state)) {
+      if ((*ci)->add_pulse(p, next_state)) {
         // this candidate tag just got to the CONFIRMED level
         
         // now see what candidates should be deleted because they
@@ -85,14 +86,15 @@ Tag_Finder::process(Pulse &p) {
         // with a confirmed candidate.
         
         for (int j = 1; j < NUM_CAND_LISTS; ++j) {
-          Cand_List & ccs = cands[j];
-          for (Cand_List::iterator cci = ccs.begin(); cci != ccs.end(); /**/ ) {
-            if (cci != ci 
-                && (cci->has_same_id_as(*ci) || cci->shares_any_pulses(*ci)))
+          for (Cand_List::iterator cci = cands[j].begin(); cci != cands[j].end(); /**/ ) {
+            if ((*cci) != (*ci) 
+                && ((*cci)->has_same_id_as(*ci) || (*cci)->shares_any_pulses(*ci)))
               {
                 Cand_List::iterator di = cci;
                 ++cci;
-                ccs.erase(di);
+                auto p = *di;
+                cands[j].erase(di);
+                delete p;
               } else {
               ++cci;
             };
@@ -105,10 +107,10 @@ Tag_Finder::process(Pulse &p) {
         Cand_List &confirmed = cands[0];
         confirmed.splice(confirmed.end(), cs, ci);
       }
-      if (ci->is_confirmed()) {
+      if ((*ci)->is_confirmed()) {
 	
         // dump all complete bursts from this confirmed tag
-        ci->dump_bursts(prefix);
+        (*ci)->dump_bursts(prefix);
 	
         // don't start a new candidate with this pulse
         confirmed_acceptance = true;
@@ -124,7 +126,7 @@ Tag_Finder::process(Pulse &p) {
   }
   // maybe start a new Tag_Candidate with this pulse 
   if (! confirmed_acceptance) {
-    cands[2].push_back(Tag_Candidate(this, graph->root(), p));
+    cands[2].push_back(new Tag_Candidate(this, graph->root(), p));
   }
 };
 
@@ -134,10 +136,11 @@ Tag_Finder::~Tag_Finder() {
   // delete them even if not
   for (Cand_List::iterator ci = cands[0].begin(); ci != cands[0].end(); ++ci ) {
       
-    if (ci->get_tag_id_level() == Tag_Candidate::CONFIRMED && ci->has_burst()) {
+    if ((*ci)->get_tag_id_level() == Tag_Candidate::CONFIRMED && (*ci)->has_burst()) {
       // dump remaining bursts
-      ci->dump_bursts(prefix);
+      (*ci)->dump_bursts(prefix);
     }
+    delete (*ci);
   }
 };
 
@@ -160,6 +163,6 @@ Tag_Finder::rename_tag(std::pair < Tag *, Tag * > tp) {
   for (int i = 0; i < 2; ++i) {
     Cand_List & cs = cands[i];
     for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); ++ci )
-      ci->renTag(tp.first, tp.second);
+      (*ci)->renTag(tp.first, tp.second);
   }
 };

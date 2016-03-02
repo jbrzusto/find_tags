@@ -20,20 +20,19 @@ Tag_Candidate::Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse)
 };
 
 Tag_Candidate::~Tag_Candidate() {
-  if (hit_count > 0) {
-    filer -> end_run(run_id, hit_count);
-  }
+  if (hit_count > 0) 
+    filer -> end_run(run_id, hit_count, ending_batch);
 };
 
-bool Tag_Candidate::has_same_id_as(Tag_Candidate &tc) {
-  return tag != BOGUS_TAG && tag == tc.tag;
+bool Tag_Candidate::has_same_id_as(Tag_Candidate *tc) {
+  return tag != BOGUS_TAG && tag == tc->tag;
 };
 
-bool Tag_Candidate::shares_any_pulses(Tag_Candidate &tc) {
+bool Tag_Candidate::shares_any_pulses(Tag_Candidate *tc) {
   // does this tag candidate use any of the pulses
   // used by another candidate?
 
-  Pulse_Buffer::iterator hit_pulses = tc.pulses.begin();
+  Pulse_Buffer::iterator hit_pulses = tc->pulses.begin();
 
   for (unsigned int i = 0; i < pulses_to_confirm_id; ++i, ++hit_pulses)
     if (pulses.count(hit_pulses->first))
@@ -295,8 +294,6 @@ Tag_Candidate::renTag(Tag * t1, Tag * t2) {
   // maintain the current confirmation level and pulse buffer;
   // subsequent hits will be reported as t2;
   tag = t2;
-
-
 }
 
 Frequency_Offset_kHz Tag_Candidate::freq_slop_kHz = 2.0;       // (kHz) maximum allowed frequency bandwidth of a burst
@@ -308,3 +305,7 @@ unsigned int Tag_Candidate::pulses_to_confirm_id = 4; // default number of pulse
 const float Tag_Candidate::BOGUS_BURST_SLOP = 0.0; // burst slop reported for first burst of ru
 
 DB_Filer * Tag_Candidate::filer = 0; // handle to output filer
+
+bool Tag_Candidate::ending_batch = false; // true iff we're ending a batch; set by Tag_Foray
+
+

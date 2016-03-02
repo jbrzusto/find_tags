@@ -56,6 +56,8 @@ Tag_Foray::set_default_max_skipped_bursts(unsigned int skip) {
 
 long long
 Tag_Foray::start() {
+  Tag_Candidate::ending_batch = false;
+
   long long bn = 0;
   char buf[MAX_LINE_SIZE + 1]; // input buffer
 
@@ -161,6 +163,7 @@ Tag_Foray::start() {
         break;
       }
   }
+  Tag_Candidate::ending_batch = true;
   return bn;
 };
 

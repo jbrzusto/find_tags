@@ -13,20 +13,20 @@
 class DB_Filer {
 
 public:
-  typedef long long int Run_ID;
-  typedef long long int Batch_ID;
+  typedef int Run_ID;
+  typedef int Batch_ID;
 
-  DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, long long bootnum=1); // initialize a filer on an existing sqlite database file
+  DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int bootnum=1); // initialize a filer on an existing sqlite database file
   ~DB_Filer (); // write summary data
 
   Run_ID begin_run(Motus_Tag_ID mid); // begin run of tag
-  void end_run(Run_ID rid, int n); // end run, noting number of hits
+  void end_run(Run_ID rid, int n, bool countOnly = false); // end run, noting number of hits; if countOnly is true, don't end run
 
   void add_hit(Run_ID rid, char ant, double ts, float sig, float sigSD, float noise, float freq, float freqSD, float slop, float burstSlop);
 
   void add_param(const string &name, double val); // record a program parameter value
 
-  void begin_batch(long long bootnum); // start new batch; uses 1 + ID of latest ended batch
+  void begin_batch(int bootnum); // start new batch; uses 1 + ID of latest ended batch
 
   void end_batch(); //!< end current batch
 
@@ -67,7 +67,7 @@ protected:
   static const int steps_per_tx = 5000; //!< number of statement steps per transaction (typically inserts)
   int num_steps; //!< counter for steps since last BEGIN statement
 
-  long long bootnum; //!< boot number for current batch
+  int bootnum; //!< boot number for current batch
 
   void step_commit(sqlite3_stmt *st); //!< step statement, and if number of steps has reached steps_per_tx, commit and start new tx
 
@@ -86,6 +86,13 @@ protected:
 
   void begin_tx(); //!< begin transaction, which is just a bunch of insert queries
   void end_tx(); //!< end transaction
+
+  static const char * q_begin_batch;
+  static const char * q_end_batch;
+  static const char * q_begin_run;
+  static const char * q_end_run;
+  static const char * q_add_hit;
+
 };
 
 

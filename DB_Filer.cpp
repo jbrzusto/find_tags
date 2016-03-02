@@ -2,9 +2,8 @@
 #include <stdio.h>
 #include <time.h>
 
-DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, long long bootnum): 
+DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int  bootnum): 
   prog_name(prog_name),
-  num_runs(0),
   num_hits(0),
   num_steps(0),
   bootnum(bootnum)
@@ -18,14 +17,14 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
   string msg = "SQLite output database does not have valid 'batches' table.";
   
   Check( sqlite3_prepare_v2(outdb,
-                            "insert into batches (monoBN, ts) values (?, ?)",
+                            q_begin_batch,
                             -1,
                             &st_begin_batch,
                             0),
          msg);
 
   Check( sqlite3_prepare_v2(outdb, 
-                            "update batches set numRuns=?, numHits=? where ID=?",
+                            q_end_batch,
                             -1,
                             &st_end_batch,
                             0),
@@ -34,21 +33,16 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
   // get automatically-generated batch ID; used to update batch record at end of run
   
   msg = "output DB table 'runs' is invalid";
-  Check( sqlite3_prepare_v2(outdb, 
-                            "insert into runs (runID, batchID, motusTagID, tsMotus) \
-                                       values (?,     ?,       ?,          0)",
+  Check( sqlite3_prepare_v2(outdb, q_begin_run,
                             -1, &st_begin_run, 0), msg);
 
-  Check( sqlite3_prepare_v2(outdb, "update runs set len=? where runID=?", -1, &st_end_run, 0),
+  Check( sqlite3_prepare_v2(outdb, q_end_run, -1, &st_end_run, 0),
          msg);
 
   begin_tx();
   begin_batch(bootnum);
 
-  Check(sqlite3_prepare_v2(outdb, 
-                           "insert into hits (runID, ant, ts, sig, sigSD, noise, freq, freqSD, slop, burstSlop) \
-                                    values (?,     ?,   ?,  ?,   ?,     ?,     ?,    ?,      ?,    ?)",
-                           -1, &st_add_hit, 0),
+  Check(sqlite3_prepare_v2(outdb, q_add_hit, -1, &st_add_hit, 0),
         "output DB does not have valid 'hits' table.");
 
   sqlite3_stmt * st_check_batchprog;
@@ -70,7 +64,7 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
     // so record new value
     sprintf(qbuf, 
           "insert into batchProgs (batchID, progName, progVersion, progBuildTS, tsMotus) \
-                           values (%lld,    '%s',     '%s',        %f,          0)",
+                           values (%d,      '%s',     '%s',        %f,          0)",
           bid,
           prog_name.c_str(),
           prog_version.c_str(),
@@ -106,7 +100,7 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
          "SQLite output database does not have valid 'runs' table - missing runID?");
 
   sqlite3_step(st_get_rid);
-  rid = 1 + sqlite3_column_int64(st_get_rid, 0);
+  rid = 1 + sqlite3_column_int(st_get_rid, 0);
   sqlite3_finalize(st_get_rid);
   st_get_rid = 0;
 
@@ -139,6 +133,8 @@ DB_Filer::~DB_Filer() {
 
   end_batch();
   end_tx();
+  sqlite3_finalize(st_begin_batch);
+  sqlite3_finalize(st_end_batch);
   sqlite3_finalize(st_begin_run);
   sqlite3_finalize(st_end_run);
   sqlite3_finalize(st_add_hit);
@@ -146,35 +142,49 @@ DB_Filer::~DB_Filer() {
   outdb = 0;
 };
 
+const char *
+DB_Filer::q_begin_run = 
+ "insert into runs (runID, batchIDbegin, batchIDend, motusTagID, tsMotus) \
+            values (?,     ?,            -1,         ?,          0)";
+
 DB_Filer::Run_ID
 DB_Filer::begin_run(Motus_Tag_ID mid) {
-  sqlite3_bind_int64(st_begin_run, 1, rid); // bind run ID
-  sqlite3_bind_int64(st_begin_run, 3, mid); // bind tag ID
+  sqlite3_bind_int(st_begin_run, 1, rid); // bind run ID
+  sqlite3_bind_int(st_begin_run, 3, mid); // bind tag ID
   step_commit(st_begin_run);
   return rid++;
 };
 
+const char *
+DB_Filer::q_end_run = "update runs set len=?, batchIDend=? where runID=?";
+
 void
-DB_Filer::end_run(Run_ID rid, int n) {
+DB_Filer::end_run(Run_ID rid, int n, bool countOnly) {
   sqlite3_bind_int(st_end_run, 1, n); // bind number of hits in run
-  sqlite3_bind_int64(st_end_run, 2, rid);  // bind run number
+  sqlite3_bind_int(st_end_run, 2, countOnly ? -1 : bid); // bind ID of batch this run ends in
+  sqlite3_bind_int(st_end_run, 3, rid);  // bind run number
   step_commit(st_end_run);
-  ++ num_runs;
 };
 
+const char *
+DB_Filer::q_add_hit = 
+"insert into hits (batchID, runID, ant, ts, sig, sigSD, noise, freq, freqSD, slop, burstSlop) \
+         values   (?,       ?,     ?,   ?,  ?,   ?,     ?,     ?,    ?,      ?,    ?)";
+//               1       2     3    4  5    6     7     8    9      10    11
 
 void
 DB_Filer::add_hit(Run_ID rid, char ant, double ts, float sig, float sigSD, float noise, float freq, float freqSD, float slop, float burstSlop) {
-  sqlite3_bind_int64 (st_add_hit, 1, rid);
-  sqlite3_bind_int   (st_add_hit, 2, ant-'0');
-  sqlite3_bind_double(st_add_hit, 3, ts);
-  sqlite3_bind_double(st_add_hit, 4, sig);
-  sqlite3_bind_double(st_add_hit, 5, sigSD);
-  sqlite3_bind_double(st_add_hit, 6, noise);
-  sqlite3_bind_double(st_add_hit, 7, freq);
-  sqlite3_bind_double(st_add_hit, 8, freqSD);
-  sqlite3_bind_double(st_add_hit, 9, slop);
-  sqlite3_bind_double(st_add_hit, 10, burstSlop);
+  sqlite3_bind_int   (st_add_hit, 1, bid);
+  sqlite3_bind_int   (st_add_hit, 2, rid);
+  sqlite3_bind_int   (st_add_hit, 3, ant-'0');
+  sqlite3_bind_double(st_add_hit, 4, ts);
+  sqlite3_bind_double(st_add_hit, 5, sig);
+  sqlite3_bind_double(st_add_hit, 6, sigSD);
+  sqlite3_bind_double(st_add_hit, 7, noise);
+  sqlite3_bind_double(st_add_hit, 8, freq);
+  sqlite3_bind_double(st_add_hit, 9, freqSD);
+  sqlite3_bind_double(st_add_hit, 10, slop);
+  sqlite3_bind_double(st_add_hit, 11, burstSlop);
   step_commit(st_add_hit);
   ++ num_hits;
 };
@@ -201,7 +211,7 @@ DB_Filer::add_param(const string &name, double value) {
   if (rv == SQLITE_DONE || (rv == SQLITE_ROW && sqlite3_column_double(st_check_param, 0) != value)) {
     // parameter value has changed since last batchID where it was set,
     // so record new value
-    sqlite3_bind_int64(st_add_param, 1, bid);
+    sqlite3_bind_int(st_add_param, 1, bid);
     // we use SQLITE_TRANSIENT in the following to make a copy, otherwise
     // the caller's copy might be destroyed before this transaction is committed
     sqlite3_bind_text(st_add_param, 2, prog_name.c_str(), -1, SQLITE_TRANSIENT); 
@@ -222,13 +232,15 @@ DB_Filer::Check(int code, int wants, int wants2, int wants3, const std::string &
 
 
 // start new batch; uses 1 + ID of latest ended batch
+
+const char * 
+DB_Filer::q_begin_batch = "insert into batches (monoBN, ts) values (?, ?)";
+
 void 
-DB_Filer::begin_batch(long long bootnum) {
-  num_runs = 0;
+DB_Filer::begin_batch(int bootnum) {
   num_hits = 0;
 
-  sqlite3_bind_int64(st_begin_batch, 1, bootnum);
-
+  sqlite3_bind_int(st_begin_batch, 1, bootnum);
   // get current time, in GMT
   struct timespec tp;
   clock_gettime(CLOCK_REALTIME, &tp);
@@ -236,14 +248,16 @@ DB_Filer::begin_batch(long long bootnum) {
   step_commit(st_begin_batch);
   bid = sqlite3_last_insert_rowid(outdb);
   // set batch ID for "insert run" query
-  sqlite3_bind_int64(st_begin_run, 2, bid);
+  sqlite3_bind_int(st_begin_run, 2, bid);
 };
+
+const char *
+DB_Filer::q_end_batch = "update batches set numHits=? where ID=?";
 
 void
 DB_Filer::end_batch() {
-  sqlite3_bind_int64(st_end_batch, 1, num_runs);
-  sqlite3_bind_int64(st_end_batch, 2, num_hits);
-  sqlite3_bind_int64(st_end_batch, 3, bid);
+  sqlite3_bind_int64(st_end_batch, 1, num_hits);
+  sqlite3_bind_int(st_end_batch, 2, bid);
   step_commit(st_end_batch);
 };
 
@@ -264,17 +278,17 @@ DB_Filer::add_ambiguity(Motus_Tag_ID proxyID, Motus_Tag_ID mid) {
   if (proxyID >= 0)
     throw std::runtime_error("Called add_ambiguity with non-negative proxyID");
   sqlite3_reset(st_add_ambig);
-  sqlite3_bind_int64(st_add_ambig, 1, proxyID);
-  sqlite3_bind_int64(st_add_ambig, 2, bid);
-  sqlite3_bind_int64(st_add_ambig, 3, mid);
+  sqlite3_bind_int(st_add_ambig, 1, proxyID);
+  sqlite3_bind_int(st_add_ambig, 2, bid);
+  sqlite3_bind_int(st_add_ambig, 3, mid);
   step_commit(st_add_ambig);
 };
 
 void
 DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string state) {
   sqlite3_reset(st_save_findtags_state);
-  sqlite3_bind_int64(st_save_findtags_state,  1, bid);
-  sqlite3_bind_int64(st_save_findtags_state,  2, bootnum);
+  sqlite3_bind_int(st_save_findtags_state,  1, bid);
+  sqlite3_bind_int(st_save_findtags_state,  2, bootnum);
   sqlite3_bind_double(st_save_findtags_state, 3, tsData);
   sqlite3_bind_double(st_save_findtags_state, 4, tsRun);
   sqlite3_bind_blob(st_save_findtags_state,   5, state.c_str(), state.length(), SQLITE_TRANSIENT);
@@ -286,8 +300,8 @@ DB_Filer::load_findtags_state(Timestamp & tsData, Timestamp & tsRun, std::string
   sqlite3_reset(st_load_findtags_state);
   if (SQLITE_DONE == sqlite3_step(st_load_findtags_state))
     return false; // no saved state
-  bid = 1 + sqlite3_column_int64 (st_load_findtags_state, 0);
-  bootnum = sqlite3_column_int64 (st_load_findtags_state, 1);
+  bid = 1 + sqlite3_column_int (st_load_findtags_state, 0);
+  bootnum = sqlite3_column_int (st_load_findtags_state, 1);
   tsData = sqlite3_column_double (st_load_findtags_state, 2);
   tsRun = sqlite3_column_double (st_load_findtags_state, 3);
   state = std::string(reinterpret_cast < const char * > (sqlite3_column_blob(st_load_findtags_state, 4)), sqlite3_column_bytes(st_load_findtags_state, 4));
