@@ -40,9 +40,8 @@ public:
   void process_event(Event e);       // !< process a tag add/remove event
 
   void test();                       // throws an exception if there are indistinguishable tags
-  Tag_Database * tags;               // registered tags on all known nominal frequencies
-
   void pause(); //!< serialize foray to output database
+
   static bool resume(Tag_Foray &tf); //!< resume foray from state saved in output database
   // returns true if successful
 
@@ -56,9 +55,10 @@ public:
 
   void set_data (std::istream * d);       // !< set the input data stream
 
+  Tag_Database * tags;               // registered tags on all known nominal frequencies
+
 protected:
                                      // settings
-
   std::istream * data;               // stream from which data records are read
   Frequency_MHz default_freq;        // default listening frequency on a port where no frequency setting has been seen
   bool force_default_freq;           // ignore in-line frequency settings and always use default?
@@ -77,14 +77,10 @@ protected:
 
   // runtime storage
 
-
   unsigned long long line_no;                    // count lines of input seen
   
-
-
   typedef short Port_Num;                        // port number can be represented as a short
-  
-  
+
   std::map < Port_Num, Freq_Setting > port_freq; // keep track of frequency settings on each port
 
 
@@ -108,33 +104,32 @@ protected:
   // corresponding pair in a registered
   // tag, and still match the tag.
 
-  static Gap default_pulse_slop;
-
   Gap burst_slop;	// (seconds) allowed slop in timing between
                         // consecutive tag bursts, in seconds this is
                         // meant to allow for measurement error at tag
                         // registration and detection times
-
-  static Gap default_burst_slop;
 
 
   Gap burst_slop_expansion; // (seconds) how much slop in timing
 			    // between tag bursts increases with each
   // skipped pulse; this is meant to allow for clock drift between
   // the tag and the receiver.
-  static Gap default_burst_slop_expansion;
 
   // how many consecutive bursts can be missing without terminating a
   // run?
 
   unsigned int max_skipped_bursts;
-  static unsigned int default_max_skipped_bursts;
 
   History *hist;
   Ticker cron;
 
   std::string lastLine; // last line processed from input
   double ts; // last timestamp parsed from input file
+
+  static Gap default_pulse_slop;
+  static Gap default_burst_slop;
+  static Gap default_burst_slop_expansion;
+  static unsigned int default_max_skipped_bursts;
 
 public:
 
@@ -143,6 +138,7 @@ public:
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
   {
+    ar & BOOST_SERIALIZATION_NVP( tags );
     ar & BOOST_SERIALIZATION_NVP( default_freq );
     ar & BOOST_SERIALIZATION_NVP( force_default_freq );
     ar & BOOST_SERIALIZATION_NVP( min_dfreq );
@@ -154,12 +150,13 @@ public:
     ar & BOOST_SERIALIZATION_NVP( line_no );
     ar & BOOST_SERIALIZATION_NVP( port_freq );
     ar & BOOST_SERIALIZATION_NVP( tag_finders );
-    ar & BOOST_SERIALIZATION_NVP( tags );
     ar & BOOST_SERIALIZATION_NVP( graphs );
     ar & BOOST_SERIALIZATION_NVP( pulse_slop );
     ar & BOOST_SERIALIZATION_NVP( burst_slop );
     ar & BOOST_SERIALIZATION_NVP( burst_slop_expansion );
     ar & BOOST_SERIALIZATION_NVP( max_skipped_bursts );
+    ar & BOOST_SERIALIZATION_NVP( hist );
+    ar & BOOST_SERIALIZATION_NVP( cron );
   };  
 };
 

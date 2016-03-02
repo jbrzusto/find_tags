@@ -119,14 +119,14 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
 
   const char * ftsm = "SQLite output database does not have valid 'findtagsState' table";
   Check ( sqlite3_prepare_v2(outdb,
-                             "insert into findtagsState (batchID, tsData, tsRun, lastLine, state) values (?, ?, ?, ?, ?);",
+                             "insert into findtagsState (batchID, monoBN, tsData, tsRun, lastLine, state) values (?, ?, ?, ?, ?, ?);",
                              -1,
                              & st_save_findtags_state,
                              0),
           ftsm);
 
   Check ( sqlite3_prepare_v2(outdb,
-                             "select batchID, tsData, tsRun, lastLine, state from findtagsState order by tsRun desc limit 1;",
+                             "select batchID, monoBN, tsData, tsRun, lastLine, state from findtagsState order by tsRun desc limit 1;",
                              -1,
                              & st_load_findtags_state,
                              0),
@@ -274,10 +274,11 @@ void
 DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string lastLine, std::string state) {
   sqlite3_reset(st_save_findtags_state);
   sqlite3_bind_int64(st_save_findtags_state,  1, bid);
-  sqlite3_bind_double(st_save_findtags_state, 2, tsData);
-  sqlite3_bind_double(st_save_findtags_state, 3, tsRun);
-  sqlite3_bind_text(st_save_findtags_state,   4, lastLine.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_blob(st_save_findtags_state,   5, state.c_str(), state.length(), SQLITE_TRANSIENT);
+  sqlite3_bind_int64(st_save_findtags_state,  2, bootnum);
+  sqlite3_bind_double(st_save_findtags_state, 3, tsData);
+  sqlite3_bind_double(st_save_findtags_state, 4, tsRun);
+  sqlite3_bind_text(st_save_findtags_state,   5, lastLine.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_blob(st_save_findtags_state,   6, state.c_str(), state.length(), SQLITE_TRANSIENT);
   step_commit(st_save_findtags_state);
 };
 
@@ -287,9 +288,10 @@ DB_Filer::load_findtags_state(Timestamp & tsData, Timestamp & tsRun, std::string
   if (SQLITE_DONE == sqlite3_step(st_load_findtags_state))
     return false; // no saved state
   bid = 1 + sqlite3_column_int64 (st_load_findtags_state, 0);
-  tsData = sqlite3_column_double (st_load_findtags_state, 1);
-  tsRun = sqlite3_column_double (st_load_findtags_state, 2);
-  lastLine = std::string(reinterpret_cast < const char * > (sqlite3_column_text(st_load_findtags_state, 3)));
-  state = std::string(reinterpret_cast < const char * > (sqlite3_column_blob(st_load_findtags_state, 4)), sqlite3_column_bytes(st_load_findtags_state, 4));
+  bootnum = sqlite3_column_int64 (st_load_findtags_state, 1);
+  tsData = sqlite3_column_double (st_load_findtags_state, 2);
+  tsRun = sqlite3_column_double (st_load_findtags_state, 3);
+  lastLine = std::string(reinterpret_cast < const char * > (sqlite3_column_text(st_load_findtags_state, 4)));
+  state = std::string(reinterpret_cast < const char * > (sqlite3_column_blob(st_load_findtags_state, 5)), sqlite3_column_bytes(st_load_findtags_state, 5));
   return true;
 };

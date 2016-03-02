@@ -293,7 +293,7 @@ usage() {
         
 
         "-n, --bootNum=BN\n"
-        "    bootnum for first batch records sent to output db table 'batches'.\n"
+        "    bootnum for first batch of records sent to output db table 'batches'.\n"
         "    Each time the line '!NEWBN,XXX' is encountered in the input, a new batch is\n"
         "    begun and 'XXX' becomes its boot number.\n\n"
 
