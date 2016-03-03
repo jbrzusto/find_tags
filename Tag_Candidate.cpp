@@ -66,7 +66,7 @@ bool Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     Add this pulse to the tag candidate, given the new state this
     will advance the DFA to.
 
-    Return true if adding the pulse confirms the tag ID.
+    Return true if adding the pulse completes a burst at the confirmed ID level.
   */
 
   pulses[p.seq_no] = p;
@@ -97,7 +97,6 @@ bool Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
       
   // see whether our level of ID confirmation has changed
 
-  bool rv = false;
   switch (tag_id_level) {
   case MULTIPLE:
     if (state->is_unique()) {
@@ -108,10 +107,8 @@ bool Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     break;
 
   case SINGLE:
-    if (pulses.size() >= pulses_to_confirm_id) {
+    if (pulses.size() >= pulses_to_confirm_id)
       tag_id_level = CONFIRMED;
-      rv= true;
-    };
     break;
 
   case CONFIRMED:
@@ -121,7 +118,7 @@ bool Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     break;
   };
 
-  return rv;
+  return pulse_completes_burst && tag_id_level == CONFIRMED;
 };
 
 Tag *

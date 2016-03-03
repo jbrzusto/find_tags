@@ -70,14 +70,14 @@ Tag_Finder::process(Pulse &p) {
         continue;
       }
 
-      if (! (*ci)->is_confirmed() && ! (*ci)->next_pulse_confirms()) {
+      //?      if (! (*ci)->is_confirmed() && ! (*ci)->next_pulse_confirms()) {
         // clone the candidate, but without the added pulse
         Tag_Candidate * clone = new Tag_Candidate(**ci);
         cloned_candidates.push_back(clone);
-      }
+        //?      }
   
       if ((*ci)->add_pulse(p, next_state)) {
-        // this candidate tag just got to the CONFIRMED level
+        // this candidate tag just completed a burst at the CONFIRMED level
         
         // now see what candidates should be deleted because they
         // have the same ID or share any pulses; only seek among
@@ -85,7 +85,8 @@ Tag_Finder::process(Pulse &p) {
         // already been eliminated if it shared any pulses
         // with a confirmed candidate.
         
-        for (int j = 1; j < NUM_CAND_LISTS; ++j) {
+        //?        for (int j = 1; j < NUM_CAND_LISTS; ++j) {
+        for (int j = 0; j < NUM_CAND_LISTS; ++j) {
           for (Cand_List::iterator cci = cands[j].begin(); cci != cands[j].end(); /**/ ) {
             if ((*cci) != (*ci) 
                 && ((*cci)->has_same_id_as(*ci) || (*cci)->shares_any_pulses(*ci)))
@@ -103,11 +104,11 @@ Tag_Finder::process(Pulse &p) {
 
         // push this candidate to end of the confirmed list
         // so it has priority for accepting new hits
-        
-        Cand_List &confirmed = cands[0];
-        confirmed.splice(confirmed.end(), cs, ci);
-      }
-      if ((*ci)->is_confirmed()) {
+
+        if (i > 0) {
+          Cand_List &confirmed = cands[0];
+          confirmed.splice(confirmed.end(), cs, ci);
+        }
 	
         // dump all complete bursts from this confirmed tag
         (*ci)->dump_bursts(prefix);
