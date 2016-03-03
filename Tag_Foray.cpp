@@ -196,8 +196,7 @@ Tag_Foray::process_event(Event e) {
 
 void
 Tag_Foray::test() {
-  // create a tagfinder for each nominal frequency, to verify that tags in the database
-  // are distinguishable with the current parameters
+  // try build tag finders for each nominal frequency
 
   Freq_Set fs = tags->get_nominal_freqs();
   for (Freq_Set :: iterator it = fs.begin(); it != fs.end(); ++it) {
@@ -209,8 +208,29 @@ Tag_Foray::test() {
       newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[*it], pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix);
     else
       newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[*it], prefix);
-    // FIXME: do something to check database validity
-    delete newtf;
+    // FIXME: do something to test validity?
+  }
+}
+
+void
+Tag_Foray::graph() {
+  // plot the DFA graphs for the given tag database, one per nominal frequency
+  
+  Timestamp t = now();
+  while (cron.ts() < t) // process all events to this point in time
+    process_event(cron.get());
+
+  Freq_Set fs = tags->get_nominal_freqs();
+  for (Freq_Set :: iterator it = fs.begin(); it != fs.end(); ++it) {
+    Tag_Finder_Key key(0, *it);
+    std::string prefix="p";
+    Tag_Finder *newtf;
+    port_freq[0] = Freq_Setting(*it / 1000.0);
+    if (max_pulse_rate > 0)
+      newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[*it], pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix);
+    else
+      newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[*it], prefix);
+    newtf->graph->viz();
   }
 }
 
@@ -272,15 +292,20 @@ Tag_Foray::pause() {
     serialize(oa, 1);
   }
   // record this state
-  struct timespec tsp;
-  clock_gettime(CLOCK_REALTIME, & tsp);
 
   Tag_Candidate::filer->
     save_findtags_state( ts,                            // last timestamp parsed from input
-                         tsp.tv_sec + 1e-9 * tsp.tv_nsec, // time now
+                         now(), // time now
                          ofs.str()                      // serialized state
                          );
 
+};
+
+double 
+Tag_Foray::now() {
+  struct timespec tsp;
+  clock_gettime(CLOCK_REALTIME, & tsp);
+  return  tsp.tv_sec + 1e-9 * tsp.tv_nsec;
 };
 
 bool

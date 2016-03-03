@@ -40,6 +40,8 @@ public:
   void process_event(Event e);       // !< process a tag add/remove event
 
   void test();                       // throws an exception if there are indistinguishable tags
+  void graph();                      // graph the DFA for each nominal frequency
+
   void pause(); //!< serialize foray to output database
 
   static bool resume(Tag_Foray &tf); //!< resume foray from state saved in output database
@@ -56,6 +58,8 @@ public:
   void set_data (std::istream * d);       // !< set the input data stream
 
   Tag_Database * tags;               // registered tags on all known nominal frequencies
+
+  Timestamp now();                   // return time now as double timestamp
 
 protected:
                                      // settings

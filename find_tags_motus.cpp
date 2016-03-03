@@ -290,7 +290,14 @@ usage() {
 
         "    Note: If this option is *not* specified, then all tags in the database are sought\n"
         "    and their detections reported over the entire timespan of the input file.\n\n"
-        
+
+        "-g --graph\n"
+        "    Output a 'graphviz'-format file describing the transition graph for each\n"
+        "    nominal frequency.  These files will be called graph1.gv, graph2, gv, ...\n"
+        "    You can visualize using the 'dot' program from http:graphviz.org like so:\n\n"
+        "       dot -Tsvg graph1.gv > graph1.svg\n\n"
+        "    and then view graph1.svg in a web browser or inkscape https://inkscape.org\n"
+        "    If you specify this option, the program quits without processing any input data.\n\n"
 
         "-n, --bootNum=BN\n"
         "    bootnum for first batch of records sent to output db table 'batches'.\n"
@@ -382,6 +389,7 @@ main (int argc, char **argv) {
         OPT_USE_EVENTS           = 'e',
 	OPT_DEFAULT_FREQ         = 'f',
 	OPT_FORCE_DEFAULT_FREQ   = 'F',
+        OPT_GRAPH                = 'g',
         COMMAND_HELP	         = 'h',
 	OPT_SIG_SLOP	         = 'l',
 	OPT_MIN_DFREQ            = 'm',
@@ -397,7 +405,7 @@ main (int argc, char **argv) {
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:ef:Fhi:l:m:M:p:rR:s:S:tw:";
+    static const char short_options[] = "b:B:c:ef:Fghi:l:m:M:p:rR:s:S:tw:";
     static const struct option long_options[] = {
         {"burst_slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst_slop_expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
@@ -405,6 +413,7 @@ main (int argc, char **argv) {
         {"use_events"              , 0, 0, OPT_USE_EVENTS},
         {"default_freq"		   , 1, 0, OPT_DEFAULT_FREQ},
         {"force_default_freq"      , 0, 0, OPT_FORCE_DEFAULT_FREQ},
+        {"graph"                   , 0, 0, OPT_GRAPH},
         {"help"			   , 0, 0, COMMAND_HELP},
         {"bootnum"                 , 1, 0, OPT_BOOT_NUM},
 	{"signal_slop"             , 1, 0, OPT_SIG_SLOP},
@@ -430,6 +439,7 @@ main (int argc, char **argv) {
     bool use_events = false;
     bool force_default_freq = false;
     bool test_only = false;
+    bool graph_only = false;
     bool resume = false;
     // rate-limiting buffer parameters
 
@@ -470,6 +480,9 @@ main (int argc, char **argv) {
         case COMMAND_HELP:
             usage();
             exit(0);
+        case OPT_GRAPH:
+          graph_only = true;
+          break;
         case OPT_BOOT_NUM:
           bootNum = atoll(optarg);
           break;
@@ -574,6 +587,10 @@ main (int argc, char **argv) {
           resume = false; // don't resume if we hit a new bootnum
         } else {
           foray = Tag_Foray(& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
+        }
+        if (graph_only) {
+          foray.graph();
+          exit(0);
         }
         if (test_only) {
           foray.test(); // throws if there's a problem
