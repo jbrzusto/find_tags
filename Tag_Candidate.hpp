@@ -59,6 +59,9 @@ protected:
   static bool ending_batch; //!< true iff we're ending a batch; tells dtor whether to end run or not.
   static DB_Filer * filer;
 
+  // buffer used by calculate_burst_params
+  static Burst_Params burst_par;
+
   friend class Tag_Finder;
   friend class Ambiguity;
 public:
@@ -93,7 +96,7 @@ public:
 
   void clear_pulses();
 
-  Burst_Params * calculate_burst_params();
+  void calculate_burst_params();
  
   void dump_bursts(string prefix="");
 

@@ -161,7 +161,8 @@ void Tag_Candidate::clear_pulses() {
     pulses.erase(pulses.begin());
 };
 
-Burst_Params * Tag_Candidate::calculate_burst_params() {
+void
+Tag_Candidate::calculate_burst_params() {
   // calculate these burst parameters:
   // - mean signal and noise strengths
   // - relative standard deviation (among pulses) of signal strength 
@@ -169,8 +170,6 @@ Burst_Params * Tag_Candidate::calculate_burst_params() {
   // - total slop in gap sizes between observed pulses and registered tag values
 
   // return true if successful, false otherwise
-
-  static Burst_Params burst_par;
 
   float sig		= 0.0;
   float sigsum	= 0.0;
@@ -182,9 +181,6 @@ Burst_Params * Tag_Candidate::calculate_burst_params() {
   double pts		= 0.0;
 
   unsigned int n = num_pulses;
-
-  if (pulses.size() < n)
-    return 0;
 
   Pulses_Iter p  = pulses.begin();
 
@@ -217,7 +213,6 @@ Burst_Params * Tag_Candidate::calculate_burst_params() {
   burst_par.freq_sd  = freq_radicand >= 0.0 ? sqrtf((n * freqsumsq - freqsum * freqsum) / (n * (n - 1))) : 0.0;
   burst_par.slop     = slop;
   burst_par.num_pred = hit_count;
-  return &burst_par;
 };
  
 void Tag_Candidate::dump_bursts(string prefix) {
@@ -238,19 +233,19 @@ void Tag_Candidate::dump_bursts(string prefix) {
       // first hit, so start a run
       run_id = filer->begin_run(tag->motusID);
     }
-    Burst_Params *bp = calculate_burst_params();
+    calculate_burst_params();
     ts = pulses.begin()->second.ts;
     filer->add_hit(
                    run_id,
                    prefix.c_str()[0],
                    ts,
-                   bp->sig,
-                   bp->sig_sd,
-                   bp->noise,
-                   bp->freq,
-                   bp->freq_sd,
-                   bp->slop,
-                   bp->burst_slop
+                   burst_par.sig,
+                   burst_par.sig_sd,
+                   burst_par.noise,
+                   burst_par.freq,
+                   burst_par.freq_sd,
+                   burst_par.slop,
+                   burst_par.burst_slop
                    );
     ++ tag->count;
     if (tag->count == 1 && tag->motusID < 0)
@@ -308,4 +303,5 @@ DB_Filer * Tag_Candidate::filer = 0; // handle to output filer
 
 bool Tag_Candidate::ending_batch = false; // true iff we're ending a batch; set by Tag_Foray
 
+Burst_Params Tag_Candidate::burst_par;
 
