@@ -92,6 +92,8 @@ protected:
   static const char * q_begin_run;
   static const char * q_end_run;
   static const char * q_add_hit;
+  static const char * q_load_findtags_state;
+  static const char * q_save_findtags_state;
 
 };
 

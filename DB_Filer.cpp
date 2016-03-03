@@ -111,20 +111,13 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
                             0),
          "SQLite output database does not have valid 'batchAmbig' table");
 
-  const char * ftsm = "SQLite output database does not have valid 'findtagsState' table";
-  Check ( sqlite3_prepare_v2(outdb,
-                             "insert into findtagsState (batchID, monoBN, tsData, tsRun, state, lastfileID, lastCharIndex) values (?, ?, ?, ?, ?, -1, -1);",
-                             -1,
-                             & st_save_findtags_state,
-                             0),
-          ftsm);
+  const char * ftsm = "SQLite output database does not have valid 'batchState' table";
 
-  Check ( sqlite3_prepare_v2(outdb,
-                             "select batchID, monoBN, tsData, tsRun, state from findtagsState order by tsRun desc limit 1;",
-                             -1,
-                             & st_load_findtags_state,
-                             0),
-          ftsm);
+  Check ( sqlite3_prepare_v2(outdb, q_save_findtags_state, -1, & st_save_findtags_state, 0), ftsm);
+  sqlite3_bind_text(st_save_findtags_state, 2, prog_name.c_str(), -1, SQLITE_TRANSIENT);
+  
+  Check ( sqlite3_prepare_v2(outdb, q_load_findtags_state, -1, & st_load_findtags_state, 0), ftsm);
+  sqlite3_bind_text(st_load_findtags_state, 1, prog_name.c_str(), -1, SQLITE_TRANSIENT);
 
 };
 
@@ -133,6 +126,8 @@ DB_Filer::~DB_Filer() {
 
   end_batch();
   end_tx();
+  sqlite3_finalize(st_save_findtags_state);
+  sqlite3_finalize(st_load_findtags_state);
   sqlite3_finalize(st_begin_batch);
   sqlite3_finalize(st_end_batch);
   sqlite3_finalize(st_begin_run);
@@ -284,26 +279,36 @@ DB_Filer::add_ambiguity(Motus_Tag_ID proxyID, Motus_Tag_ID mid) {
   step_commit(st_add_ambig);
 };
 
+const char *
+DB_Filer::q_save_findtags_state = 
+  "insert into batchState (batchID, progName, monoBN, tsData, tsRun, state, lastfileID, lastCharIndex)\
+                   values (?,       ?,        ?,      ?,      ?,     ?,     -1,         -1);";
+  //                     1       2        3      4      5      6     7          8
+
 void
 DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string state) {
   sqlite3_reset(st_save_findtags_state);
-  sqlite3_bind_int(st_save_findtags_state,  1, bid);
-  sqlite3_bind_int(st_save_findtags_state,  2, bootnum);
-  sqlite3_bind_double(st_save_findtags_state, 3, tsData);
-  sqlite3_bind_double(st_save_findtags_state, 4, tsRun);
-  sqlite3_bind_blob(st_save_findtags_state,   5, state.c_str(), state.length(), SQLITE_TRANSIENT);
+  sqlite3_bind_int(st_save_findtags_state,    1, bid);
+  sqlite3_bind_int(st_save_findtags_state,    3, bootnum);
+  sqlite3_bind_double(st_save_findtags_state, 4, tsData);
+  sqlite3_bind_double(st_save_findtags_state, 5, tsRun);
+  sqlite3_bind_blob(st_save_findtags_state,   6, state.c_str(), state.length(), SQLITE_TRANSIENT);
   step_commit(st_save_findtags_state);
 };
 
+const char *
+DB_Filer::q_load_findtags_state = "select batchID, monoBN, tsData, tsRun, state from batchState where progName=? order by tsRun desc limit 1;";
+//                                    0       1      2      3     4 
+          
 bool
 DB_Filer::load_findtags_state(Timestamp & tsData, Timestamp & tsRun, std::string & state) {
   sqlite3_reset(st_load_findtags_state);
   if (SQLITE_DONE == sqlite3_step(st_load_findtags_state))
     return false; // no saved state
-  bid = 1 + sqlite3_column_int (st_load_findtags_state, 0);
-  bootnum = sqlite3_column_int (st_load_findtags_state, 1);
+  bid = 1 + sqlite3_column_int   (st_load_findtags_state, 0);
+  bootnum = sqlite3_column_int   (st_load_findtags_state, 1);
   tsData = sqlite3_column_double (st_load_findtags_state, 2);
-  tsRun = sqlite3_column_double (st_load_findtags_state, 3);
+  tsRun = sqlite3_column_double  (st_load_findtags_state, 3);
   state = std::string(reinterpret_cast < const char * > (sqlite3_column_blob(st_load_findtags_state, 4)), sqlite3_column_bytes(st_load_findtags_state, 4));
   return true;
 };
