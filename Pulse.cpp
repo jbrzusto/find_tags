@@ -7,9 +7,7 @@ Pulse::Pulse(double ts, Frequency_Offset_kHz dfreq, float sig, float noise, Freq
   sig(sig),
   noise(noise)
 { 
-  static Seq_No seq_no = 0;
-
-  this->seq_no = ++seq_no;
+  this->seq_no = ++count;
 };
 
 Pulse Pulse::make(double ts, Frequency_Offset_kHz dfreq, float sig, float noise, Frequency_MHz ant_freq) {
@@ -20,3 +18,5 @@ void Pulse::dump() {
   // 14 digits in timestamp output yields 0.1 ms precision
   std::cout << std::setprecision(14) << ts << std::setprecision(3) << ',' << dfreq << ',' << sig << ',' << noise << endl;
 };
+
+Pulse::Seq_No Pulse::count = 0;

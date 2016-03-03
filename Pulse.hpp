@@ -26,7 +26,9 @@ public:
 
   // additional parameters for algorithmic use
 
-  Seq_No	seq_no;     
+  Seq_No	        seq_no;     
+
+  static Seq_No         count;
 
 private:
   Pulse(double ts, Frequency_Offset_kHz dfreq, float sig, float noise, Frequency_MHz ant_freq);

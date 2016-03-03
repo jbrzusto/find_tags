@@ -244,6 +244,9 @@ Tag_Foray::pause() {
     // Freq_Setting
     oa << make_nvp("nominal_freqs", Freq_Setting::nominal_freqs);
 
+    // Pulse
+    oa << make_nvp("count", Pulse::count);
+
     // Node 
     oa << make_nvp("_numNodes", Node::_numNodes);
     oa << make_nvp("_numLinks", Node::_numLinks);
@@ -303,6 +306,9 @@ Tag_Foray::resume(Tag_Foray &tf) {
 
   // Freq_Setting
   ia >> make_nvp("nominal_freqs", Freq_Setting::nominal_freqs);
+
+  // Pulse
+  ia >> make_nvp("count", Pulse::count);
 
   // Node 
   ia >> make_nvp("_numNodes", Node::_numNodes);
