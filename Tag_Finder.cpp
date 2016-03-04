@@ -72,7 +72,7 @@ Tag_Finder::process(Pulse &p) {
 
       //?      if (! (*ci)->is_confirmed() && ! (*ci)->next_pulse_confirms()) {
         // clone the candidate, but without the added pulse
-        Tag_Candidate * clone = new Tag_Candidate(**ci);
+      Tag_Candidate * clone = (*ci)->clone();
         cloned_candidates.push_back(clone);
         //?      }
   

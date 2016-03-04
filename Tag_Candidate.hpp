@@ -64,11 +64,20 @@ protected:
 
   friend class Tag_Finder;
   friend class Ambiguity;
+
+  static long long num_cands;
+
+  static long long max_num_cands;
+  
+  static Timestamp max_cand_time;
+
 public:
 
   Tag_Candidate() {}; // default ctor for deserialization
   
   Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse);
+
+  Tag_Candidate * clone();
 
   ~Tag_Candidate();
 
@@ -96,7 +105,7 @@ public:
 
   void clear_pulses();
 
-  void calculate_burst_params();
+  void calculate_burst_params(Pulse_Iter &p);
  
   void dump_bursts(string prefix="");
 
@@ -109,6 +118,12 @@ public:
   static void dump_bogus_burst(Timestamp ts, std::string & prefix, Frequency_MHz antfreq);
 
   static void set_filer(DB_Filer *dbf);
+
+  static long long get_max_num_cands();
+
+  static long long get_num_cands();
+
+  static Timestamp get_max_cand_time();
 
   void renTag(Tag * t1, Tag * t2); //!< if this candidate is for tag t1, make it finish any run and start a new one pointing at t2.
 

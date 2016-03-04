@@ -15,15 +15,30 @@ Tag_Candidate::Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse)
   freq_range(freq_slop_kHz, pulse.dfreq),
   sig_range(sig_slop_dB, pulse.sig)
 {
-  pulses[pulse.seq_no] = pulse;
+  pulses.push_back(pulse);
   state->tcLink();
+  if (++num_cands > max_num_cands) {
+    max_num_cands = num_cands;
+    max_cand_time = pulse.ts;
+  };
 };
 
 Tag_Candidate::~Tag_Candidate() {
   if (hit_count > 0) 
     filer -> end_run(run_id, hit_count, ending_batch);
+  --num_cands;
 };
 
+Tag_Candidate *
+Tag_Candidate::clone() {
+  auto tc = new Tag_Candidate(* this);
+  if (++num_cands > max_num_cands) {
+    max_num_cands = num_cands;
+    max_cand_time = pulses.rbegin()->ts;
+  }
+  return tc;
+};
+  
 bool Tag_Candidate::has_same_id_as(Tag_Candidate *tc) {
   return tag != BOGUS_TAG && tag == tc->tag;
 };
@@ -32,14 +47,26 @@ bool Tag_Candidate::shares_any_pulses(Tag_Candidate *tc) {
   // does this tag candidate use any of the pulses
   // used by another candidate?
 
-  Pulse_Buffer::iterator hit_pulses = tc->pulses.begin();
+  // these are two vectors, sorted in order of pulse seq_no,
+  // so compare them that way.
 
-  for (unsigned int i = 0; i < pulses_to_confirm_id; ++i, ++hit_pulses)
-    if (pulses.count(hit_pulses->first))
+  auto i1 = pulses.begin();
+  auto e1 = pulses.end();
+  auto i2 = tc->pulses.begin();
+  auto e2 = tc->pulses.end();
+
+  while(i1 != e1 && i2 != e2) {
+    if (i1->seq_no < i2->seq_no) {
+      ++ i1;
+    } else if (i1->seq_no > i2->seq_no) {
+      ++ i2;
+    } else {
       return true;
+    }
+  }
   return false;
 };
-
+  
 bool Tag_Candidate::expired(const Pulse &p) {
   if (! state->valid()) {
     state->tcUnlink();
@@ -69,7 +96,7 @@ bool Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     Return true if adding the pulse completes a burst at the confirmed ID level.
   */
 
-  pulses[p.seq_no] = p;
+  pulses.push_back(p);
   last_ts = p.ts;
 
   // extend the range of frequencies seen in this run of bursts
@@ -99,6 +126,9 @@ bool Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
 
   switch (tag_id_level) {
   case MULTIPLE:
+    if (pulses.size() > pulses_to_confirm_id)
+      throw std::runtime_error("Still at MULTIPLE tag_id_level but with pulses_to_confirm bursts");
+
     if (state->is_unique()) {
       tag = state->get_tag();
       num_pulses = tag->gaps.size();
@@ -153,13 +183,11 @@ bool Tag_Candidate::next_pulse_confirms() {
 void Tag_Candidate::clear_pulses() {
   // drop pulses from the most recent burst (presumably after
   // outputting it)
-
-  for (unsigned int i=0; i < num_pulses; ++i)
-    pulses.erase(pulses.begin());
+  pulses.clear();
 };
 
 void
-Tag_Candidate::calculate_burst_params() {
+Tag_Candidate::calculate_burst_params(Pulse_Iter & p) {
   // calculate these burst parameters:
   // - mean signal and noise strengths
   // - relative standard deviation (among pulses) of signal strength 
@@ -179,26 +207,24 @@ Tag_Candidate::calculate_burst_params() {
 
   unsigned int n = num_pulses;
 
-  Pulses_Iter p  = pulses.begin();
-
   if (last_dumped_ts != BOGUS_TIMESTAMP) {
-    Gap g = p->second.ts - last_dumped_ts;
+    Gap g = p->ts - last_dumped_ts;
     burst_par.burst_slop = fmodf(g, tag->period) - tag->gaps[n-1];
   } else {
     burst_par.burst_slop = BOGUS_BURST_SLOP;
   }
 
   for (unsigned int i = 0; i < n; ++i, ++p) {
-    sig	   = powf(10.0, p->second.sig / 10.0);
+    sig	   = powf(10.0, p->sig / 10.0);
     sigsum	  += sig;
     sigsumsq	  += sig*sig;
-    noise	  += powf(10.0, p->second.noise / 10.0);
-    freqsum	  += p->second.dfreq;
-    freqsumsq	  += p->second.dfreq * p->second.dfreq;
+    noise	  += powf(10.0, p->noise / 10.0);
+    freqsum	  += p->dfreq;
+    freqsumsq	  += p->dfreq * p->dfreq;
     if (i > 0) {
-      slop += fabsf( (p->second.ts - pts) - tag->gaps[i-1]);
+      slop += fabsf( (p->ts - pts) - tag->gaps[i-1]);
     }
-    pts = p->second.ts;
+    pts = p->ts;
   }
   last_dumped_ts     = pts;
   burst_par.sig      = 10.0 *	log10f(sigsum / n);
@@ -218,20 +244,14 @@ void Tag_Candidate::dump_bursts(string prefix) {
   if (pulses.size() < num_pulses)
     return;
 
-  // get the hit rate: this is the number of tag hits
-  // since the last time dump of this tag id divided by the time
-  // elapsed.  The higher it is, the more bogus hits there have
-  // been on this tag ID lately.
-
-  Timestamp ts = pulses.rbegin()->second.ts;
-
-  while (pulses.size() >= num_pulses) {
+  auto p = pulses.begin();
+  while (p != pulses.end()) {
     if (++hit_count == 1) {
       // first hit, so start a run
       run_id = filer->begin_run(tag->motusID);
     }
-    calculate_burst_params();
-    ts = pulses.begin()->second.ts;
+    Timestamp ts = p->ts;
+    calculate_burst_params(p);
     filer->add_hit(
                    run_id,
                    prefix.c_str()[0],
@@ -247,8 +267,8 @@ void Tag_Candidate::dump_bursts(string prefix) {
     ++ tag->count;
     if (tag->count == 1 && tag->motusID < 0)
       Ambiguity::detected(tag);
-    clear_pulses();
   }
+  clear_pulses();
 };
 
 void
@@ -288,6 +308,21 @@ Tag_Candidate::renTag(Tag * t1, Tag * t2) {
   tag = t2;
 }
 
+long long
+Tag_Candidate::get_max_num_cands() {
+  return max_num_cands;
+};
+
+long long
+Tag_Candidate::get_num_cands() {
+  return num_cands;
+};
+
+Timestamp
+Tag_Candidate::get_max_cand_time() {
+  return max_cand_time;
+};
+
 Frequency_Offset_kHz Tag_Candidate::freq_slop_kHz = 2.0;       // (kHz) maximum allowed frequency bandwidth of a burst
 
 float Tag_Candidate::sig_slop_dB = 10;         // (dB) maximum allowed range of signal strengths within a burst
@@ -301,4 +336,8 @@ DB_Filer * Tag_Candidate::filer = 0; // handle to output filer
 bool Tag_Candidate::ending_batch = false; // true iff we're ending a batch; set by Tag_Foray
 
 Burst_Params Tag_Candidate::burst_par;
+
+long long Tag_Candidate::num_cands = 0; // count of allocated but not freed candidates.
+long long Tag_Candidate::max_num_cands = 0; // count of allocated but not freed candidates.
+Timestamp Tag_Candidate::max_cand_time = 0; // timestamp at maximum candidate count
 

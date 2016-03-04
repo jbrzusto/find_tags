@@ -34,7 +34,7 @@ private:
   Pulse(double ts, Frequency_Offset_kHz dfreq, float sig, float noise, Frequency_MHz ant_freq);
 
 public:
-  Pulse(){};
+  Pulse();
 
   static Pulse make(double ts, Frequency_Offset_kHz dfreq, float sig, float noise, Frequency_MHz ant_freq);
 
@@ -52,7 +52,7 @@ public:
 
 };
 
-typedef std::map < Pulse::Seq_No, Pulse > Pulse_Buffer;
-typedef Pulse_Buffer :: iterator Pulses_Iter;
+typedef std::vector < Pulse > Pulse_Buffer;
+typedef Pulse_Buffer :: iterator Pulse_Iter;
 
 #endif // PULSE_HPP

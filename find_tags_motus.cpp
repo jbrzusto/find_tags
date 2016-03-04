@@ -599,6 +599,7 @@ main (int argc, char **argv) {
         }
         long long newbn = foray.start();
         if (newbn == 0) {
+          std::cout << "Max num candidates: " << Tag_Candidate::get_max_num_cands() << " at " << std::setprecision(14) << Tag_Candidate::get_max_cand_time() << "; now: " << Tag_Candidate::get_num_cands() << std::endl;
           foray.pause();
           break;
         }
