@@ -204,6 +204,8 @@ All output from a run of this program forms a new batch.
 #include "Tag_Finder.hpp"
 #include "Rate_Limiting_Tag_Finder.hpp"
 #include "Tag_Foray.hpp"
+#include "Lotek_Data_Source.hpp"
+#include "SG_Data_Source.hpp"
 
 //#define FIND_TAGS_DEBUG 
 
@@ -310,6 +312,20 @@ usage() {
 	"    is within SSLOP.  This limit applies within each burst of a sequence\n"
 	"    default: 10 dB\n\n"
 
+	"-L, --lotek\n"
+	"    input data come from a lotek receiver.  In this case, input lines have a different format:\n\n"
+        "       TS,ID,ANT,SIG,ANTFREQ,GAIN,CODESET\n\n"
+	"    with:\n\n"
+	"        TS:     real timestamp (seconds since the unix epoch)\n"
+        "        ID:     lotek tag ID\n"
+        "        ANT:    single digit\n"
+	"        SIG:    signal strength in Lotek receiver units\n"
+	"        GAIN:   receiver gain setting, in Lotek receiver units\n"
+	"        CODESET: 'Lotek3' or 'Lotek4'\n\n"
+
+	"    Each input record is used to generate a sequence of pulse records in SG format,\n"
+        "    and the program re-finds tags from these.\n\n"
+
 	"-m, --min_dfreq=MINDFREQ\n"
 	"    minimum offset frequency, in kHz.  Pulses with smaller offset frequency\n"
 	"    are dropped.\n"
@@ -392,6 +408,7 @@ main (int argc, char **argv) {
         OPT_GRAPH                = 'g',
         COMMAND_HELP	         = 'h',
 	OPT_SIG_SLOP	         = 'l',
+        OPT_LOTEK                = 'L',
 	OPT_MIN_DFREQ            = 'm',
 	OPT_MAX_DFREQ            = 'M',
         OPT_BOOT_NUM             = 'n',
@@ -405,7 +422,7 @@ main (int argc, char **argv) {
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:ef:Fghi:l:m:M:p:rR:s:S:tw:";
+    static const char short_options[] = "b:B:c:ef:Fghi:l:Lm:M:p:rR:s:S:tw:";
     static const struct option long_options[] = {
         {"burst_slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst_slop_expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
@@ -417,6 +434,7 @@ main (int argc, char **argv) {
         {"help"			   , 0, 0, COMMAND_HELP},
         {"bootnum"                 , 1, 0, OPT_BOOT_NUM},
 	{"signal_slop"             , 1, 0, OPT_SIG_SLOP},
+        {"lotek"                   , 0, 0, OPT_LOTEK},
 	{"min_dfreq"               , 1, 0, OPT_MIN_DFREQ},
 	{"max_dfreq"               , 1, 0, OPT_MAX_DFREQ},
         {"pulse_slop"		   , 1, 0, OPT_PULSE_SLOP},
@@ -441,6 +459,7 @@ main (int argc, char **argv) {
     bool test_only = false;
     bool graph_only = false;
     bool resume = false;
+    bool lotek_data = false;
     // rate-limiting buffer parameters
 
     float max_pulse_rate = 0;    // no rate-limiting
@@ -489,6 +508,9 @@ main (int argc, char **argv) {
         case OPT_SIG_SLOP:
           sig_slop_dB = atof(optarg);
 	  break;
+        case OPT_LOTEK:
+          lotek_data = true;
+          break;
 	case OPT_MIN_DFREQ:
 	  min_dfreq = atof(optarg);
 	  break;
@@ -541,13 +563,6 @@ main (int argc, char **argv) {
     }
     string output_filename = string(argv[optind++]);
 
-    std::istream * pulses;
-    if (optind < argc) {
-      pulses = new ifstream(argv[optind++]);
-    } else {
-      pulses = & std::cin;
-    }
-
     // set options and parameters
 
     string program_name("find_tags_motus");
@@ -577,6 +592,22 @@ main (int argc, char **argv) {
 
       // Freq_Setting needs to know the set of nominal frequencies
       Freq_Setting::set_nominal_freqs(tag_db.get_nominal_freqs());
+
+      // set up the data source
+      Data_Source * pulses;
+      if (! lotek_data) {
+        if (optind < argc) {
+          pulses = new SG_Data_Source(new ifstream(argv[optind++]));
+        } else {
+          pulses = new SG_Data_Source(& std::cin);
+        }
+      } else {
+        if (optind < argc) {
+          pulses = new Lotek_Data_Source(new ifstream(argv[optind++]), & tag_db, default_freq);
+        } else {
+          pulses = new Lotek_Data_Source(& std::cin, & tag_db, default_freq);
+        }
+      }
 
       Tag_Foray foray;
       

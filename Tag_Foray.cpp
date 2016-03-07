@@ -6,7 +6,7 @@
 
 Tag_Foray::Tag_Foray () {}; // default ctor for deserializing into
 
-Tag_Foray::Tag_Foray (Tag_Database * tags, std::istream *data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq) :
+Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq) :
   tags(tags),
   data(data),
   default_freq(default_freq),
@@ -64,16 +64,8 @@ Tag_Foray::start() {
   while (! bn) {
       // read and parse a line from a SensorGnome file
 
-      if (! data->getline(buf, MAX_LINE_SIZE)) {
-        if (data->eof())
+      if (! data->getline(buf, MAX_LINE_SIZE))
           break;
-        data->clear();
-        continue;
-      }
-
-      if (!buf[0])
-        continue;
-      //	break;
 
       ++line_no;
 
@@ -362,8 +354,8 @@ Tag_Foray::resume(Tag_Foray &tf) {
 };
 
 void
-Tag_Foray::set_data (std::istream * d) {
-  data = d;
+Tag_Foray::set_data (Data_Source * data) {
+  this->data = data;
 };
 
   

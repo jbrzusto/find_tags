@@ -7,6 +7,8 @@
 
 #include "Tag_Finder.hpp"
 #include "Rate_Limiting_Tag_Finder.hpp"
+#include "Data_Source.hpp"
+
 #include <sqlite3.h>
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/list.hpp>
@@ -31,7 +33,7 @@ public:
 
   Tag_Foray (); //!< default ctor to give object into which resume() deserializes
   
-  Tag_Foray (Tag_Database * tags, std::istream * data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq=false);
+  Tag_Foray (Tag_Database * tags, Data_Source * data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq=false);
 
   ~Tag_Foray ();
 
@@ -55,7 +57,7 @@ public:
 
   static void set_default_max_skipped_bursts(unsigned int skip);
 
-  void set_data (std::istream * d);       // !< set the input data stream
+  void set_data (Data_Source * data);       // !< set the input data stream
 
   Tag_Database * tags;               // registered tags on all known nominal frequencies
 
@@ -63,7 +65,7 @@ public:
 
 protected:
                                      // settings
-  std::istream * data;               // stream from which data records are read
+  Data_Source * data;                // stream from which data records are read
   Frequency_MHz default_freq;        // default listening frequency on a port where no frequency setting has been seen
   bool force_default_freq;           // ignore in-line frequency settings and always use default?
   float min_dfreq;                   // minimum allowed pulse offset frequency; pulses with smaller offset frequency are

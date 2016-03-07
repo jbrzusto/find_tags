@@ -22,10 +22,13 @@ public:
   long long             count;                          // number of times this tag has been detected during a run of the program;
                                                         // The only use so far is to keep track of whether an Ambiguity Clone can be
                                                         // augmented or reduced without creating a new one.
+  short                 mfgID;                          // manufacturer ID; only used for Lotek input data
+  short                 codeSet;                        // codeset the ID is from; either '3' or '4', if a Lotek tag.  0 if undefined.
+
 public:
   Tag(){};
 
-  Tag(Motus_Tag_ID motusID, Frequency_MHz freq, Frequency_Offset_kHz dfreq, const std::vector < Gap > & gaps);
+  Tag(Motus_Tag_ID motusID, Frequency_MHz freq, Frequency_Offset_kHz dfreq, short mfgID, short codeSet, const std::vector < Gap > & gaps);
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {
