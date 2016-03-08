@@ -26,7 +26,7 @@ Tag_Database::populate_from_sqlite_file(string filename, bool get_history) {
 
   sqlite3_stmt * st; //!< pre-compiled statement for recording raw pulses
 
-  if (SQLITE_OK != sqlite3_prepare_v2(db, "select tagID, nomFreq, offsetFreq, round(4*param1)/4000.0, round(4*param2)/4000.0, round(4*param3)/4000.0, round(4000 * period) / 4000, mfgID, codeSet from tags order by nomFreq, tagID",
+  if (SQLITE_OK != sqlite3_prepare_v2(db, "select tagID, nomFreq, offsetFreq, round(4*param1)/4000.0, round(4*param2)/4000.0, round(4*param3)/4000.0, round(4000 * period) / 4000, cast(mfgID as int), codeSet from tags order by nomFreq, tagID",
                                       -1, &st, 0)) 
     throw std::runtime_error("Sqlite tag database does not have the required columns: tagID, nomFreq, offsetFreq, param1, param2, param3, period, mfgID, codeSet");
 
@@ -47,9 +47,9 @@ Tag_Database::populate_from_sqlite_file(string filename, bool get_history) {
 
     // extract codeset; "Lotek3"->3, "Lotek4"->4, otherwise 0
     short codeSet = 0;
-    if (sqlite3_column_bytes(st, 7) == 6)
-      codeSet = sqlite3_column_text(st, 7)[5] - '0';
-    short id = sqlite3_column_int(st, 8);
+    if (sqlite3_column_bytes(st, 8) == 6)
+      codeSet = sqlite3_column_text(st, 8)[5] - '0';
+    short id = sqlite3_column_int(st, 7);
     
     Nominal_Frequency_kHz nom_freq = Freq_Setting::as_Nominal_Frequency_kHz(freq_MHz);
     if (nominal_freqs.count(nom_freq) == 0) {

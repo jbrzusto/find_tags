@@ -13,7 +13,7 @@ Lotek_Data_Source::Lotek_Data_Source(std::istream * data, Tag_Database *tdb, Fre
     auto tags = tdb->get_tags_at_freq(*f);
     for (auto t = tags->begin(); t != tags->end(); ++t) {
       Tag & tg = **t;
-      tcode.insert(std::make_pair(std::make_pair(tg.codeSet, tg.mfgID), *t));
+      tcode.insert(std::make_pair(std::make_pair(tg.codeSet, tg.mfgID), & tg.gaps));
     }
   }
   // generate the vector of antenna frequencies
@@ -54,6 +54,7 @@ Lotek_Data_Source::getline(char * buf, int maxLen) {
       if (i == sgbuf.end())
         return false;
       strncpy(buf, i->second.c_str(), maxLen);
+      //      std::cout << buf << std::endl;
       sgbuf.erase(i);
       return true;
     }
@@ -88,7 +89,7 @@ Lotek_Data_Source::translateLine()
   short gain;
   short codeSet;
 
-  if (7 != sscanf(ltbuf, "%lf,%hd,%hd,%hd,%lf,%hd,%hd", &ts, &id, &ant, &sig, &freq, &gain, &codeSet)) {
+  if (7 != sscanf(ltbuf, "%lf,%hd,%hd,%hd,%lf,%hd,Lotek%hd", &ts, &id, &ant, &sig, &freq, &gain, &codeSet)) {
     std::cerr << "bad Lotek input line: " << ltbuf << std::endl;
     return false;
   }
@@ -102,9 +103,13 @@ Lotek_Data_Source::translateLine()
     sgbuf.insert(std::make_pair(ts, freqRec.str()));
   }
   
-  auto tt = tcode.find(std::make_pair(codeSet, id));
+  auto csid = std::make_pair(codeSet, id);
+  auto tt = tcode.find(csid);
   if (tt == tcode.end()) {
-    std::cerr << "Ignoring record: no known tag with ID " << id << " in codeset " << codeSet << std::endl;
+    if (! warned.count(csid)) {
+      std::cerr << "Ignoring record: no known tag with ID " << id << " in codeset " << codeSet << std::endl;
+      warned.insert(csid);
+    }
     return false;
   }
   auto gg = tt->second;
@@ -115,7 +120,7 @@ Lotek_Data_Source::translateLine()
     // "%hd,%lf,%f,%f,%f", &port_num, &ts, &dfreq, &sig, &noise)) {
 
     pRec << "p" << ant << "," << std::setprecision(14) << ts << std::setprecision(3) << ",0," << sig << ",-96";
-    sgbuf.insert(std::make_pair(ts, pRec));
+    sgbuf.insert(std::make_pair(ts, pRec.str()));
     ts += *i; // NB: the last gap takes us to the next burst, so is not actually used
   }
   return true;

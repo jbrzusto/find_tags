@@ -7,6 +7,7 @@
 #include "Data_Source.hpp"
 #include "Tag_Database.hpp"
 #include <map>
+#include <unordered_set>
 
 class Lotek_Data_Source : public Data_Source { 
 
@@ -31,6 +32,7 @@ protected:
   std::map < double, std::string > sgbuf; //!< buffer of SG-format lines
   Timestamp latestInputTS; //!< timestmap of most recent input line
   std::vector < Frequency_MHz > antFreq; //!< frequency on each antenna, in MHz
+  std::set < std::pair < short, short > > warned; //!< sets of tag/codeset combos for which 'non-existent' warning has been issued
   
   // methods
 
