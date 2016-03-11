@@ -34,7 +34,7 @@ Tag_Candidate::clone() {
   auto tc = new Tag_Candidate(* this);
   if (++num_cands > max_num_cands) {
     max_num_cands = num_cands;
-    max_cand_time = pulses.rbegin()->ts;
+    max_cand_time = last_ts;
   }
   return tc;
 };

@@ -613,8 +613,7 @@ main (int argc, char **argv) {
       
       for (;;) {
         if (resume) {
-          Tag_Foray::resume(foray);
-          foray.set_data(pulses);
+          Tag_Foray::resume(foray, pulses);
           resume = false; // don't resume if we hit a new bootnum
         } else {
           foray = Tag_Foray(& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);

@@ -282,6 +282,10 @@ Tag_Foray::pause() {
   
     // dynamic members of all classes
     serialize(oa, 1);
+
+    // data source
+    data->serialize(oa, 1);
+
   }
   // record this state
 
@@ -301,7 +305,7 @@ Tag_Foray::now() {
 };
 
 bool
-Tag_Foray::resume(Tag_Foray &tf) {
+Tag_Foray::resume(Tag_Foray &tf, Data_Source *data) {
   Timestamp paused;
   Timestamp lastLineTS;
   std::string blob;
@@ -350,12 +354,13 @@ Tag_Foray::resume(Tag_Foray &tf) {
   
   // dynamic members of all classes
   tf.serialize(ia, 1);
-  return true;
-};
 
-void
-Tag_Foray::set_data (Data_Source * data) {
-  this->data = data;
+  // data source deserialization happens into the
+  // new data source
+  tf.data = data;
+
+  data->serialize(ia, 1);
+  return true;
 };
 
   

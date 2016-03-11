@@ -6,13 +6,20 @@
 
 #include "find_tags_common.hpp"
 
+using boost::serialization::make_nvp;
+
+
 class Data_Source { 
 
 public:
   Data_Source();
   ~Data_Source();
 
-virtual bool getline(char * buf, int maxLen) = 0;
+  virtual bool getline(char * buf, int maxLen) = 0;
+
+  virtual void serialize(boost::archive::binary_iarchive & ar, const unsigned int version){};
+
+  virtual void serialize(boost::archive::binary_oarchive & ar, const unsigned int version){};
 
 };
 

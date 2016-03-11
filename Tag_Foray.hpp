@@ -46,7 +46,7 @@ public:
 
   void pause(); //!< serialize foray to output database
 
-  static bool resume(Tag_Foray &tf); //!< resume foray from state saved in output database
+  static bool resume(Tag_Foray &tf, Data_Source *data); //!< resume foray from state saved in output database
   // returns true if successful
 
   static void set_default_pulse_slop_ms(float pulse_slop_ms);
@@ -56,8 +56,6 @@ public:
   static void set_default_burst_slop_expansion_ms(float burst_slop_expansion_ms);
 
   static void set_default_max_skipped_bursts(unsigned int skip);
-
-  void set_data (Data_Source * data);       // !< set the input data stream
 
   Tag_Database * tags;               // registered tags on all known nominal frequencies
 

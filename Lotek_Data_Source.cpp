@@ -48,24 +48,27 @@ Lotek_Data_Source::getline(char * buf, int maxLen) {
     // are old enough to be guaranteed (by the value of MAX_LEAD_SECONDS)
     // that no older data will be generated from subsequent input records
     auto i = sgbuf.begin();
-    if (done) {
-      // easy case: no input left on true source, so just return
-      // lines from sgbuf, if there are any.
-      if (i == sgbuf.end())
-        return false;
+    if (i != sgbuf.end() && i->first + MAX_LEAD_SECONDS <= latestInputTS) {
+      // easy case - there's a sufficiently old line in the buffer
       strncpy(buf, i->second.c_str(), maxLen);
-      //      std::cout << buf << std::endl;
       sgbuf.erase(i);
       return true;
     }
-    if (i->first + MAX_LEAD_SECONDS <= latestInputTS) {
-      // easy case - there'a a sufficiently old line in the buffer
-      strncpy(buf, i->second.c_str(), maxLen);
-      return true;
-    }
-    // typical case; no sufficiently old lines left in sgbuf, but lines left on input
+    // no lines in sgbuf are sufficiently old.  If there are no true
+    // input lines left, we're done (we save insufficiently old 
+    // sgbuf lines until the next time the algorithm is run with 
+    // subsequent data, because there might be pulses from there
+    // which precede some of those in the current sgbuf.
+
+    if (done)
+      return false;
+
+    // typical case; no sufficiently old lines left in sgbuf, but we haven't
+    // reached EOF on input
+        
     if (getInputLine())
       translateLine();
+
     // loop around until eof or a line is found
   }
 };
@@ -93,7 +96,7 @@ Lotek_Data_Source::translateLine()
     std::cerr << "bad Lotek input line: " << ltbuf << std::endl;
     return false;
   }
-
+  latestInputTS = ts;
   if (freq != antFreq[ant]) {
     antFreq[ant] = freq;
     std::ostringstream freqRec;
@@ -118,13 +121,41 @@ Lotek_Data_Source::translateLine()
   for(auto i = gg->begin(); i != gg->end(); ++i) {
     std::ostringstream pRec;
     // "%hd,%lf,%f,%f,%f", &port_num, &ts, &dfreq, &sig, &noise)) {
-
-    pRec << "p" << ant << "," << std::setprecision(14) << ts << std::setprecision(3) << ",0," << sig << ",-96";
+    // we use dfreq=4 to put it at the usual nominal SG frequency (i.e. funcube is tuned 4 kHz
+    // below nominal, so dfreq=4 means a tag on nominal)
+    pRec << "p" << ant << "," << std::setprecision(14) << ts << std::setprecision(3) << ",4," << sig << ",-96";
     sgbuf.insert(std::make_pair(ts, pRec.str()));
     ts += *i; // NB: the last gap takes us to the next burst, so is not actually used
   }
   return true;
 }
-    
 
+// ugly macro because I couldn't figure out how to make this work
+// properly with templates.
+
+// Note: we only serialize what's needed to resume           
+// processing buffered lines.  Tcode will be reconstructed   
+// from the tag database provided, as we don't want          
+// to be saving another copy of tag signatures (and the      
+// copy saved might be saved with motus in the future).      
+
+#define SERIALIZE_FUN_BODY \
+   ar & BOOST_SERIALIZATION_NVP( sgbuf );                       \
+   ar & BOOST_SERIALIZATION_NVP( latestInputTS );               \
+   ar & BOOST_SERIALIZATION_NVP( antFreq );                     \
+   ar & BOOST_SERIALIZATION_NVP( warned );
+    
+void
+Lotek_Data_Source::serialize(boost::archive::binary_iarchive & ar, const unsigned int version) {
+  
+  SERIALIZE_FUN_BODY;
+
+};
+
+void
+Lotek_Data_Source::serialize(boost::archive::binary_oarchive & ar, const unsigned int version) {
+
+  SERIALIZE_FUN_BODY;
+
+};
 
