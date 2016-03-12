@@ -13,6 +13,12 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
                         SQLITE_OPEN_READWRITE,
                         0),
         "Output database file does not exist.");
+
+  sqlite3_exec(outdb,
+               "pragma journal_mode=wal; pragma cache_size=200000;",
+               0,
+               0,
+               0);
   
   string msg = "SQLite output database does not have valid 'batches' table.";
   

@@ -310,7 +310,10 @@ usage() {
 	"    tag signal strength slop, in dB.  A tag burst will only be recognized\n"
 	"    if its dynamic range (i.e. range of signal strengths of its component pulses)\n"
 	"    is within SSLOP.  This limit applies within each burst of a sequence\n"
-	"    default: 10 dB\n\n"
+	"    default: 10 dB\n"
+        "    Note: if SSLOP < 0, this means to ignore signal strength; this is\n"
+        "    appropriate for sources where signal strength is not in DB units, e.g. Lotek\n"
+        "    .DTA files, as of March 2016\n\n"
 
 	"-L, --lotek\n"
 	"    input data come from a lotek receiver.  In this case, input lines have a different format:\n\n"
@@ -466,9 +469,9 @@ main (int argc, char **argv) {
     Gap pulse_rate_window = 60;  // 1 minute window
     Gap min_bogus_spacing = 600; // emit bogus tag ID at most once every 10 minutes
 
-    Gap pulse_slop = 0.0015; // 1.5 ms
-    Gap burst_slop = 0.010; // 10 ms
-    Gap burst_slop_expansion = 0.001; // 1ms = 1 part in 10000 for 10s BI
+    Gap pulse_slop = 1.5; // ms
+    Gap burst_slop = 10; // ms
+    Gap burst_slop_expansion = 1; // 1ms = 1 part in 10000 for 10s BI
     int max_skipped_bursts = 60;
 
     int pulses_to_confirm = PULSES_PER_BURST;
@@ -629,7 +632,7 @@ main (int argc, char **argv) {
         }
         long long newbn = foray.start();
         if (newbn == 0) {
-          std::cout << "Max num candidates: " << Tag_Candidate::get_max_num_cands() << " at " << std::setprecision(14) << Tag_Candidate::get_max_cand_time() << "; now: " << Tag_Candidate::get_num_cands() << std::endl;
+          std::cerr << "Max num candidates: " << Tag_Candidate::get_max_num_cands() << " at " << std::setprecision(14) << Tag_Candidate::get_max_cand_time() << "; now: " << Tag_Candidate::get_num_cands() << std::endl;
           foray.pause();
           break;
         }

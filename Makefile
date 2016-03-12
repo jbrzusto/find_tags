@@ -39,7 +39,7 @@ Tag_Database.o: Tag_Database.cpp Tag_Database.hpp find_tags_common.hpp
 
 Pulse.o: Pulse.cpp Pulse.hpp find_tags_common.hpp
 
-Tag_Candidate.o: Tag_Candidate.hpp Tag_Candidate.cpp Tag_Finder.hpp find_tags_common.hpp
+Tag_Candidate.o: Tag_Candidate.hpp Tag_Candidate.cpp Tag_Finder.hpp Bounded_Range.hpp find_tags_common.hpp
 
 Tag_Finder.o: Tag_Finder.hpp Tag_Finder.cpp Tag_Candidate.hpp find_tags_common.hpp
 

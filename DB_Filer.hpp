@@ -64,7 +64,7 @@ protected:
 
   static char qbuf[256]; //!< query buffer re-used in various places
 
-  static const int steps_per_tx = 5000; //!< number of statement steps per transaction (typically inserts)
+  static const int steps_per_tx = 50000; //!< number of statement steps per transaction (typically inserts)
   int num_steps; //!< counter for steps since last BEGIN statement
 
   int bootnum; //!< boot number for current batch

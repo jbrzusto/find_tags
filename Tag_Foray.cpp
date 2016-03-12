@@ -67,6 +67,10 @@ Tag_Foray::start() {
       if (! data->getline(buf, MAX_LINE_SIZE))
           break;
 
+#ifdef DEBUG
+      std::cout << buf << std::endl;
+#endif
+
       ++line_no;
 
       switch (buf[0]) {

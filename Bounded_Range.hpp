@@ -11,13 +11,15 @@ template < class VALTYPE > class  Bounded_Range {
 private:
   VALTYPE low;
   VALTYPE high;
-  VALTYPE width;  
+  VALTYPE width;  // if negative, have_bounds is never true, is_in and
+                  // is_compatible are always true,
+                  // and extend_by is a no-op; this makes the bounded range infinite.
   bool have_bounds;
 
   void validate () {
     // ensure that the invariant is satisfied
 
-    // Note: if have_bounds is false or high < low, then the interval
+    // Note: if widthif have_bounds is false or high < low, then the interval
     // is unbounded (bi-infinite, in the case of numeric VALTYPE)
 
     if (have_bounds) {
@@ -42,7 +44,7 @@ public:
     low(lowhigh),
     high(lowhigh),
     width(width),
-    have_bounds(true)
+    have_bounds(width >= 0)
   {
     validate();
   };
@@ -51,7 +53,7 @@ public:
     low(low),
     high(high),
     width(width),
-    have_bounds(true)
+    have_bounds(width >= 0)
   {
     validate();
   };
@@ -89,8 +91,10 @@ public:
       }
       return true;
     } else {
-      low = high = p;
-      width = high - low;
+      if (width >= 0) {
+        low = high = p;
+        have_bounds = true;
+      }
       return true;
     }
   };
