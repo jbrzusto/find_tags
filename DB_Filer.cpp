@@ -132,6 +132,11 @@ DB_Filer::~DB_Filer() {
 
   end_batch();
   end_tx();
+  sqlite3_exec(outdb,
+               "pragma journal_mode=delete;",
+               0,
+               0,
+               0);
   sqlite3_finalize(st_save_findtags_state);
   sqlite3_finalize(st_load_findtags_state);
   sqlite3_finalize(st_begin_batch);
