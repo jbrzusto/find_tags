@@ -390,6 +390,10 @@ usage() {
         "    prints 'Okay\\n' to stderr and the exist code is 0.  Otherwise, the exist\n"
         "    code is -1 and an error message is printed to stderr.\n\n"
 
+         "-u, --unsigned_dfreq\n"
+         "    ignore the sign of frequency offsets, as some versions of the pulse detection\n"
+         "    code do a poor job of estimating a negative frequency\n\n"
+        
 	"-w, --pulse_rate_window=PULSERATEWIN\n"
 	"    the time window (seconds) over which pulse_rate is measured.  When pulse\n"
 	"    rate exceeds the value specified by --max_pulse_rate during a period of\n"
@@ -421,11 +425,12 @@ main (int argc, char **argv) {
 	OPT_FREQ_SLOP	         = 's',
 	OPT_MAX_SKIPPED_BURSTS   = 'S',
         OPT_TEST                 = 't',
+        OPT_UNSIGNED_DFREQ       = 'u',
 	OPT_PULSE_RATE_WINDOW    = 'w'
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:ef:Fghi:l:Lm:M:p:rR:s:S:tw:";
+    static const char short_options[] = "b:B:c:ef:Fghi:l:Lm:M:p:rR:s:S:tuw:";
     static const struct option long_options[] = {
         {"burst_slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst_slop_expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
@@ -447,6 +452,7 @@ main (int argc, char **argv) {
 	{"max_skipped_bursts"      , 1, 0, OPT_MAX_SKIPPED_BURSTS},
 	{"pulse_rate_window"       , 1, 0, OPT_PULSE_RATE_WINDOW},
         {"test"                    , 0, 0, OPT_TEST},
+        {"unsigned_dfreq"          , 0, 0, OPT_UNSIGNED_DFREQ},
         {0, 0, 0, 0}
     };
 
@@ -460,6 +466,7 @@ main (int argc, char **argv) {
     bool use_events = false;
     bool force_default_freq = false;
     bool test_only = false;
+    bool unsigned_dfreq = false;
     bool graph_only = false;
     bool resume = false;
     bool lotek_data = false;
@@ -535,6 +542,9 @@ main (int argc, char **argv) {
 	case OPT_MAX_SKIPPED_BURSTS:
           max_skipped_bursts = atoi(optarg);
 	  break;
+        case OPT_UNSIGNED_DFREQ:
+          unsigned_dfreq = true;
+          break;
 	case OPT_PULSE_RATE_WINDOW:
 	  pulse_rate_window = atof(optarg);
 	  break;
@@ -590,6 +600,7 @@ main (int argc, char **argv) {
       dbf.add_param("max_skipped_bursts", max_skipped_bursts);
       dbf.add_param("pulse_rate_window", pulse_rate_window);
       dbf.add_param("min_bogus_spacing", min_bogus_spacing);
+      dbf.add_param("unsigned_dfreq", unsigned_dfreq);
 
       Tag_Candidate::set_filer(& dbf);
 
@@ -619,7 +630,7 @@ main (int argc, char **argv) {
           Tag_Foray::resume(foray, pulses);
           resume = false; // don't resume if we hit a new bootnum
         } else {
-          foray = Tag_Foray(& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing);
+          foray = Tag_Foray(& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing, unsigned_dfreq);
         }
         if (graph_only) {
           foray.graph();
