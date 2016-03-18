@@ -26,6 +26,8 @@ public:
 
   void add_param(const string &name, double val); // record a program parameter value
 
+  void add_GPS_fix(double ts, double lat, double lon, double alt); // record a GPS fix
+
   void begin_batch(int bootnum); // start new batch; uses 1 + ID of latest ended batch
 
   void end_batch(); //!< end current batch
@@ -48,6 +50,7 @@ protected:
   sqlite3_stmt * st_end_run; //!< end a run
   sqlite3_stmt * st_add_hit; //!< add a hit to a run
   sqlite3_stmt * st_add_prog; //!< add batch program entry
+  sqlite3_stmt * st_add_GPS_fix; //!< add a GPS fix
   sqlite3_stmt * st_check_param; //!< check whether parameter value has changed
   sqlite3_stmt * st_add_param; //!< add batch parameter entry
   sqlite3_stmt * st_add_ambig; //!< add ambiguity entry
@@ -92,6 +95,7 @@ protected:
   static const char * q_begin_run;
   static const char * q_end_run;
   static const char * q_add_hit;
+  static const char * q_add_GPS_fix;
   static const char * q_load_findtags_state;
   static const char * q_save_findtags_state;
 

@@ -51,6 +51,9 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
   Check(sqlite3_prepare_v2(outdb, q_add_hit, -1, &st_add_hit, 0),
         "output DB does not have valid 'hits' table.");
 
+  Check(sqlite3_prepare_v2(outdb, q_add_GPS_fix,-1, &st_add_GPS_fix, 0),
+        "output DB does not have valid 'gps' table.");
+
   sqlite3_stmt * st_check_batchprog;
   msg = "output DB does not have valid 'batchProgs' table.";
 
@@ -193,6 +196,23 @@ DB_Filer::add_hit(Run_ID rid, char ant, double ts, float sig, float sigSD, float
   sqlite3_bind_double(st_add_hit, 11, burstSlop);
   step_commit(st_add_hit);
   ++ num_hits;
+};
+
+const char *
+DB_Filer::q_add_GPS_fix = 
+"insert or ignore into gps (ts, batchID, gpsts, lat, lon, alt) \
+                     values(?,  ?,       null,  ?,   ?,   ?)";
+//                       1   2             3   4    5
+
+void
+DB_Filer::add_GPS_fix(double ts, double lat, double lon, double alt) {
+  sqlite3_bind_double   (st_add_GPS_fix, 1, ts);
+  sqlite3_bind_int      (st_add_GPS_fix, 2, bid);
+  // for now, there is no gpsts, so we use null; eventually:  sqlite3_bind_double   (st_add_GPS_fix, 3, gpsts);
+  sqlite3_bind_double   (st_add_GPS_fix, 3, lat);
+  sqlite3_bind_double   (st_add_GPS_fix, 4, lon);
+  sqlite3_bind_double   (st_add_GPS_fix, 5, alt);
+  step_commit(st_add_GPS_fix);
 };
 
 void

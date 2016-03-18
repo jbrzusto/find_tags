@@ -74,6 +74,19 @@ Tag_Foray::start() {
       ++line_no;
 
       switch (buf[0]) {
+      case 'G':
+        {
+          /* a GPS fix line like:
+             G,1458001712,44.34021,-66.118733333,21.6
+                 ts        lat        lon        alt
+          */
+          double ts, lat, lon, alt;
+          if (4 == sscanf(buf+2, "%lf,%lf,%lf,%lf", &ts, &lat, &lon, &alt)) {
+            // line is okay, so file it
+            Tag_Candidate::filer-> add_GPS_fix( ts, lat, lon, alt );
+          } // otherwise, quietly ignore malformed GPS fix line
+        }
+        break;
       case 'S':
         {
           /* a parameter-setting line like: 
