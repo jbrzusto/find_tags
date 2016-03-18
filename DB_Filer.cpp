@@ -278,7 +278,7 @@ DB_Filer::begin_batch(int bootnum) {
 };
 
 const char *
-DB_Filer::q_end_batch = "update batches set numHits=? where ID=?";
+DB_Filer::q_end_batch = "update batches set numHits=? where batchID=?";
 
 void
 DB_Filer::end_batch() {
