@@ -2,11 +2,13 @@
 #include <stdio.h>
 #include <time.h>
 
-DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int  bootnum): 
+DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int  bootnum, double minGPSdt): 
   prog_name(prog_name),
   num_hits(0),
   num_steps(0),
-  bootnum(bootnum)
+  bootnum(bootnum),
+  minGPSdt(minGPSdt),
+  lastGPSts(0)
 {
   Check(sqlite3_open_v2(out.c_str(),
                         & outdb,
@@ -51,8 +53,12 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
   Check(sqlite3_prepare_v2(outdb, q_add_hit, -1, &st_add_hit, 0),
         "output DB does not have valid 'hits' table.");
 
-  Check(sqlite3_prepare_v2(outdb, q_add_GPS_fix,-1, &st_add_GPS_fix, 0),
-        "output DB does not have valid 'gps' table.");
+  if (minGPSdt >= 0) {
+    Check(sqlite3_prepare_v2(outdb, q_add_GPS_fix,-1, &st_add_GPS_fix, 0),
+          "output DB does not have valid 'gps' table.");
+  } else {
+    lastGPSts = +1.0 / 0.0; // ensures new timestamp is never late enough to record a GPS fix
+  }
 
   sqlite3_stmt * st_check_batchprog;
   msg = "output DB does not have valid 'batchProgs' table.";
@@ -146,6 +152,8 @@ DB_Filer::~DB_Filer() {
   sqlite3_finalize(st_end_batch);
   sqlite3_finalize(st_begin_run);
   sqlite3_finalize(st_end_run);
+  if (minGPSdt >= 0)
+    sqlite3_finalize(st_add_GPS_fix);
   sqlite3_finalize(st_add_hit);
   sqlite3_close(outdb);
   outdb = 0;
@@ -206,6 +214,9 @@ DB_Filer::q_add_GPS_fix =
 
 void
 DB_Filer::add_GPS_fix(double ts, double lat, double lon, double alt) {
+  if (ts - lastGPSts < minGPSdt)
+    return;
+  lastGPSts = ts;
   sqlite3_bind_double   (st_add_GPS_fix, 1, ts);
   sqlite3_bind_int      (st_add_GPS_fix, 2, bid);
   // for now, there is no gpsts, so we use null; eventually:  sqlite3_bind_double   (st_add_GPS_fix, 3, gpsts);

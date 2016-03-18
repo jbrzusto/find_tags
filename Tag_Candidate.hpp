@@ -16,6 +16,7 @@
 // forward declaration for include of Tag_Finder.hpp
 class Tag_Candidate;
 class Tag_Finder;
+class Lotek_Data_Source;
 class Ambiguity;
 
 #include "Tag_Finder.hpp"
@@ -25,6 +26,7 @@ class Tag_Candidate {
   /* an automaton walking the DFA graph, recording the pulses it has accepted
      and looking for the first valid burst */
   friend class Tag_Foray;
+  friend class Lotek_Data_Source; // to give access to the filer FIXME: kludge!
 
 public:
 

@@ -47,6 +47,7 @@
 #include "find_tags_common.hpp"
 #include "Data_Source.hpp"
 #include "Tag_Database.hpp"
+#include "Tag_Candidate.hpp"
 #include <map>
 #include <unordered_set>
 #include <boost/serialization/map.hpp>
@@ -77,7 +78,7 @@ protected:
   Timestamp latestInputTS;                                                //!< timestamp of most recent input line
   std::vector < Frequency_MHz > antFreq;                                  //!< most recent listen frequency on each antenna, in MHz
   std::set < std::pair < short, short > > warned;                         //!< sets of tag/codeset combos for which 'non-existent' warning has been issued
-  
+
   // methods
 
   bool getInputLine(); //!< get line from true input stream; return

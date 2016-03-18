@@ -16,7 +16,7 @@ public:
   typedef int Run_ID;
   typedef int Batch_ID;
 
-  DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int bootnum=1); // initialize a filer on an existing sqlite database file
+  DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int bootnum=1, double minGPSdt = 300); // initialize a filer on an existing sqlite database file
   ~DB_Filer (); // write summary data
 
   Run_ID begin_run(Motus_Tag_ID mid); // begin run of tag
@@ -71,6 +71,10 @@ protected:
   int num_steps; //!< counter for steps since last BEGIN statement
 
   int bootnum; //!< boot number for current batch
+
+  double minGPSdt; //!< minimum time step for GPS fixes
+
+  double lastGPSts; //!< most recent GPS timestamp
 
   void step_commit(sqlite3_stmt *st); //!< step statement, and if number of steps has reached steps_per_tx, commit and start new tx
 

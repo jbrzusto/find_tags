@@ -91,11 +91,17 @@ Lotek_Data_Source::translateLine()
   Frequency_MHz freq;
   short gain;
   short codeSet;
+  double lat;
+  double lon;
 
-  if (7 != sscanf(ltbuf, "%lf,%hd,%hd,%hd,%lf,%hd,Lotek%hd", &ts, &id, &ant, &sig, &freq, &gain, &codeSet)) {
+  if (9 != sscanf(ltbuf, "%lf,%hd,%hd,%hd,%lf,%hd,Lotek%hd,%lf,%lf", &ts, &id, &ant, &sig, &freq, &gain, &codeSet, &lat, &lon)) {
     std::cerr << "bad Lotek input line: " << ltbuf << std::endl;
     return false;
   }
+  // output a GPS fix
+  if (lat != 999 && lon != 999)
+    Tag_Candidate::filer->add_GPS_fix(ts, lat, lon, 0);
+
   latestInputTS = ts;
   if (freq != antFreq[ant]) {
     antFreq[ant] = freq;

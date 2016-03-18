@@ -301,6 +301,10 @@ usage() {
         "    and then view graph1.svg in a web browser or inkscape https://inkscape.org\n"
         "    If you specify this option, the program quits without processing any input data.\n\n"
 
+        "-G --GPS_min_dt\n"
+        "    Minimum time step between GPS fixes, in seconds.  Default: 3600 (i.e. 1 per hour)\n"
+        "    A negative values means do not record any GPS timestamps to the output database.\n\n"
+
         "-n, --bootNum=BN\n"
         "    bootnum for first batch of records sent to output db table 'batches'.\n"
         "    Each time the line '!NEWBN,XXX' is encountered in the input, a new batch is\n"
@@ -413,6 +417,7 @@ main (int argc, char **argv) {
 	OPT_DEFAULT_FREQ         = 'f',
 	OPT_FORCE_DEFAULT_FREQ   = 'F',
         OPT_GRAPH                = 'g',
+        OPT_GPS_MIN_DT           = 'G',
         COMMAND_HELP	         = 'h',
 	OPT_SIG_SLOP	         = 'l',
         OPT_LOTEK                = 'L',
@@ -430,7 +435,7 @@ main (int argc, char **argv) {
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:ef:Fghi:l:Lm:M:p:rR:s:S:tuw:";
+    static const char short_options[] = "b:B:c:ef:FgG:hi:l:Lm:M:p:rR:s:S:tuw:";
     static const struct option long_options[] = {
         {"burst_slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst_slop_expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
@@ -439,6 +444,7 @@ main (int argc, char **argv) {
         {"default_freq"		   , 1, 0, OPT_DEFAULT_FREQ},
         {"force_default_freq"      , 0, 0, OPT_FORCE_DEFAULT_FREQ},
         {"graph"                   , 0, 0, OPT_GRAPH},
+        {"GPS_min_dt"              , 1, 0, OPT_GPS_MIN_DT},
         {"help"			   , 0, 0, COMMAND_HELP},
         {"bootnum"                 , 1, 0, OPT_BOOT_NUM},
 	{"signal_slop"             , 1, 0, OPT_SIG_SLOP},
@@ -468,6 +474,7 @@ main (int argc, char **argv) {
     bool test_only = false;
     bool unsigned_dfreq = false;
     bool graph_only = false;
+    double GPS_min_dt = 3600;
     bool resume = false;
     bool lotek_data = false;
     // rate-limiting buffer parameters
@@ -511,6 +518,9 @@ main (int argc, char **argv) {
             exit(0);
         case OPT_GRAPH:
           graph_only = true;
+          break;
+        case OPT_GPS_MIN_DT:
+          GPS_min_dt = atof(optarg);
           break;
         case OPT_BOOT_NUM:
           bootNum = atoll(optarg);
@@ -584,7 +594,7 @@ main (int argc, char **argv) {
     try {
       Node::init();
       Tag_Database tag_db (tag_filename, use_events);
-      DB_Filer dbf (output_filename, program_name, program_version, program_build_ts, bootNum);
+      DB_Filer dbf (output_filename, program_name, program_version, program_build_ts, bootNum, GPS_min_dt);
       dbf.add_param("default_freq", default_freq);
       dbf.add_param("force_default_freq", force_default_freq);
       dbf.add_param("use_events", use_events);
