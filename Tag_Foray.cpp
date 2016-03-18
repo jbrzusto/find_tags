@@ -205,6 +205,7 @@ Tag_Foray::test() {
     else
       newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[*it], prefix);
     // FIXME: do something to test validity?
+    delete newtf;
   }
 }
 
