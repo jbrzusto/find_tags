@@ -51,11 +51,9 @@ public:
 
   static void set_default_pulse_slop_ms(float pulse_slop_ms);
 
-  static void set_default_burst_slop_ms(float burst_slop_ms);
+  static void set_default_clock_fuzz_ppm(float clock_fuzz);
 
-  static void set_default_burst_slop_expansion_ms(float burst_slop_expansion_ms);
-
-  static void set_default_max_skipped_bursts(unsigned int skip);
+  static void set_default_max_skipped_time(Gap skip);
 
   Tag_Database * tags;               // registered tags on all known nominal frequencies
 
@@ -108,21 +106,11 @@ protected:
   // corresponding pair in a registered
   // tag, and still match the tag.
 
-  Gap burst_slop;	// (seconds) allowed slop in timing between
-                        // consecutive tag bursts, in seconds this is
-                        // meant to allow for measurement error at tag
-                        // registration and detection times
+  float clock_fuzz;	// max allowed clock rate difference for timing, in ppm
 
+  // how much time can a tag run go without seeing a pulse?
 
-  Gap burst_slop_expansion; // (seconds) how much slop in timing
-			    // between tag bursts increases with each
-  // skipped pulse; this is meant to allow for clock drift between
-  // the tag and the receiver.
-
-  // how many consecutive bursts can be missing without terminating a
-  // run?
-
-  unsigned int max_skipped_bursts;
+  Gap max_skipped_time;
 
   History *hist;
   Ticker cron;
@@ -130,9 +118,8 @@ protected:
   double ts; // last timestamp parsed from input file
 
   static Gap default_pulse_slop;
-  static Gap default_burst_slop;
-  static Gap default_burst_slop_expansion;
-  static unsigned int default_max_skipped_bursts;
+  static float default_clock_fuzz;
+  static Gap default_max_skipped_time;
 
 public:
 
@@ -155,9 +142,8 @@ public:
     ar & BOOST_SERIALIZATION_NVP( tag_finders );
     ar & BOOST_SERIALIZATION_NVP( graphs );
     ar & BOOST_SERIALIZATION_NVP( pulse_slop );
-    ar & BOOST_SERIALIZATION_NVP( burst_slop );
-    ar & BOOST_SERIALIZATION_NVP( burst_slop_expansion );
-    ar & BOOST_SERIALIZATION_NVP( max_skipped_bursts );
+    ar & BOOST_SERIALIZATION_NVP( clock_fuzz );
+    ar & BOOST_SERIALIZATION_NVP( max_skipped_time );
     ar & BOOST_SERIALIZATION_NVP( hist );
     ar & BOOST_SERIALIZATION_NVP( cron );
   };  

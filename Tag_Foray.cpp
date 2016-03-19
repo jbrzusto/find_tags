@@ -19,9 +19,8 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   unsigned_dfreq(unsigned_dfreq),
   line_no(0),
   pulse_slop(default_pulse_slop),
-  burst_slop(default_burst_slop),
-  burst_slop_expansion(default_burst_slop_expansion),
-  max_skipped_bursts(default_max_skipped_bursts),
+  clock_fuzz(default_clock_fuzz),
+  max_skipped_time(default_max_skipped_time),
   hist(tags->get_history()),
   cron(hist->getTicker())
 {
@@ -38,18 +37,13 @@ Tag_Foray::set_default_pulse_slop_ms(float pulse_slop_ms) {
 };
 
 void
-Tag_Foray::set_default_burst_slop_ms(float burst_slop_ms) {
-  default_burst_slop = burst_slop_ms / 1000.0;	// stored as seconds
+Tag_Foray::set_default_clock_fuzz_ppm(float clock_fuzz) {
+  default_clock_fuzz = clock_fuzz * 1E-6;	// ppm -> proportion
 };
 
 void
-Tag_Foray::set_default_burst_slop_expansion_ms(float burst_slop_expansion_ms) {
-  default_burst_slop_expansion = burst_slop_expansion_ms / 1000.0;   // stored as seconds
-};
-
-void
-Tag_Foray::set_default_max_skipped_bursts(unsigned int skip) {
-  default_max_skipped_bursts = skip;
+Tag_Foray::set_default_max_skipped_time(Gap skip) {
+  default_max_skipped_time = skip;
 };
 
 
@@ -138,12 +132,6 @@ Tag_Foray::start() {
             else
               newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], prefix.str());
             tag_finders[key] = newtf;
-#if 0
-            //#ifdef FIND_TAGS_DEBUG
-            std::cerr << "Interval Tree for " << prefix.str() << std::endl;
-            newtf->graph.get_root()->dump(std::cerr);
-            std::cerr << "Burst slop expansion is " << Tag_Finder::default_burst_slop_expansion << std::endl;
-#endif
           };
 
           if (dfreq < 0 && unsigned_dfreq)
@@ -184,7 +172,7 @@ Tag_Foray::process_event(Event e) {
   switch (e.code) {
   case Event::E_ACTIVATE:
     {
-      auto rv = g->addTag(t, pulse_slop, burst_slop / t->gaps[3], (1 + max_skipped_bursts) * t->period);
+      auto rv = g->addTag(t, pulse_slop, clock_fuzz, max_skipped_time);
       for (auto i = tag_finders.begin(); i != tag_finders.end(); ++i)
         if (i->first.second == fs)
           i->second->rename_tag(rv);
@@ -192,7 +180,7 @@ Tag_Foray::process_event(Event e) {
     break;
   case Event::E_DEACTIVATE:
     {
-      auto rv = g->delTag(t, pulse_slop, burst_slop / t->gaps[3], (1 + max_skipped_bursts) * t->period);
+      auto rv = g->delTag(t, pulse_slop, clock_fuzz, max_skipped_time);
       for (auto i = tag_finders.begin(); i != tag_finders.end(); ++i)
         if (i->first.second == fs)
           i->second->rename_tag(rv);
@@ -250,9 +238,8 @@ Tag_Foray::~Tag_Foray () {
 };
 
 Gap Tag_Foray::default_pulse_slop = 0.0015; // 1.5 ms
-Gap Tag_Foray::default_burst_slop = 0.010; // 10 ms
-Gap Tag_Foray::default_burst_slop_expansion = 0.001; // 1ms = 1 part in 10000 for 10s BI
-unsigned int Tag_Foray::default_max_skipped_bursts = 60;
+float Tag_Foray::default_clock_fuzz = 50E-6; // 50 ppm
+Gap Tag_Foray::default_max_skipped_time = 1000; // 1000 s; at 50ppm, this translate to fuzz of 50 ms
   
 void
 Tag_Foray::pause() {
@@ -267,9 +254,8 @@ Tag_Foray::pause() {
 
     // Tag_Foray
     oa << make_nvp("default_pulse_slop", Tag_Foray::default_pulse_slop);
-    oa << make_nvp("default_burst_slop", Tag_Foray::default_burst_slop);
-    oa << make_nvp("default_burst_slop_expansion", Tag_Foray::default_burst_slop_expansion);
-    oa << make_nvp("default_max_skipped_bursts", Tag_Foray::default_max_skipped_bursts);
+    oa << make_nvp("default_clock_fuzz", Tag_Foray::default_clock_fuzz);
+    oa << make_nvp("default_max_skipped_time", Tag_Foray::default_max_skipped_time);
 
     // Freq_Setting
     oa << make_nvp("nominal_freqs", Freq_Setting::nominal_freqs);
@@ -339,9 +325,8 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data) {
 
   // Tag_Foray
   ia >> make_nvp("default_pulse_slop", Tag_Foray::default_pulse_slop);
-  ia >> make_nvp("default_burst_slop", Tag_Foray::default_burst_slop);
-  ia >> make_nvp("default_burst_slop_expansion", Tag_Foray::default_burst_slop_expansion);
-  ia >> make_nvp("default_max_skipped_bursts", Tag_Foray::default_max_skipped_bursts);
+  ia >> make_nvp("default_clock_fuzz", Tag_Foray::default_clock_fuzz);
+  ia >> make_nvp("default_max_skipped_time", Tag_Foray::default_max_skipped_time);
 
   // Freq_Setting
   ia >> make_nvp("nominal_freqs", Freq_Setting::nominal_freqs);

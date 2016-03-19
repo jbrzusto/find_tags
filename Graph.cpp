@@ -106,6 +106,18 @@ Graph::_addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   int i;
   for(i = 0; i < 2 * n - 1; ++i ) {
     g = tag->gaps[i % n];
+    // Given a clock mismatch of timeFuzz, we consider two measurements
+    // of time to be equal when:
+    //
+    //   t1/t2 <= (1 + timeFuzz) and t2/t1 <= (1 + timeFuzz)
+    //
+    // where timeFuzz is on the order of a few parts per million (i.e. ~ 10E-6)
+    // Then   t2 / (1 + timeFuzz) <= t1 <= t2 * (1 + timeFuzz)
+    // but  1/(1 + timeFuzz) = 1 - timeFuzz + timeFuzz^2 -/+ ...
+    // and because timeFuzz << 1, the RHS is ~ 1 - timeFuzz.
+    // So the condition is t2 * (1 - timeFuzz) <= t1 <= t2 * (1 + timeFuzz)
+    // except that we force the allowed interval to have width at least 2 * tol
+    
     GapRange gr(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)));
     GapRanges grs;
     grs.push_back(gr);

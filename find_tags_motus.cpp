@@ -260,16 +260,6 @@ usage() {
         "    Ignore frequency settings in the input dataset; always assume\n"
         "    all receivers are tuned to the default frequency\n\n"
 
-	"-b, --burst_slop=BSLOP\n"
-	"    how much to allow time between consecutive bursts\n"
-	"    to differ from measured tag values, in millseconds.\n"
-	"    default: 20 ms\n\n"
-
-	"-B, --burst_slop_expansion=BSLOPEXP\n"
-	"    how much to increase burst slop for each missed burst\n"
-	"    in milliseconds; meant to allow for clock drift\n"
-	"    default: 1 ms / burst\n\n"
-
 	"-c, --pulses_to_confirm=CONFIRM\n"
 	"    how many pulses must be detected before a hit is confirmed.\n"
 	"    By default, CONFIRM = PULSES_PER_BURST, but for more stringent\n"
@@ -277,6 +267,14 @@ usage() {
 	"    or larger, so that more gaps must match those registered for a given tag\n"
 	"    before a hit is reported.\n"
 	"    default: PULSES_PER_BURST (i.e. 4)\n\n"
+
+        "-C, --clock_fuzz=FUZZ\n"
+        "    how much fuzz to allow between clocks on the tag and on the receiver, in parts\n"
+        "    per million.  Either clock is allowed to be faster than the other, so\n"
+        "      if t1 and t2 are inter-pulse timespans measured by the two clocks, then:\n\n"
+        "       t1 / t2 <= (1 + FUZZ * 1E-6)  and t2 / t1 <= (1 + FUZZ * 1E-6)\n\n"
+        "    This can compensate for temperature dependence in clock rates, for example.\n"
+        "    default: 50 ppm.\n\n"
 
         "-e --use-events\n"
         "    This option can be used to limit the search for specific tags to\n"
@@ -344,8 +342,8 @@ usage() {
 	"    default: Inf (i.e. no minimum)\n\n"
 
 	"-p, --pulse_slop=PSLOP\n"
-	"    how much to allow time between consecutive pulses\n"
-	"    in a burst to differ from measured tag values, in milliseconds\n"
+	"    how much error to allow in measurement of pulse timing\n"
+	"    in milliseconds\n"
 	"    default: 1.5 ms\n\n"
 
 
@@ -380,12 +378,11 @@ usage() {
 	"    is within FSLOP.  This limit applies to all bursts within a sequence\n"
 	"    default: 2 kHz\n\n"
 
-	"-S, --max_skipped_bursts=SKIPS\n"
-	"    maximum number of consecutive bursts that can be missing (skipped)\n"
-	"    without terminating a run.  When using the pulses_to_confirm criterion\n"
-	"    that number of pulses must occur with no gaps larger than SKIPS bursts\n"
-	"    between them.\n"
-	"    default: 60\n\n"
+	"-S, --max_skipped_time=SKIP\n"
+	"    maximum time allowed between consecutive pulses in a run of a tag\n"
+	"    A run of detections of a tag will end if no compatible pulse has been seen since\n"
+	"    its latest pulse.\n"
+	"    default: 1000 seconds\n\n"
 
 	"-t, --test\n"
 	"    verify that the tag database is valid and that all tags in it can be\n"
@@ -410,9 +407,8 @@ usage() {
 int
 main (int argc, char **argv) {
       enum {
-	OPT_BURST_SLOP	         = 'b',
-	OPT_BURST_SLOP_EXPANSION = 'B',
 	OPT_PULSES_TO_CONFIRM    = 'c',
+        OPT_CLOCK_FUZZ           = 'C',
         OPT_USE_EVENTS           = 'e',
 	OPT_DEFAULT_FREQ         = 'f',
 	OPT_FORCE_DEFAULT_FREQ   = 'F',
@@ -428,18 +424,17 @@ main (int argc, char **argv) {
         OPT_RESUME               = 'r',
 	OPT_MAX_PULSE_RATE       = 'R',
 	OPT_FREQ_SLOP	         = 's',
-	OPT_MAX_SKIPPED_BURSTS   = 'S',
+	OPT_MAX_SKIPPED_TIME     = 'S',
         OPT_TEST                 = 't',
         OPT_UNSIGNED_DFREQ       = 'u',
 	OPT_PULSE_RATE_WINDOW    = 'w'
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:ef:FgG:hi:l:Lm:M:p:rR:s:S:tuw:";
+    static const char short_options[] = "c:C:ef:FgG:hi:l:Lm:M:p:rR:s:S:tuw:";
     static const struct option long_options[] = {
-        {"burst_slop"		   , 1, 0, OPT_BURST_SLOP},
-        {"burst_slop_expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
 	{"pulses_to_confirm"	   , 1, 0, OPT_PULSES_TO_CONFIRM},
+        {"clock_fuzz"              , 1, 0, OPT_CLOCK_FUZZ},
         {"use_events"              , 0, 0, OPT_USE_EVENTS},
         {"default_freq"		   , 1, 0, OPT_DEFAULT_FREQ},
         {"force_default_freq"      , 0, 0, OPT_FORCE_DEFAULT_FREQ},
@@ -455,7 +450,7 @@ main (int argc, char **argv) {
         {"resume"                  , 0, 0, OPT_RESUME},
 	{"max_pulse_rate"          , 1, 0, OPT_MAX_PULSE_RATE},
         {"frequency_slop"	   , 1, 0, OPT_FREQ_SLOP},
-	{"max_skipped_bursts"      , 1, 0, OPT_MAX_SKIPPED_BURSTS},
+	{"max_skipped_time"        , 1, 0, OPT_MAX_SKIPPED_TIME},
 	{"pulse_rate_window"       , 1, 0, OPT_PULSE_RATE_WINDOW},
         {"test"                    , 0, 0, OPT_TEST},
         {"unsigned_dfreq"          , 0, 0, OPT_UNSIGNED_DFREQ},
@@ -484,9 +479,8 @@ main (int argc, char **argv) {
     Gap min_bogus_spacing = 600; // emit bogus tag ID at most once every 10 minutes
 
     Gap pulse_slop = 1.5; // ms
-    Gap burst_slop = 10; // ms
-    Gap burst_slop_expansion = 1; // 1ms = 1 part in 10000 for 10s BI
-    int max_skipped_bursts = 60;
+    float clock_fuzz = 50; // ppm
+    Gap max_skipped_time = 1000; // seconds
 
     int pulses_to_confirm = PULSES_PER_BURST;
     float sig_slop_dB = 10;
@@ -495,14 +489,11 @@ main (int argc, char **argv) {
 
     while ((c = getopt_long(argc, argv, short_options, long_options, &option_index)) != -1) {
         switch (c) {
-        case OPT_BURST_SLOP:
-          burst_slop = atof(optarg);
-	  break;
-        case OPT_BURST_SLOP_EXPANSION:
-          burst_slop_expansion = atof(optarg);
-	  break;
 	case OPT_PULSES_TO_CONFIRM:
           pulses_to_confirm = atoi(optarg);
+	  break;
+        case OPT_CLOCK_FUZZ:
+          clock_fuzz = atof(optarg);
 	  break;
         case OPT_USE_EVENTS:
           use_events = true;
@@ -549,8 +540,8 @@ main (int argc, char **argv) {
         case OPT_FREQ_SLOP:
           freq_slop_kHz = atof(optarg);
 	  break;
-	case OPT_MAX_SKIPPED_BURSTS:
-          max_skipped_bursts = atoi(optarg);
+	case OPT_MAX_SKIPPED_TIME:
+          max_skipped_time = atof(optarg);
 	  break;
         case OPT_UNSIGNED_DFREQ:
           unsigned_dfreq = true;
@@ -571,9 +562,8 @@ main (int argc, char **argv) {
       exit(1);
     }
     Tag_Foray::set_default_pulse_slop_ms(pulse_slop);
-    Tag_Foray::set_default_burst_slop_ms(burst_slop);
-    Tag_Foray::set_default_burst_slop_expansion_ms(burst_slop_expansion);
-    Tag_Foray::set_default_max_skipped_bursts(max_skipped_bursts);
+    Tag_Foray::set_default_clock_fuzz_ppm(clock_fuzz);
+    Tag_Foray::set_default_max_skipped_time(max_skipped_time);
     Tag_Candidate::set_pulses_to_confirm_id(pulses_to_confirm);
     Tag_Candidate::set_sig_slop_dB(sig_slop_dB);
     Tag_Candidate::set_freq_slop_kHz(freq_slop_kHz);
@@ -598,8 +588,7 @@ main (int argc, char **argv) {
       dbf.add_param("default_freq", default_freq);
       dbf.add_param("force_default_freq", force_default_freq);
       dbf.add_param("use_events", use_events);
-      dbf.add_param("burst_slop", burst_slop);
-      dbf.add_param("burst_slop_expansion", burst_slop_expansion );
+      dbf.add_param("clock_fuzz", clock_fuzz);
       dbf.add_param("pulses_to_confirm", pulses_to_confirm);
       dbf.add_param("signal_slop", sig_slop_dB);
       dbf.add_param("min_dfreq", min_dfreq);
@@ -607,7 +596,7 @@ main (int argc, char **argv) {
       dbf.add_param("pulse_slop", pulse_slop);
       dbf.add_param("max_pulse_rate", max_pulse_rate );
       dbf.add_param("frequency_slop", freq_slop_kHz);
-      dbf.add_param("max_skipped_bursts", max_skipped_bursts);
+      dbf.add_param("max_skipped_time", max_skipped_time);
       dbf.add_param("pulse_rate_window", pulse_rate_window);
       dbf.add_param("min_bogus_spacing", min_bogus_spacing);
       dbf.add_param("unsigned_dfreq", unsigned_dfreq);
