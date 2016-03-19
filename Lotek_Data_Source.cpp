@@ -86,6 +86,7 @@ Lotek_Data_Source::translateLine()
 
   Timestamp ts;
   short id; 
+  char antName[5];
   short ant;
   short sig;
   Frequency_MHz freq;
@@ -94,12 +95,15 @@ Lotek_Data_Source::translateLine()
   double lat;
   double lon;
 
-  if (9 != sscanf(ltbuf, "%lf,%hd,%hd,%hd,%lf,%hd,Lotek%hd,%lf,%lf", &ts, &id, &ant, &sig, &freq, &gain, &codeSet, &lat, &lon)) {
+  if (9 != sscanf(ltbuf, "%lf,%hd,%4[^,],%hd,%lf,%hd,Lotek%hd,%lf,%lf", &ts, &id, antName, &sig, &freq, &gain, &codeSet, &lat, &lon)) {
     std::cerr << "bad Lotek input line: " << ltbuf << std::endl;
     return false;
   }
+  // clean up weird lotek antenna naming: either a digit or AHdigit
+  ant = antName[antName[0] == 'A' ? 2 : 0] - '0';
+
   // output a GPS fix
-  if (lat != 999 && lon != 999)
+  if (lat != -999 && lon != -999)
     Tag_Candidate::filer->add_GPS_fix(ts, lat, lon, 0);
 
   latestInputTS = ts;
