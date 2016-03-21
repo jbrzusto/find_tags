@@ -35,10 +35,8 @@ public:
   
   Tag_Foray (Tag_Database * tags, Data_Source * data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq=false);
 
-  ~Tag_Foray ();
+  void start();                 // begin searching for tags
 
-  long long start();                 // begin searching for tags; returns 0 if end of file; returns NN if receives command
-                                     // !NEWBN,NN
   void process_event(Event e);       // !< process a tag add/remove event
 
   void test();                       // throws an exception if there are indistinguishable tags

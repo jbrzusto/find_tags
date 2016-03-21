@@ -4,7 +4,7 @@
 #include <sstream>
 #include <time.h>
 
-Tag_Foray::Tag_Foray () {}; // default ctor for deserializing into
+Tag_Foray::Tag_Foray () : hist(0) {}; // default ctor for deserializing into
 
 Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq) :
   tags(tags),
@@ -48,21 +48,20 @@ Tag_Foray::set_default_max_skipped_time(Gap skip) {
 
 
 
-long long
+void
 Tag_Foray::start() {
   Tag_Candidate::ending_batch = false;
 
-  long long bn = 0;
   char buf[MAX_LINE_SIZE + 1]; // input buffer
 
-  while (! bn) {
+  for (;;) {
       // read and parse a line from a SensorGnome file
 
       if (! data->getline(buf, MAX_LINE_SIZE))
           break;
 
 #ifdef DEBUG
-      std::cout << buf << std::endl;
+      std::cerr << buf << std::endl;
 #endif
 
       ++line_no;
@@ -150,10 +149,7 @@ Tag_Foray::start() {
         break;
       case '!':
         {
-          if (1 != sscanf(buf+1, "NEWBN,%lld", & bn)) {
-            std::cerr << "Warning: malformed line in input\n  at line " << line_no << ":\n" << (string("") + buf) << std::endl;
-            continue;
-          }
+          // for future extension: in-band commands
         }
         break;
       default:
@@ -161,7 +157,6 @@ Tag_Foray::start() {
       }
   }
   Tag_Candidate::ending_batch = true;
-  return bn;
 };
 
 void
@@ -231,11 +226,6 @@ Tag_Foray::graph() {
     newtf->graph->viz();
   }
 }
-
-Tag_Foray::~Tag_Foray () {
-  for (auto tfi = tag_finders.begin(); tfi != tag_finders.end(); ++tfi)
-    delete (tfi->second);
-};
 
 Gap Tag_Foray::default_pulse_slop = 0.0015; // 1.5 ms
 float Tag_Foray::default_clock_fuzz = 50E-6; // 50 ppm
