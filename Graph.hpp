@@ -4,6 +4,7 @@
 #include "find_tags_common.hpp"
 #include "Node.hpp"
 #include "Ambiguity.hpp"
+#include "Gap_Range.hpp"
 
 class Graph {
   // the graph representing a DFA for the NDFA full-burst recognition
@@ -52,9 +53,9 @@ protected:
 
   void erase (const TagPhase &t);
 
-  void insert (GapRanges & gr, TagPhase p);
+  void insert (Gap_Ranges & gr, TagPhase p);
 
-  void erase (GapRanges & gr, TagPhase p);
+  void erase (Gap_Ranges & gr, TagPhase p);
 
   bool hasEdge ( Node *n, Gap b, TagPhase p);
 
@@ -70,17 +71,17 @@ protected:
 
   void dropEdgeIfExtra(Node * n, Node::Edges::iterator i);
 
-  void insert (Node *n, GapRanges & gr, TagPhase p);
+  void insert (Node *n, Gap_Ranges & gr, TagPhase p);
     
-  void insertRec (GapRanges & gr, TagPhase tFrom, TagPhase tTo);
+  void insertRec (Gap_Ranges & gr, TagPhase tFrom, TagPhase tTo);
 
-  void insertRec (Node *n, GapRanges & gr, TagPhase tFrom, TagPhase tTo);
+  void insertRec (Node *n, Gap_Ranges & gr, TagPhase tFrom, TagPhase tTo);
 
-  void erase (Node *n, GapRanges & gr, TagPhase tp);
+  void erase (Node *n, Gap_Ranges & gr, TagPhase tp);
 
-  void eraseRec (GapRanges & gr, TagPhase tpFrom, TagPhase tpTo);
+  void eraseRec (Gap_Ranges & gr, TagPhase tpFrom, TagPhase tpTo);
 
-  void eraseRec (Node *n, GapRanges & gr, TagPhase tpFrom, TagPhase tpTo);
+  void eraseRec (Node *n, Gap_Ranges & gr, TagPhase tpFrom, TagPhase tpTo);
 
   void renTagRec(Node * n, Tag *t1, Tag *t2); //!< rename a tag from t1 to t2, starting at node n, and recursing
 

@@ -56,9 +56,7 @@ typedef std::unordered_multimap < TagID, Phase > TagPhaseSet;
 // difference between two nearby timestamp values. We use float, which
 // has sufficient precision here.
 
-typedef float Gap;
-typedef std::pair < Gap, Gap > GapRange;
-typedef std::vector < GapRange > GapRanges;
+typedef double Gap;
 
 // common standard stuff
 

@@ -118,8 +118,8 @@ Graph::_addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
     // So the condition is t2 * (1 - timeFuzz) <= t1 <= t2 * (1 + timeFuzz)
     // except that we force the allowed interval to have width at least 2 * tol
     
-    GapRange gr(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz)));
-    GapRanges grs;
+    Gap_Range gr(g, tol, timeFuzz);
+    Gap_Ranges grs;
     grs.push_back(gr);
     insertRec(grs, TagPhase(tag, i), TagPhase(tag, i+1));
 #ifdef DEBUG
@@ -136,9 +136,9 @@ Graph::_addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   // to missed bursts (only if n > 1); a beeper tag has n = 1.
   
   // back edges 
-  GapRanges grs;
+  Gap_Ranges grs;
   for(g = tag->gaps[n - 1]; g < maxTime; g += tag->period)
-    grs.push_back(GapRange(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz))));
+    grs.push_back(Gap_Range(g, tol, timeFuzz));
 
   insertRec(grs, TagPhase(tag, 2 * n - 1), TagPhase(tag, n)); // self-linked edges for a beeper tag: 2 * 1 - 1 == 1
 
@@ -151,7 +151,7 @@ Graph::_addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   if (n > 1) {
     grs.clear();
     for(g = tag->gaps[n - 1] + tag->period; g < maxTime; g += tag->period)
-      grs.push_back(GapRange(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz))));
+      grs.push_back(Gap_Range(g, tol, timeFuzz));
     insertRec(grs, TagPhase(tag, n - 1), TagPhase(tag, n));
   }
   
@@ -165,21 +165,21 @@ Graph::_delTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   Gap g;
 
   // remove skip edges
-  GapRanges grs;
+  Gap_Ranges grs;
   for(g = tag->gaps[n - 1] + tag->period; g < maxTime; g += tag->period)
-    grs.push_back(GapRange(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz))));
+    grs.push_back(Gap_Range(g, tol, timeFuzz));
   eraseRec(grs, TagPhase(tag, n - 1), TagPhase(tag, n));
 
   // remove back edges 
   grs.clear();
   for(g = tag->gaps[n - 1]; g < maxTime; g += tag->period)
-    grs.push_back(GapRange(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz))));
+    grs.push_back(Gap_Range(g, tol, timeFuzz));
   eraseRec(grs, TagPhase(tag, 2 * n - 1), TagPhase(tag, n));
 
   for(int i = 2 * n - 2; i >= 0; --i) {
     g = tag->gaps[i % n];
     grs.clear();
-    grs.push_back(GapRange(std::min(g - tol, g * (1 - timeFuzz)), std::max(g + tol, g * (1 + timeFuzz))));
+    grs.push_back(Gap_Range(g, tol, timeFuzz));
     eraseRec(grs, TagPhase(tag, i), TagPhase(tag, i + 1));
 #ifdef DEBUG
     validateSetToNode();
@@ -308,12 +308,12 @@ Graph::erase (const TagPhase &t) {
 };
 
 void 
-Graph::insert (GapRanges & grs, TagPhase p) {
+Graph::insert (Gap_Ranges & grs, TagPhase p) {
   insert (_root, grs, p);
 };
 
 void 
-Graph::erase (GapRanges & grs, TagPhase p) {
+Graph::erase (Gap_Ranges & grs, TagPhase p) {
   erase(_root, grs, p);
 };
 
@@ -468,7 +468,7 @@ Graph::dropEdgeIfExtra(Node * n, Node::Edges::iterator i)
 };
 
 void
-Graph::insert (Node *n, GapRanges & grs, TagPhase p)
+Graph::insert (Node *n, Gap_Ranges & grs, TagPhase p)
 {
   for (auto gr = grs.begin(); gr != grs.end(); ++gr) {
     Gap lo = gr->first;
@@ -496,13 +496,13 @@ Graph::insert (Node *n, GapRanges & grs, TagPhase p)
 };
 
 void 
-Graph::insertRec (GapRanges & grs, TagPhase tFrom, TagPhase tTo) {
+Graph::insertRec (Gap_Ranges & grs, TagPhase tFrom, TagPhase tTo) {
   newStamp();
   insertRec (_root, grs, tFrom, tTo);
 };
     
 void 
-Graph::insertRec (Node *n, GapRanges & grs, TagPhase tFrom, TagPhase tTo) {
+Graph::insertRec (Node *n, Gap_Ranges & grs, TagPhase tFrom, TagPhase tTo) {
   // recursively insert a transition from tFrom to tTo because this
   // is a DAG, rather than a tree, a given node might already have
   // been visited by depth-first search, so we don't continue the
@@ -554,7 +554,7 @@ Graph::renTagRec(Node * n, Tag *t1, Tag *t2) {
 };
   
 void 
-Graph::erase (Node *n, GapRanges & grs, TagPhase tp) {
+Graph::erase (Node *n, Gap_Ranges & grs, TagPhase tp) {
   // for any edges from n at points in the range [lo, hi]
   // remove p from the tail node.
   // If edges at lo and/or hi become redundant after 
@@ -580,13 +580,13 @@ Graph::erase (Node *n, GapRanges & grs, TagPhase tp) {
 };
 
 void 
-Graph::eraseRec (GapRanges & grs, TagPhase tpFrom, TagPhase tpTo) {
+Graph::eraseRec (Gap_Ranges & grs, TagPhase tpFrom, TagPhase tpTo) {
   newStamp();
   eraseRec (_root, grs, tpFrom, tpTo);
 };
 
 void 
-Graph::eraseRec (Node *n, GapRanges & grs, TagPhase tpFrom, TagPhase tpTo) {
+Graph::eraseRec (Node *n, Gap_Ranges & grs, TagPhase tpFrom, TagPhase tpTo) {
   // recursively erase all transitions between tpFrom and tpTo for
   // the range lo, hi
   n->stamp = stamp;

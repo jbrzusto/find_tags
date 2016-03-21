@@ -26,7 +26,7 @@ Tag_Database::populate_from_sqlite_file(string filename, bool get_history) {
 
   sqlite3_stmt * st; //!< pre-compiled statement for recording raw pulses
 
-  if (SQLITE_OK != sqlite3_prepare_v2(db, "select tagID, nomFreq, offsetFreq, round(4*param1)/4000.0, round(4*param2)/4000.0, round(4*param3)/4000.0, round(4000 * period) / 4000, cast(mfgID as int), codeSet from tags order by nomFreq, tagID",
+  if (SQLITE_OK != sqlite3_prepare_v2(db, "select tagID, nomFreq, offsetFreq, param1/1000.0, param2/1000.0, param3/1000.0, period, cast(mfgID as int), codeSet from tags order by nomFreq, tagID",
                                       -1, &st, 0)) 
     throw std::runtime_error("Sqlite tag database does not have the required columns: tagID, nomFreq, offsetFreq, param1, param2, param3, period, mfgID, codeSet");
 
