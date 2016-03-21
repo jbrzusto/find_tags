@@ -45,6 +45,7 @@ protected:
 
   // sqlite3 pre-compiled statements
   sqlite3_stmt * st_begin_batch; //!< create a batch record
+  sqlite3_stmt * st_drop_saved_state; //!< drop saved state for previous batch
   sqlite3_stmt * st_end_batch; //!< update a batch record, when finished
   sqlite3_stmt * st_begin_run; //!< start a run
   sqlite3_stmt * st_end_run; //!< end a run
@@ -95,6 +96,7 @@ protected:
   void end_tx(); //!< end transaction
 
   static const char * q_begin_batch;
+  static const char * q_drop_saved_state;
   static const char * q_end_batch;
   static const char * q_begin_run;
   static const char * q_end_run;

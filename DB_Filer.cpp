@@ -38,7 +38,12 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
                             0),
          msg);
 
-  // get automatically-generated batch ID; used to update batch record at end of run
+  Check( sqlite3_prepare_v2(outdb, 
+                            q_drop_saved_state,
+                            -1,
+                            &st_drop_saved_state,
+                            0),
+         "SQLite output database does not have valid 'batchState' table.");
   
   msg = "output DB table 'runs' is invalid";
   Check( sqlite3_prepare_v2(outdb, q_begin_run,
@@ -46,9 +51,6 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
 
   Check( sqlite3_prepare_v2(outdb, q_end_run, -1, &st_end_run, 0),
          msg);
-
-  begin_tx();
-  begin_batch(bootnum);
 
   Check(sqlite3_prepare_v2(outdb, q_add_hit, -1, &st_add_hit, 0),
         "output DB does not have valid 'hits' table.");
@@ -134,6 +136,9 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
   Check ( sqlite3_prepare_v2(outdb, q_load_findtags_state, -1, & st_load_findtags_state, 0), ftsm);
   sqlite3_bind_text(st_load_findtags_state, 1, prog_name.c_str(), -1, SQLITE_TRANSIENT);
 
+  begin_tx();
+  begin_batch(bootnum);
+
 };
 
 
@@ -149,6 +154,7 @@ DB_Filer::~DB_Filer() {
   sqlite3_finalize(st_save_findtags_state);
   sqlite3_finalize(st_load_findtags_state);
   sqlite3_finalize(st_begin_batch);
+  sqlite3_finalize(st_drop_saved_state);
   sqlite3_finalize(st_end_batch);
   sqlite3_finalize(st_begin_run);
   sqlite3_finalize(st_end_run);
@@ -273,6 +279,9 @@ DB_Filer::Check(int code, int wants, int wants2, int wants3, const std::string &
 const char * 
 DB_Filer::q_begin_batch = "insert into batches (monoBN, ts) values (?, ?)";
 
+const char *
+DB_Filer::q_drop_saved_state = "delete from batchState where batchID=?";
+
 void 
 DB_Filer::begin_batch(int bootnum) {
   num_hits = 0;
@@ -284,6 +293,7 @@ DB_Filer::begin_batch(int bootnum) {
   sqlite3_bind_double(st_begin_batch, 2, tp.tv_sec + 1.0e-9 * tp.tv_nsec);
   step_commit(st_begin_batch);
   bid = sqlite3_last_insert_rowid(outdb);
+
   // set batch ID for "insert run" query
   sqlite3_bind_int(st_begin_run, 2, bid);
 };
@@ -329,6 +339,10 @@ DB_Filer::q_save_findtags_state =
 
 void
 DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string state) {
+  // drop any saved state for previous batch
+  sqlite3_bind_int(st_drop_saved_state, 1, bid - 1);
+  step_commit(st_drop_saved_state);
+
   sqlite3_reset(st_save_findtags_state);
   sqlite3_bind_int(st_save_findtags_state,    1, bid);
   sqlite3_bind_int(st_save_findtags_state,    3, bootnum);
