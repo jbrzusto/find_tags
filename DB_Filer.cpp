@@ -80,8 +80,8 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
     // program version has changed since latest batchID for which it was recorded,
     // so record new value
     sprintf(qbuf, 
-          "insert into batchProgs (batchID, progName, progVersion, progBuildTS, tsMotus) \
-                           values (%d,      '%s',     '%s',        %f,          0)",
+          "insert into batchProgs (batchID, progName, progVersion, progBuildTS) \
+                           values (%d,      '%s',     '%s',        %f)",
           bid,
           prog_name.c_str(),
           prog_version.c_str(),
@@ -103,8 +103,8 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
   sqlite3_bind_text(st_check_param, 1, prog_name.c_str(), -1, SQLITE_TRANSIENT);
 
   Check( sqlite3_prepare_v2(outdb, 
-                            "insert into batchParams (batchID, progName, paramName, paramVal, tsMotus) \
-                                           values (?,       ?,        ?,         ?,          0)",
+                            "insert into batchParams (batchID, progName, paramName, paramVal) \
+                                           values (?,       ?,        ?,         ?)",
                             -1, &st_add_param, 0),
          "output DB does not have valid 'batchParams' table.");
 
@@ -167,8 +167,8 @@ DB_Filer::~DB_Filer() {
 
 const char *
 DB_Filer::q_begin_run = 
- "insert into runs (runID, batchIDbegin, batchIDend, motusTagID, tsMotus) \
-            values (?,     ?,            -1,         ?,          0)";
+ "insert into runs (runID, batchIDbegin, motusTagID, ant) \
+            values (?,     ?,            ?,          ?)";
 
 DB_Filer::Run_ID
 DB_Filer::begin_run(Motus_Tag_ID mid) {
