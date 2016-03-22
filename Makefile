@@ -40,7 +40,7 @@ Tag_Candidate.o: Tag_Candidate.hpp Tag_Candidate.cpp Tag_Finder.hpp Bounded_Rang
 
 Tag_Finder.o: Tag_Finder.hpp Tag_Finder.cpp Tag_Candidate.hpp find_tags_common.hpp
 
-Tag_Foray.o: Tag_Foray.hpp Tag_Foray.cpp find_tags_common.hpp
+Tag_Foray.o: Tag_Foray.hpp Tag_Foray.cpp find_tags_common.hpp DB_Filer.hpp
 
 Rate_Limiting_Tag_Finder.o: Rate_Limiting_Tag_Finder.hpp find_tags_common.hpp
 
