@@ -271,6 +271,7 @@ Tag_Foray::pause() {
     oa << make_nvp("freq_slop_kHz", Tag_Candidate::freq_slop_kHz);
     oa << make_nvp("sig_slop_dB", Tag_Candidate::sig_slop_dB);
     oa << make_nvp("pulses_to_confirm_id", Tag_Candidate::pulses_to_confirm_id);
+    oa << make_nvp("num_cands", Tag_Candidate::num_cands);
 
     // Ambiguity (a singleton class)
     oa << make_nvp("abm", Ambiguity::abm);
@@ -343,6 +344,7 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data) {
   ia >> make_nvp("freq_slop_kHz", Tag_Candidate::freq_slop_kHz);
   ia >> make_nvp("sig_slop_dB", Tag_Candidate::sig_slop_dB);
   ia >> make_nvp("pulses_to_confirm_id", Tag_Candidate::pulses_to_confirm_id);
+  ia >> make_nvp("num_cands", Tag_Candidate::num_cands);
 
   // Ambiguity (a singleton class)
   ia >> make_nvp("abm", Ambiguity::abm);
