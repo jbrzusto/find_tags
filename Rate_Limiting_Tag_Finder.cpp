@@ -1,6 +1,6 @@
 #include "Rate_Limiting_Tag_Finder.hpp"
 
-BOOST_CLASS_EXPORT(Rate_Limiting_Tag_Finder)
+//BOOST_CLASS_EXPORT(Rate_Limiting_Tag_Finder)
 
 Rate_Limiting_Tag_Finder::Rate_Limiting_Tag_Finder(Tag_Foray *owner) :
   Tag_Finder(owner) {
