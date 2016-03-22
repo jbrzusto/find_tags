@@ -70,22 +70,15 @@ Tag_Finder::process(Pulse &p) {
         continue;
       }
 
-      //?      if (! (*ci)->is_confirmed() && ! (*ci)->next_pulse_confirms()) {
-        // clone the candidate, but without the added pulse
       Tag_Candidate * clone = (*ci)->clone();
-        cloned_candidates.push_back(clone);
-        //?      }
+      cloned_candidates.push_back(clone);
   
       if ((*ci)->add_pulse(p, next_state)) {
         // this candidate tag just completed a burst at the CONFIRMED level
         
         // now see what candidates should be deleted because they
-        // have the same ID or share any pulses; only seek among
-        // unconfirmed candidates, as the current one would have
-        // already been eliminated if it shared any pulses
-        // with a confirmed candidate.
+        // have the same ID or share any pulses
         
-        //?        for (int j = 1; j < NUM_CAND_LISTS; ++j) {
         for (int j = 0; j < NUM_CAND_LISTS; ++j) {
           for (Cand_List::iterator cci = cands[j].begin(); cci != cands[j].end(); /**/ ) {
             if ((*cci) != (*ci) 

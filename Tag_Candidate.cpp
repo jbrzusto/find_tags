@@ -10,6 +10,7 @@ Tag_Candidate::Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse)
   last_dumped_ts(BOGUS_TIMESTAMP),
   tag(BOGUS_TAG),
   tag_id_level(MULTIPLE),
+  run_id(0),
   hit_count(0),
   num_pulses(0),
   freq_range(freq_slop_kHz, pulse.dfreq),
@@ -24,8 +25,11 @@ Tag_Candidate::Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse)
 };
 
 Tag_Candidate::~Tag_Candidate() {
-  if (hit_count > 0) 
-    filer -> end_run(run_id, hit_count, ending_batch);
+  if (tag_id_level == CONFIRMED) {
+    int n = Tag_Foray::num_cands_with_run_id(run_id, -1);
+    if (n == 0)
+      filer -> end_run(run_id, hit_count, ending_batch);
+  }
   --num_cands;
 };
 
@@ -36,6 +40,9 @@ Tag_Candidate::clone() {
     max_num_cands = num_cands;
     max_cand_time = last_ts;
   }
+  if (tc->tag_id_level == CONFIRMED)
+    Tag_Foray::num_cands_with_run_id(run_id, 1);
+
   return tc;
 };
   
@@ -249,6 +256,7 @@ void Tag_Candidate::dump_bursts(string prefix) {
     if (++hit_count == 1) {
       // first hit, so start a run
       run_id = filer->begin_run(tag->motusID, prefix.c_str()[0]-'0');
+      Tag_Foray::num_cands_with_run_id(run_id, 1);
     }
     Timestamp ts = p->ts;
     calculate_burst_params(p);

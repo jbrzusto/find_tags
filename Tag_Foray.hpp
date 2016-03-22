@@ -8,7 +8,7 @@
 #include "Tag_Finder.hpp"
 #include "Rate_Limiting_Tag_Finder.hpp"
 #include "Data_Source.hpp"
-
+#include "DB_Filer.hpp"
 #include <sqlite3.h>
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/list.hpp>
@@ -56,6 +56,10 @@ public:
   static void set_default_clock_fuzz_ppm(float clock_fuzz);
 
   static void set_default_max_skipped_time(Gap skip);
+
+  static int num_cands_with_run_id(DB_Filer::Run_ID rid, int delta); //!< return the number of candidates with the given run id
+  // if delta is 0. Otherwise, adjust the count by delta, and return the new count.
+
 
   Tag_Database * tags;               // registered tags on all known nominal frequencies
 
@@ -122,6 +126,14 @@ protected:
   static Gap default_pulse_slop;
   static float default_clock_fuzz;
   static Gap default_max_skipped_time;
+
+  // keep track of how many candidates share the same run; this is
+  // to manage clones at the confirmed level, so that death of a single
+  // clone does not end a run.
+
+  typedef std::unordered_map < DB_Filer::Run_ID, int > Run_Cand_Counter;
+  static  Run_Cand_Counter num_cands_with_run_id_;
+
 
 public:
 

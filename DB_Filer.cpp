@@ -181,11 +181,14 @@ DB_Filer::begin_run(Motus_Tag_ID mid, int ant) {
 
 const char *
 DB_Filer::q_end_run = "update runs set len=?, batchIDend=? where runID=?";
-
+//                                  1       2              3 
 void
 DB_Filer::end_run(Run_ID rid, int n, bool countOnly) {
   sqlite3_bind_int(st_end_run, 1, n); // bind number of hits in run
-  sqlite3_bind_int(st_end_run, 2, countOnly ? -1 : bid); // bind ID of batch this run ends in
+  if (countOnly)
+    sqlite3_bind_null(st_end_run, 2); // null indicates this run has not ended
+  else
+    sqlite3_bind_int(st_end_run, 2, bid); // bind ID of batch this run ends in
   sqlite3_bind_int(st_end_run, 3, rid);  // bind run number
   step_commit(st_end_run);
 };

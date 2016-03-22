@@ -230,7 +230,8 @@ Tag_Foray::graph() {
 Gap Tag_Foray::default_pulse_slop = 0.0015; // 1.5 ms
 float Tag_Foray::default_clock_fuzz = 50E-6; // 50 ppm
 Gap Tag_Foray::default_max_skipped_time = 1000; // 1000 s; at 50ppm, this translate to fuzz of 50 ms
-  
+Tag_Foray::Run_Cand_Counter Tag_Foray::num_cands_with_run_id_ = Run_Cand_Counter();
+
 void
 Tag_Foray::pause() {
   // make an archive;
@@ -246,6 +247,7 @@ Tag_Foray::pause() {
     oa << make_nvp("default_pulse_slop", Tag_Foray::default_pulse_slop);
     oa << make_nvp("default_clock_fuzz", Tag_Foray::default_clock_fuzz);
     oa << make_nvp("default_max_skipped_time", Tag_Foray::default_max_skipped_time);
+    oa << make_nvp("num_cands_with_run_id_", Tag_Foray::num_cands_with_run_id_);
 
     // Freq_Setting
     oa << make_nvp("nominal_freqs", Freq_Setting::nominal_freqs);
@@ -317,6 +319,7 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data) {
   ia >> make_nvp("default_pulse_slop", Tag_Foray::default_pulse_slop);
   ia >> make_nvp("default_clock_fuzz", Tag_Foray::default_clock_fuzz);
   ia >> make_nvp("default_max_skipped_time", Tag_Foray::default_max_skipped_time);
+  ia >> make_nvp("num_cands_with_run_id_", Tag_Foray::num_cands_with_run_id_);
 
   // Freq_Setting
   ia >> make_nvp("nominal_freqs", Freq_Setting::nominal_freqs);
@@ -356,4 +359,26 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data) {
   return true;
 };
 
-  
+int
+Tag_Foray::num_cands_with_run_id (DB_Filer::Run_ID rid, int delta) {
+  if (rid == 0)
+    return 0;
+  auto i = num_cands_with_run_id_.find(rid);
+  if (i == num_cands_with_run_id_.end()) {
+    // rid not present
+    if (delta == 0)
+      return 0;
+    if (delta < 0)
+      throw std::runtime_error("Tried to reduce count of cands with run_id already at 0.");
+    num_cands_with_run_id_.insert(std::make_pair(rid, delta));
+    return delta;
+  } else {
+    if (delta == 0)
+      return i->second;
+    i->second += delta;
+    if (i->second > 0)
+      return i->second;
+    num_cands_with_run_id_.erase(i);
+    return(0);
+  }
+};
