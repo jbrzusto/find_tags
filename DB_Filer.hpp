@@ -19,10 +19,10 @@ public:
   DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int bootnum=1, double minGPSdt = 300); // initialize a filer on an existing sqlite database file
   ~DB_Filer (); // write summary data
 
-  Run_ID begin_run(Motus_Tag_ID mid); // begin run of tag
+  Run_ID begin_run(Motus_Tag_ID mid, int ant ); // begin run of tag
   void end_run(Run_ID rid, int n, bool countOnly = false); // end run, noting number of hits; if countOnly is true, don't end run
 
-  void add_hit(Run_ID rid, char ant, double ts, float sig, float sigSD, float noise, float freq, float freqSD, float slop, float burstSlop);
+  void add_hit(Run_ID rid, double ts, float sig, float sigSD, float noise, float freq, float freqSD, float slop, float burstSlop);
 
   void add_param(const string &name, double val); // record a program parameter value
 

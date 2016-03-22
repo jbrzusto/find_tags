@@ -171,9 +171,10 @@ DB_Filer::q_begin_run =
             values (?,     ?,            ?,          ?)";
 
 DB_Filer::Run_ID
-DB_Filer::begin_run(Motus_Tag_ID mid) {
+DB_Filer::begin_run(Motus_Tag_ID mid, int ant) {
   sqlite3_bind_int(st_begin_run, 1, rid); // bind run ID
   sqlite3_bind_int(st_begin_run, 3, mid); // bind tag ID
+  sqlite3_bind_int(st_begin_run, 4, ant);
   step_commit(st_begin_run);
   return rid++;
 };
@@ -191,23 +192,22 @@ DB_Filer::end_run(Run_ID rid, int n, bool countOnly) {
 
 const char *
 DB_Filer::q_add_hit = 
-"insert into hits (batchID, runID, ant, ts, sig, sigSD, noise, freq, freqSD, slop, burstSlop) \
-         values   (?,       ?,     ?,   ?,  ?,   ?,     ?,     ?,    ?,      ?,    ?)";
-//               1       2     3    4  5    6     7     8    9      10    11
+"insert into hits (batchID, runID, ts, sig, sigSD, noise, freq, freqSD, slop, burstSlop) \
+         values   (?,       ?,     ?,  ?,   ?,     ?,     ?,    ?,      ?,    ?)";
+//               1       2     3  4    5     6     7    8      9     10
 
 void
-DB_Filer::add_hit(Run_ID rid, char ant, double ts, float sig, float sigSD, float noise, float freq, float freqSD, float slop, float burstSlop) {
+DB_Filer::add_hit(Run_ID rid, double ts, float sig, float sigSD, float noise, float freq, float freqSD, float slop, float burstSlop) {
   sqlite3_bind_int   (st_add_hit, 1, bid);
   sqlite3_bind_int   (st_add_hit, 2, rid);
-  sqlite3_bind_int   (st_add_hit, 3, ant-'0');
-  sqlite3_bind_double(st_add_hit, 4, ts);
-  sqlite3_bind_double(st_add_hit, 5, sig);
-  sqlite3_bind_double(st_add_hit, 6, sigSD);
-  sqlite3_bind_double(st_add_hit, 7, noise);
-  sqlite3_bind_double(st_add_hit, 8, freq);
-  sqlite3_bind_double(st_add_hit, 9, freqSD);
-  sqlite3_bind_double(st_add_hit, 10, slop);
-  sqlite3_bind_double(st_add_hit, 11, burstSlop);
+  sqlite3_bind_double(st_add_hit, 3, ts);
+  sqlite3_bind_double(st_add_hit, 4, sig);
+  sqlite3_bind_double(st_add_hit, 5, sigSD);
+  sqlite3_bind_double(st_add_hit, 6, noise);
+  sqlite3_bind_double(st_add_hit, 7, freq);
+  sqlite3_bind_double(st_add_hit, 8, freqSD);
+  sqlite3_bind_double(st_add_hit, 9, slop);
+  sqlite3_bind_double(st_add_hit, 10, burstSlop);
   step_commit(st_add_hit);
   ++ num_hits;
 };

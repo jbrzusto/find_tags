@@ -248,13 +248,12 @@ void Tag_Candidate::dump_bursts(string prefix) {
   while (p != pulses.end()) {
     if (++hit_count == 1) {
       // first hit, so start a run
-      run_id = filer->begin_run(tag->motusID);
+      run_id = filer->begin_run(tag->motusID, prefix.c_str()[0]-'0');
     }
     Timestamp ts = p->ts;
     calculate_burst_params(p);
     filer->add_hit(
                    run_id,
-                   prefix.c_str()[0],
                    ts,
                    burst_par.sig,
                    burst_par.sig_sd,
