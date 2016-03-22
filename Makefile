@@ -6,12 +6,12 @@ CXX=~john/bin/gfilt
 ##PROFILING=-g -pg
 
 ## DEBUG FLAGS:
-##CPPFLAGS=-Wall -Wno-sign-compare -g3 -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS) -I/home/src/boost_1_54_0
+##CPPFLAGS=-Wall -Wno-sign-compare -g3 -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS) -I/usr/local/include/boost_1.60
 
 ## PRODUCTION FLAGS:
-CPPFLAGS=-Wall -Wno-sign-compare -O3 -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS) -I/home/src/boost_1_54_0
+CPPFLAGS=-Wall -Wno-sign-compare -O3 -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS)  -I/usr/local/include/boost_1.60
 
-LDFLAGS=-ldl -lrt -lboost_serialization -lsqlite3
+LDFLAGS=-ldl -lrt -L /usr/local/lib/boost_1.60 -lboost_serialization -lsqlite3
 PROGRAM_VERSION=\""$(shell git describe)\""
 PROGRAM_BUILD_TS=$(shell date +%s)
 

@@ -13,7 +13,11 @@
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/list.hpp>
 #include <boost/serialization/map.hpp>
+#include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/set.hpp>
+#include <boost/serialization/unordered_set.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/vector.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/config.hpp>
 #include <boost/mpl/eval_if.hpp>
@@ -145,137 +149,6 @@ public:
     ar & BOOST_SERIALIZATION_NVP( hist );
     ar & BOOST_SERIALIZATION_NVP( cron );
   };  
-};
-
-
-// serialize std::unordered_set
-
-template< class Member >
-void serialize(
-               boost::archive::binary_oarchive &ar,
-               std::unordered_set < Member > &s,
-               const unsigned int file_version
-               ){
-  save(ar, s, file_version);
-};
-
-template< class Member >
-void serialize(
-               boost::archive::binary_iarchive &ar,
-               std::unordered_set < Member > &s,
-               const unsigned int file_version
-               ){
-  load(ar, s, file_version);
-};
-
-template< class Member >
-void save(boost::archive::binary_oarchive & ar, std::unordered_set < Member > & s, const unsigned int version) {
-  
-  size_t n = s.size();
-  ar & BOOST_SERIALIZATION_NVP( n );
-  for (auto i = s.begin(); i != s.end(); ++i)
-    ar & make_nvp("m", *i);
-};
-
-template<class Archive, class Member>
-void load(Archive & ar, std::unordered_set < Member > & s, const unsigned int version) {
-
-  size_t n;
-  ar & BOOST_SERIALIZATION_NVP( n );
-  for (size_t i = 0; i < n; ++i) {
-    Member m;
-    ar & BOOST_SERIALIZATION_NVP( m );
-    s.insert(m);
-  }
-};
-
-// serialize std::unordered_multiset
-
-template< class Member >
-void serialize(
-               boost::archive::binary_oarchive &ar,
-               std::unordered_multiset < Member > &s,
-               const unsigned int file_version
-               ){
-  save(ar, s, file_version);
-};
-
-template< class Member >
-void serialize(
-               boost::archive::binary_iarchive &ar,
-               std::unordered_multiset < Member > &s,
-               const unsigned int file_version
-               ){
-  load(ar, s, file_version);
-};
-
-
-template< class Member >
-void save(boost::archive::binary_oarchive & ar, std::unordered_multiset < Member > & s, const unsigned int version) {
-  
-  size_t n = s.size();
-  ar & BOOST_SERIALIZATION_NVP( n );
-  for (auto i = s.begin(); i != s.end(); ++i)
-    ar & make_nvp("m", *i);
-};
-
-template<class Archive, class Member>
-void load(Archive & ar, std::unordered_multiset < Member > & s, const unsigned int version) {
-
-  size_t n;
-  ar & BOOST_SERIALIZATION_NVP( n );
-  for (size_t i = 0; i < n; ++i) {
-    Member m;
-    ar & BOOST_SERIALIZATION_NVP( m );
-    s.insert(m);
-  }
-};
-
-// serialize std::unordered_multimap
-
-template< class Key, class Value >
-void serialize(
-               boost::archive::binary_oarchive &ar,
-               std::unordered_multimap < Key, Value > &s,
-               const unsigned int file_version
-               ){
-  save(ar, s, file_version);
-};
-
-template< class Key, class Value >
-void serialize(
-               boost::archive::binary_iarchive &ar,
-               std::unordered_multimap < Key, Value > &s,
-               const unsigned int file_version
-               ){
-  load(ar, s, file_version);
-};
-
-
-template< class Key, class Value >
-void save(boost::archive::binary_oarchive & ar, std::unordered_multimap < Key, Value > & s, const unsigned int version) {
-  
-  size_t n = s.size();
-  ar & BOOST_SERIALIZATION_NVP( n );
-  for (auto i = s.begin(); i != s.end(); ++i) {
-    ar & make_nvp("k", i->first);
-    ar & make_nvp("v", i->second);
-  };
-
-};
-
-template<class Archive, class Key, class Value>
-void load(Archive & ar, std::unordered_multimap < Key, Value > & s, const unsigned int version) {
-
-  size_t n;
-  ar & BOOST_SERIALIZATION_NVP( n );
-  for (size_t i = 0; i < n; ++i) {
-    Key k;
-    Value v;
-    ar & BOOST_SERIALIZATION_NVP( k );
-    ar & BOOST_SERIALIZATION_NVP( v );
-    s.insert(std::make_pair(k, v));
-  }
 };
 
 #endif // TAG_FORAY
