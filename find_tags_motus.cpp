@@ -623,10 +623,8 @@ main (int argc, char **argv) {
 
       Tag_Foray foray;
       
-      if (resume) {
-        Tag_Foray::resume(foray, pulses);
-        resume = false; // don't resume if we hit a new bootnum
-      } else {
+      if (! resume || ! Tag_Foray::resume(foray, pulses)) {
+        // either not asked to resume, or resume failed (e.g. no resume state saved)
         foray = Tag_Foray(& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing, unsigned_dfreq);
       }
       if (graph_only) {
@@ -639,9 +637,8 @@ main (int argc, char **argv) {
         exit(0);
       }
       foray.start();
-      std::cerr << "Max num candidates: " << Tag_Candidate::get_max_num_cands() << " at " << std::setprecision(14) << Tag_Candidate::get_max_cand_time() << "; now: " << Tag_Candidate::get_num_cands() << std::endl;
+      std::cerr << "Max num candidates: " << Tag_Candidate::get_max_num_cands() << " at " << std::setprecision(14) << Tag_Candidate::get_max_cand_time() << "; now (" << foray.last_seen() << "): " << Tag_Candidate::get_num_cands() << std::endl;
       foray.pause();
-      dbf.end_batch();
     }
     catch (std::runtime_error e) {
       std::cerr << e.what() << std::endl;

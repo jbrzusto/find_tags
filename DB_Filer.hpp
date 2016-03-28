@@ -30,7 +30,7 @@ public:
 
   void begin_batch(int bootnum); // start new batch; uses 1 + ID of latest ended batch
 
-  void end_batch(); //!< end current batch
+  void end_batch(Timestamp tsBegin, Timestamp tsEnd); //!< end current batch
 
   void add_ambiguity(Motus_Tag_ID proxyID, Motus_Tag_ID mid); // add a motus tag ID to a proxy group, given by proxyID, which is negative
 

@@ -11,7 +11,9 @@ Set::label() const {
 };
 
 Set::~Set() {
+#ifdef DEBUG
   allSets.erase(this);
+#endif
   --_numSets;
 };
 
@@ -21,13 +23,17 @@ Set::numSets() {
 };
   
 Set::Set() : s(), _label(maxLabel++) , hash(0) {
+#ifdef DEBUG
   allSets.insert(this);
+#endif
   ++_numSets;
 };
 
 Set::Set(TagPhase p) : s(), _label(maxLabel++), hash(hashTP(p)) {
     s.insert(p);
+#ifdef DEBUG
     allSets.insert(this); 
+#endif
     ++_numSets;
 };
 
@@ -115,6 +121,7 @@ Set::cloneReduce(TagPhase p) {
   return ns;
 };
 
+#ifdef DEBUG
 void
 Set::dumpAll() {
   for (auto i = allSets.begin(); i != allSets.end(); ++i) {
@@ -124,6 +131,7 @@ Set::dumpAll() {
     }
   }
 };
+#endif
 
 void
 Set::dump() const {
@@ -138,10 +146,13 @@ Set::dump() const {
 
 void
 Set::init() {
-  allSets = std::set < Set * > ();
   _empty = new Set();
-  allSets.insert(_empty);
   ++_numSets;
+
+#ifdef DEBUG
+  allSets = std::set < Set * > ();
+  allSets.insert(_empty);
+#endif
 };
 
 bool
@@ -162,6 +173,8 @@ Set::hashTP (TagPhase tp) {
 };
 
 Set * Set::_empty = 0;
+#ifdef DEBUG
 std::set < Set * > Set::allSets = std::set < Set * > ();
+#endif
 int Set::_numSets = 0;
 int Set::maxLabel = 0;

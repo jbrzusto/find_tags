@@ -87,7 +87,7 @@ public:
 
   bool shares_any_pulses(Tag_Candidate *tc);
 
-  bool expired(const Pulse &p); //!< has tag candidate expired, either due to a long time lag or a tag event which has deleted its state?
+  bool expired(Timestamp ts); //!< has tag candidate expired, either due to a long time lag or a tag event which has deleted its state?
 
   Node * advance_by_pulse(const Pulse &p);
 

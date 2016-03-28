@@ -36,7 +36,7 @@ class Tag_Foray {
 public:
 
   Tag_Foray (); //!< default ctor to give object into which resume() deserializes
-  
+  ~Tag_Foray (); //!< dtor which deletes Tag_Finders and their confirmed candidates, so runs are correctly ended
   Tag_Foray (Tag_Database * tags, Data_Source * data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq=false);
 
   void start();                 // begin searching for tags
@@ -64,6 +64,8 @@ public:
   Tag_Database * tags;               // registered tags on all known nominal frequencies
 
   Timestamp now();                   // return time now as double timestamp
+
+  Timestamp last_seen() {return ts;}; // return last timestamp seen on input
 
 protected:
                                      // settings
@@ -121,7 +123,8 @@ protected:
   History *hist;
   Ticker cron;
 
-  double ts; // last timestamp parsed from input file
+  double ts;      // last timestamp parsed from input file
+  double tsBegin; // first timestamp parsed from input file
 
   static Gap default_pulse_slop;
   static float default_clock_fuzz;

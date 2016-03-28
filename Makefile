@@ -9,7 +9,7 @@ CXX=~john/bin/gfilt
 ##CPPFLAGS=-Wall -Wno-sign-compare -g3 -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS) -I/usr/local/include/boost_1.60
 
 ## PRODUCTION FLAGS:
-CPPFLAGS=-Wall -Wno-sign-compare -O3 -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS)  -I/usr/local/include/boost_1.60
+CPPFLAGS=-Wall -Wno-sign-compare -g3 -O3 -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS)  -I/usr/local/include/boost_1.60
 
 LDFLAGS=-ldl -lrt -L /usr/local/lib/boost_1.60 -lboost_serialization -lsqlite3
 PROGRAM_VERSION=\""$(shell git describe)\""
@@ -78,3 +78,8 @@ testAddRemoveTag.o: testAddRemoveTag.cpp Graph.o Tag_Database.o Freq_Setting.o D
 
 testAddRemoveTag: testAddRemoveTag.o Tag_Database.o Tag.o Node.o Set.o Graph.o Freq_Setting.o History.o Ticker.o Ambiguity.o DB_Filer.o Tag_Candidate.o
 	g++ $(PROFILING) -o testAddRemoveTag $^ $(LDFLAGS)
+
+testum.o: testum.cpp
+
+testum: testum.o
+	g++ $(PROFILING) -o $@ $^ $(LDFLAGS)

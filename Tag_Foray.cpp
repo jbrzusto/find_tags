@@ -4,7 +4,12 @@
 #include <sstream>
 #include <time.h>
 
-Tag_Foray::Tag_Foray () : hist(0) {}; // default ctor for deserializing into
+Tag_Foray::Tag_Foray () :  // default ctor for deserializing into
+  line_no(0),   // line numbers reset even when resuming
+  hist(0),      // we recreate history on resume
+  ts(0),        // end and start timestamps for new batch set to 0
+  tsBegin(0)
+{};
 
 Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq) :
   tags(tags),
@@ -22,7 +27,9 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   clock_fuzz(default_clock_fuzz),
   max_skipped_time(default_max_skipped_time),
   hist(tags->get_history()),
-  cron(hist->getTicker())
+  cron(hist->getTicker()),
+  ts(0),
+  tsBegin(0)
 {
   // create one empty graph for each nominal frequency
   auto fs = tags->get_nominal_freqs();
@@ -30,6 +37,11 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
     graphs.insert(std::make_pair(*i, new Graph()));
 };
 
+
+Tag_Foray::~Tag_Foray () {
+  for (auto tfi = tag_finders.begin(); tfi != tag_finders.end(); ++tfi)
+    delete (tfi->second);
+};
 
 void
 Tag_Foray::set_default_pulse_slop_ms(float pulse_slop_ms) {
@@ -73,7 +85,7 @@ Tag_Foray::start() {
              G,1458001712,44.34021,-66.118733333,21.6
                  ts        lat        lon        alt
           */
-          double ts, lat, lon, alt;
+          double lat, lon, alt;
           if (4 == sscanf(buf+2, "%lf,%lf,%lf,%lf", &ts, &lat, &lon, &alt)) {
             // line is okay, so file it
             Tag_Candidate::filer-> add_GPS_fix( ts, lat, lon, alt );
@@ -155,8 +167,9 @@ Tag_Foray::start() {
       default:
         break;
       }
+      if (! tsBegin)
+        tsBegin = ts;
   }
-  Tag_Candidate::ending_batch = true;
 };
 
 void
@@ -234,10 +247,26 @@ Tag_Foray::Run_Cand_Counter Tag_Foray::num_cands_with_run_id_ = Run_Cand_Counter
 
 void
 Tag_Foray::pause() {
-  // make an archive;
+  // serialize and save state of the tag finder
   // this is the top-level of the serializer,
   // so we dump class static members from here.
+
+  // before doing so, reap candidates from all tag finders so
+  // we finish runs which have expired. (needed e.g. when no
+  // pulses have been received for an antenna in a long time)
+  for (auto tfi = tag_finders.begin(); tfi != tag_finders.end(); ++tfi)
+    tfi->second->reap(ts);
+
+  // Now when destructors are called for remaining (non-expired)
+  // tag candidates, we do *not* want to actually end the run,
+  // as it might continue in the next batch of data.  Indicate
+  // this.
+
+  Tag_Candidate::ending_batch = true;
+
   std::ostringstream ofs;
+
+  Tag_Candidate::filer->end_batch(tsBegin, ts);
 
   {
     // block to ensure oa dtor is called
@@ -265,7 +294,9 @@ Tag_Foray::pause() {
     oa << make_nvp("_numSets", Set::_numSets);
     oa << make_nvp("maxLabel", Set::maxLabel);
     oa << make_nvp("_empty", Set::_empty);
+#ifdef DEBUG
     oa << make_nvp("allSets", Set::allSets);
+#endif
 
     // Tag_Candidate
     oa << make_nvp("freq_slop_kHz", Tag_Candidate::freq_slop_kHz);
@@ -307,11 +338,12 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data) {
   Timestamp lastLineTS;
   std::string blob;
   
-  Tag_Candidate::filer->
+  if (! Tag_Candidate::filer->
     load_findtags_state( paused,
                          lastLineTS,
                          blob                      // serialized state
-                         );
+                         ))
+    return false;
 
   std::istringstream ifs (blob);
   boost::archive::binary_iarchive ia(ifs);
@@ -338,7 +370,9 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data) {
   ia >> make_nvp("_numSets", Set::_numSets);
   ia >> make_nvp("maxLabel", Set::maxLabel);
   ia >> make_nvp("_empty", Set::_empty);
+#ifdef DEBUG
   ia >> make_nvp("allSets", Set::allSets);
+#endif
 
   // Tag_Candidate
   ia >> make_nvp("freq_slop_kHz", Tag_Candidate::freq_slop_kHz);
@@ -358,6 +392,7 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data) {
   tf.data = data;
 
   data->serialize(ia, 1);
+
   return true;
 };
 

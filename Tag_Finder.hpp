@@ -42,6 +42,8 @@ public:
 
   Nominal_Frequency_kHz nom_freq;
 
+  Timestamp last_reap;  // last timestamp at which full candidate list was checked for expiry
+
   // - internal representation of tag database
   // the set of tags at a single nominal frequency is a "TagSet"
 
@@ -76,6 +78,9 @@ public:
 
   void rename_tag(std::pair < Tag *, Tag * > tp);
 
+  void reap(Timestamp now); //!< reap all tag candidates which have expired by time now; used in case pulse stream from a given
+  // slot ends, so we can free up memory and correctly end runs.
+
 public:
   
   // public serialize function.
@@ -84,6 +89,7 @@ public:
   void serialize(Archive & ar, const unsigned int version)
   {
     ar & BOOST_SERIALIZATION_NVP( owner );
+    ar & BOOST_SERIALIZATION_NVP( last_reap );
     ar & BOOST_SERIALIZATION_NVP( graph );
     ar & BOOST_SERIALIZATION_NVP( cands );
     ar & BOOST_SERIALIZATION_NVP( prefix );

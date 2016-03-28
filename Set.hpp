@@ -24,7 +24,9 @@ protected:
   static int _numSets;
   static int maxLabel;
   static Set * _empty;
+#ifdef DEBUG
   static std::set < Set * > allSets;
+#endif
 
 public:
   static Set * empty();
@@ -50,7 +52,9 @@ public:
   Set * cloneAugment(TagPhase p);
   Set * cloneReduce(TagPhase p);
 
+#ifdef DEBUG
   static void dumpAll();
+#endif
 
   void dump() const;
     

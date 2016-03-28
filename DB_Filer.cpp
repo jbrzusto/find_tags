@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 
-DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int  bootnum, double minGPSdt): 
+DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int  bootnum, double minGPSdt):
   prog_name(prog_name),
   num_hits(0),
   num_steps(0),
@@ -17,13 +17,13 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
         "Output database file does not exist.");
 
   sqlite3_exec(outdb,
-               "pragma journal_mode=wal; pragma cache_size=200000;",
+               "pragma cache_size=200000;",
                0,
                0,
                0);
-  
+
   string msg = "SQLite output database does not have valid 'batches' table.";
-  
+
   Check( sqlite3_prepare_v2(outdb,
                             q_begin_batch,
                             -1,
@@ -31,20 +31,20 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
                             0),
          msg);
 
-  Check( sqlite3_prepare_v2(outdb, 
+  Check( sqlite3_prepare_v2(outdb,
                             q_end_batch,
                             -1,
                             &st_end_batch,
                             0),
          msg);
 
-  Check( sqlite3_prepare_v2(outdb, 
+  Check( sqlite3_prepare_v2(outdb,
                             q_drop_saved_state,
                             -1,
                             &st_drop_saved_state,
                             0),
          "SQLite output database does not have valid 'batchState' table.");
-  
+
   msg = "output DB table 'runs' is invalid";
   Check( sqlite3_prepare_v2(outdb, q_begin_run,
                             -1, &st_begin_run, 0), msg);
@@ -73,36 +73,14 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
         msg);
   sqlite3_bind_text(st_check_batchprog, 1, prog_name.c_str(), -1, SQLITE_TRANSIENT);
 
-  int rv = Check(sqlite3_step(st_check_batchprog), SQLITE_DONE, SQLITE_ROW, msg);
-
-  if (rv == SQLITE_DONE || 
-      (rv == SQLITE_ROW && string((const char *) sqlite3_column_text(st_check_batchprog, 0)) != prog_version)) {
-    // program version has changed since latest batchID for which it was recorded,
-    // so record new value
-    sprintf(qbuf, 
-          "insert into batchProgs (batchID, progName, progVersion, progBuildTS) \
-                           values (%d,      '%s',     '%s',        %f)",
-          bid,
-          prog_name.c_str(),
-          prog_version.c_str(),
-          prog_ts);
-  
-    Check( sqlite3_exec(outdb,
-                        qbuf,
-                        0,
-                        0,
-                        0),
-           msg);
-  }
-
   msg = "output DB does not have valid 'batchParams' table.";
-  Check( sqlite3_prepare_v2(outdb, 
+  Check( sqlite3_prepare_v2(outdb,
                             "select paramVal from batchParams where progName = ? and paramName = ? order by batchID desc limit 1",
                             -1, &st_check_param, 0),
          msg);
   sqlite3_bind_text(st_check_param, 1, prog_name.c_str(), -1, SQLITE_TRANSIENT);
 
-  Check( sqlite3_prepare_v2(outdb, 
+  Check( sqlite3_prepare_v2(outdb,
                             "insert into batchParams (batchID, progName, paramName, paramVal) \
                                            values (?,       ?,        ?,         ?)",
                             -1, &st_add_param, 0),
@@ -132,19 +110,40 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
 
   Check ( sqlite3_prepare_v2(outdb, q_save_findtags_state, -1, & st_save_findtags_state, 0), ftsm);
   sqlite3_bind_text(st_save_findtags_state, 2, prog_name.c_str(), -1, SQLITE_TRANSIENT);
-  
+
   Check ( sqlite3_prepare_v2(outdb, q_load_findtags_state, -1, & st_load_findtags_state, 0), ftsm);
   sqlite3_bind_text(st_load_findtags_state, 1, prog_name.c_str(), -1, SQLITE_TRANSIENT);
 
   begin_tx();
   begin_batch(bootnum);
 
+  int rv = Check(sqlite3_step(st_check_batchprog), SQLITE_DONE, SQLITE_ROW, msg);
+
+  if (rv == SQLITE_DONE ||
+      (rv == SQLITE_ROW && string((const char *) sqlite3_column_text(st_check_batchprog, 0)) != prog_version)) {
+    // program version has changed since latest batchID for which it was recorded,
+    // so record new value
+    sprintf(qbuf,
+          "insert into batchProgs (batchID, progName, progVersion, progBuildTS) \
+                           values (%d,      '%s',     '%s',        %f)",
+          bid,
+          prog_name.c_str(),
+          prog_version.c_str(),
+          prog_ts);
+
+    Check( sqlite3_exec(outdb,
+                        qbuf,
+                        0,
+                        0,
+                        0),
+           msg);
+  }
+
 };
 
 
 DB_Filer::~DB_Filer() {
 
-  end_batch();
   end_tx();
   sqlite3_exec(outdb,
                "pragma journal_mode=delete;",
@@ -166,7 +165,7 @@ DB_Filer::~DB_Filer() {
 };
 
 const char *
-DB_Filer::q_begin_run = 
+DB_Filer::q_begin_run =
  "insert into runs (runID, batchIDbegin, motusTagID, ant) \
             values (?,     ?,            ?,          ?)";
 
@@ -181,7 +180,7 @@ DB_Filer::begin_run(Motus_Tag_ID mid, int ant) {
 
 const char *
 DB_Filer::q_end_run = "update runs set len=?, batchIDend=? where runID=?";
-//                                  1       2              3 
+//                                  1       2              3
 void
 DB_Filer::end_run(Run_ID rid, int n, bool countOnly) {
   sqlite3_bind_int(st_end_run, 1, n); // bind number of hits in run
@@ -194,7 +193,7 @@ DB_Filer::end_run(Run_ID rid, int n, bool countOnly) {
 };
 
 const char *
-DB_Filer::q_add_hit = 
+DB_Filer::q_add_hit =
 "insert into hits (batchID, runID, ts, sig, sigSD, noise, freq, freqSD, slop, burstSlop) \
          values   (?,       ?,     ?,  ?,   ?,     ?,     ?,    ?,      ?,    ?)";
 //               1       2     3  4    5     6     7    8      9     10
@@ -216,7 +215,7 @@ DB_Filer::add_hit(Run_ID rid, double ts, float sig, float sigSD, float noise, fl
 };
 
 const char *
-DB_Filer::q_add_GPS_fix = 
+DB_Filer::q_add_GPS_fix =
 "insert or ignore into gps (ts, batchID, gpsts, lat, lon, alt) \
                      values(?,  ?,       null,  ?,   ?,   ?)";
 //                       1   2             3   4    5
@@ -260,7 +259,7 @@ DB_Filer::add_param(const string &name, double value) {
     sqlite3_bind_int(st_add_param, 1, bid);
     // we use SQLITE_TRANSIENT in the following to make a copy, otherwise
     // the caller's copy might be destroyed before this transaction is committed
-    sqlite3_bind_text(st_add_param, 2, prog_name.c_str(), -1, SQLITE_TRANSIENT); 
+    sqlite3_bind_text(st_add_param, 2, prog_name.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(st_add_param, 3, name.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_double(st_add_param, 4, value);
     step_commit(st_add_param);
@@ -269,8 +268,8 @@ DB_Filer::add_param(const string &name, double value) {
 
 int
 DB_Filer::Check(int code, int wants, int wants2, int wants3, const std::string & err) {
-  if (code == wants 
-      || (wants2 != -1 && code == wants2) 
+  if (code == wants
+      || (wants2 != -1 && code == wants2)
       || (wants3 != -1 && code == wants3))
     return code;
   throw std::runtime_error(err + "\nSqlite error: " + sqlite3_errmsg(outdb));
@@ -279,13 +278,13 @@ DB_Filer::Check(int code, int wants, int wants2, int wants3, const std::string &
 
 // start new batch; uses 1 + ID of latest ended batch
 
-const char * 
+const char *
 DB_Filer::q_begin_batch = "insert into batches (monoBN, ts) values (?, ?)";
 
 const char *
 DB_Filer::q_drop_saved_state = "delete from batchState where batchID=?";
 
-void 
+void
 DB_Filer::begin_batch(int bootnum) {
   num_hits = 0;
 
@@ -302,12 +301,14 @@ DB_Filer::begin_batch(int bootnum) {
 };
 
 const char *
-DB_Filer::q_end_batch = "update batches set numHits=? where batchID=?";
-
+DB_Filer::q_end_batch = "update batches set tsBegin=?, tsEnd=?, numHits=? where batchID=?";
+//                                     1         2       3             4
 void
-DB_Filer::end_batch() {
-  sqlite3_bind_int64(st_end_batch, 1, num_hits);
-  sqlite3_bind_int(st_end_batch, 2, bid);
+DB_Filer::end_batch(Timestamp tsBegin, Timestamp tsEnd) {
+  sqlite3_bind_double(st_end_batch, 1, tsBegin);
+  sqlite3_bind_double(st_end_batch, 2, tsEnd);
+  sqlite3_bind_int64(st_end_batch, 3, num_hits);
+  sqlite3_bind_int(st_end_batch, 4, bid);
   step_commit(st_end_batch);
 };
 
@@ -324,7 +325,7 @@ DB_Filer::end_tx() {
 void
 DB_Filer::add_ambiguity(Motus_Tag_ID proxyID, Motus_Tag_ID mid) {
   // proxyID must be a negative integer
-  // add mid to its ambiguity group.  
+  // add mid to its ambiguity group.
   if (proxyID >= 0)
     throw std::runtime_error("Called add_ambiguity with non-negative proxyID");
   sqlite3_reset(st_add_ambig);
@@ -335,7 +336,7 @@ DB_Filer::add_ambiguity(Motus_Tag_ID proxyID, Motus_Tag_ID mid) {
 };
 
 const char *
-DB_Filer::q_save_findtags_state = 
+DB_Filer::q_save_findtags_state =
   "insert into batchState (batchID, progName, monoBN, tsData, tsRun, state, lastfileID, lastCharIndex)\
                    values (?,       ?,        ?,      ?,      ?,     ?,     -1,         -1);";
   //                     1       2        3      4      5      6     7          8
@@ -356,18 +357,17 @@ DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string sta
 };
 
 const char *
-DB_Filer::q_load_findtags_state = "select batchID, monoBN, tsData, tsRun, state from batchState where progName=? order by tsRun desc limit 1;";
-//                                    0       1      2      3     4 
-          
+DB_Filer::q_load_findtags_state = "select batchID, tsData, tsRun, state from batchState where progName=? order by tsRun desc limit 1;";
+//                                    0      1      2     3
+
 bool
 DB_Filer::load_findtags_state(Timestamp & tsData, Timestamp & tsRun, std::string & state) {
   sqlite3_reset(st_load_findtags_state);
   if (SQLITE_DONE == sqlite3_step(st_load_findtags_state))
     return false; // no saved state
   bid = 1 + sqlite3_column_int   (st_load_findtags_state, 0);
-  bootnum = sqlite3_column_int   (st_load_findtags_state, 1);
-  tsData = sqlite3_column_double (st_load_findtags_state, 2);
-  tsRun = sqlite3_column_double  (st_load_findtags_state, 3);
-  state = std::string(reinterpret_cast < const char * > (sqlite3_column_blob(st_load_findtags_state, 4)), sqlite3_column_bytes(st_load_findtags_state, 4));
+  tsData = sqlite3_column_double (st_load_findtags_state, 1);
+  tsRun = sqlite3_column_double  (st_load_findtags_state, 2);
+  state = std::string(reinterpret_cast < const char * > (sqlite3_column_blob(st_load_findtags_state, 3)), sqlite3_column_bytes(st_load_findtags_state, 3));
   return true;
 };

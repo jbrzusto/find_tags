@@ -25,7 +25,7 @@ Tag_Candidate::Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse)
 };
 
 Tag_Candidate::~Tag_Candidate() {
-  if (tag_id_level == CONFIRMED) {
+  if (tag_id_level == CONFIRMED && run_id > 0) {
     int n = Tag_Foray::num_cands_with_run_id(run_id, -1);
     if (n == 0)
       filer -> end_run(run_id, hit_count, ending_batch);
@@ -42,7 +42,6 @@ Tag_Candidate::clone() {
   }
   if (tc->tag_id_level == CONFIRMED)
     Tag_Foray::num_cands_with_run_id(run_id, 1);
-
   return tc;
 };
   
@@ -74,12 +73,17 @@ bool Tag_Candidate::shares_any_pulses(Tag_Candidate *tc) {
   return false;
 };
   
-bool Tag_Candidate::expired(const Pulse &p) {
+bool Tag_Candidate::expired(Timestamp ts) {
+  if (! state) {
+    std::cerr << "whoops - checking for expiry of Tag Candidate with NULL state!" << std::endl;
+    return true;
+  }
   if (! state->valid()) {
     state->tcUnlink();
     return true;
   }
-  return p.ts - last_ts > state->get_max_age();
+  bool rv = ts - last_ts > state->get_max_age();
+  return rv;
 };
 
 Node * Tag_Candidate::advance_by_pulse(const Pulse &p) {
@@ -306,7 +310,7 @@ Tag_Candidate::renTag(Tag * t1, Tag * t2) {
   if (tag != t1)
     return;
   // end the current run for t1
-  if (hit_count > 0) {
+  if (hit_count > 0 && run_id > 0) {
     filer -> end_run(run_id, hit_count);
   }
   hit_count = 0;
