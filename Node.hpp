@@ -42,6 +42,8 @@ public:
   
   Gap get_max_age();  //!< maximum gap value for which there's an edge to another node
 
+  Gap get_min_age();  //!< minimum gap value for which there's an edge to another node
+
   Phase get_phase(); //!< return the phase for the (presumed unique) tag int his set
   Tag * get_tag(); //!< return the (presumed unique) tag in the set for this node
 

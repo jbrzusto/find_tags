@@ -38,7 +38,7 @@ protected:
   Tag_Finder    *owner;
   Node	        *state;		 // where in the appropriate DFA I am
   Pulse_Buffer	 pulses;	 // pulses in the path so far
-  Timestamp	 last_ts;        // timestamp of last pulse in last burst
+  Timestamp	 last_ts;        // timestamp of last pulse accepted by this candidate
   Timestamp	 last_dumped_ts; // timestamp of last pulse in last dumped burst (used to calculate burst slop when dumping)
   Tag   	 *tag;            // current unique tag ID, if confirmed, or BOGUS_TAG when more than one is compatible
   Tag_ID_Level   tag_id_level;   // how well-resolved is the current tag ID?
@@ -88,6 +88,8 @@ public:
   bool shares_any_pulses(Tag_Candidate *tc);
 
   bool expired(Timestamp ts); //!< has tag candidate expired, either due to a long time lag or a tag event which has deleted its state?
+
+  Timestamp min_next_pulse_ts(); //!< return minimum timestamp of next pulse this candidate would accept
 
   Node * advance_by_pulse(const Pulse &p);
 

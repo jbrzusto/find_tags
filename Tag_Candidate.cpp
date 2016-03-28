@@ -73,7 +73,8 @@ bool Tag_Candidate::shares_any_pulses(Tag_Candidate *tc) {
   return false;
 };
   
-bool Tag_Candidate::expired(Timestamp ts) {
+bool
+Tag_Candidate::expired(Timestamp ts) {
   if (! state) {
     std::cerr << "whoops - checking for expiry of Tag Candidate with NULL state!" << std::endl;
     return true;
@@ -86,7 +87,14 @@ bool Tag_Candidate::expired(Timestamp ts) {
   return rv;
 };
 
-Node * Tag_Candidate::advance_by_pulse(const Pulse &p) {
+Timestamp
+Tag_Candidate::min_next_pulse_ts() {
+  return last_ts + state->get_min_age();
+};
+
+
+Node * 
+Tag_Candidate::advance_by_pulse(const Pulse &p) {
 
   if (! ( freq_range.is_compatible(p.dfreq)
 	  && sig_range.is_compatible(p.sig)))
@@ -98,7 +106,8 @@ Node * Tag_Candidate::advance_by_pulse(const Pulse &p) {
   return state->advance(gap);
 }
 
-bool Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
+bool
+Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
 
   /*
     Add this pulse to the tag candidate, given the new state this

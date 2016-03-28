@@ -22,7 +22,11 @@ class Tag_Finder;
 #include "Tag_Candidate.hpp"
 
 // Set of running DFAs representing possible tags burst sequences
-typedef std::list < Tag_Candidate * > Cand_List;
+//typedef std::list < Tag_Candidate * > Cand_List;
+
+// candidate list sorted in order of smallest gap they are ready
+// to accept
+typedef std::map < Gap, Tag_Candidate * > Cand_List;
 
 typedef std::vector < Cand_List > Cand_List_Vec;
 
@@ -36,7 +40,7 @@ class Tag_Finder {
 
 public:
 
-  static const int NUM_CAND_LISTS = 4; // 3 levels of tag candidates: 0 = confirmed, 1 = single ID, 2 = multiple ID, 3 = clones
+  static const int NUM_CAND_LISTS = 3; // 3 levels of tag candidates: 0 = confirmed, 1 = single ID, 2 = multiple ID
 
   Tag_Foray * owner;
 

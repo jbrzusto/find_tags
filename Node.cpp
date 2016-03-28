@@ -127,6 +127,15 @@ Node::get_max_age() {
   return 0;
 };
 
+Gap
+Node::get_min_age() {
+  auto i = e.begin();
+  ++i;
+  if (std::isfinite(i->first))
+    return i->first;
+  return 0;
+};
+
 Tag * 
 Node::get_tag() {
   if (s == Set::empty())
