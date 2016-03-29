@@ -483,7 +483,7 @@ main (int argc, char **argv) {
 
     int pulses_to_confirm = PULSES_PER_BURST;
     float sig_slop_dB = 10;
-    Frequency_Offset_kHz freq_slop_kHz = 2.0;       // (kHz) maximum allowed frequency bandwidth of a burst
+    Frequency_Offset_kHz freq_slop_kHz = 0.5;       // (kHz) maximum allowed frequency bandwidth of a burst
     long long bootNum = 1; // default boot number
 
     while ((c = getopt_long(argc, argv, short_options, long_options, &option_index)) != -1) {
