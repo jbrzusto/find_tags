@@ -119,33 +119,13 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
   pulses.push_back(p);
   last_ts = p.ts;
 
-
-  bool pulse_completes_burst = num_pulses > 0 && new_state->get_phase() % num_pulses == num_pulses - 1;
-
-  // Extend the range of signal strengths seen in this burst, but
-  // only if this is not the last pulse in a burst.  The range and
-  // orientation of antennas can change significantly between
-  // bursts, so we don't want to enforce signal strength
-  // uniformity across bursts, hence we reset the bounds after
-  // each burst.  For frequency offset, the change from burst to burst
-  // will be smaller, as it is due to slowly-varying temperature changes
-  // and a bit to dopller effects, so for frequency, we recentre the bounded
-  // range after each burst.
-
-  if (pulse_completes_burst) {
-    sig_range.clear_bounds();
-    freq_range.pin_to_centre(); // range can now grow in either direction from centre of current range.
-  } else {
-    sig_range.extend_by(p.sig);
-    freq_range.extend_by(p.dfreq);
-  }
-
   // adjust use counts for states
   new_state->tcLink();
   state->tcUnlink();
 
   state = new_state;
-      
+
+  bool pulse_completes_burst = false;
   // see whether our level of ID confirmation has changed
 
   switch (tag_id_level) {
@@ -164,18 +144,36 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     break;
 
   case SINGLE:
-    if (pulses.size() >= pulses_to_confirm_id) {
+    if (pulses.size() >= pulses_to_confirm_id)
       tag_id_level = CONFIRMED;
-      pulse_completes_burst = true;
-    }
-    break;
+
+    // fall through
 
   case CONFIRMED:
+    pulse_completes_burst = new_state->get_phase() % num_pulses == num_pulses - 1;
     break;
 
   default:
     break;
   };
+
+  // Extend the range of signal strengths seen in this burst, but
+  // only if this is not the last pulse in a burst.  The range and
+  // orientation of antennas can change significantly between
+  // bursts, so we don't want to enforce signal strength
+  // uniformity across bursts, hence we reset the bounds after
+  // each burst.  For frequency offset, the change from burst to burst
+  // will be smaller, as it is due to slowly-varying temperature changes
+  // and a bit to dopller effects, so for frequency, we recentre the bounded
+  // range after each burst.
+
+  if (pulse_completes_burst) {
+    sig_range.clear_bounds();
+    freq_range.pin_to_centre(); // range can now grow in either direction from centre of current range.
+  } else {
+    sig_range.extend_by(p.sig);
+    freq_range.extend_by(p.dfreq);
+  }
 
   return pulse_completes_burst && tag_id_level == CONFIRMED;
 };
