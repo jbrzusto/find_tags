@@ -51,129 +51,70 @@ Tag_Finder::process(Pulse &p) {
 
   for (int i = 0; i < NUM_CAND_LISTS; ++i) {
 
-
-
     Cand_List & cs = cands[i];
+    
+    Cand_List::iterator nextci; // "next" iterator in case we need to delete current one while traversing list
 
-    //    for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); /**/ ) {
-    auto cse = cs.end();
-    for (Cand_List::iterator ci = cs.begin(); ci != cse && p.ts >= ci->first; /**/ ) {
+    for (Cand_List::iterator ci = cs.begin(); ci != cs.end() && p.ts >= ci->first; ci = nextci ) {
+      nextci = ci;
+      ++nextci;
+
+      // check whether candidate has expired
       if ((ci->second)->expired(p.ts)) {
-        Cand_List::iterator di = ci;
-        ++ci;
-        auto pdi = di->second;
-        cs.erase(di);
-        delete pdi;
+        delete ci->second;
+        cs.erase(ci);
         continue;
       }
 
-      // if the pulse has already been accepted at the "confirmed" level
-      // continue; (we're just looping to reap expired candidates)
-      if (confirmed_acceptance) {
-        ++ci;
-        continue;
-      }
-
-      // see whether this Tag Candidate can accept this pulse
+      // check whether candidate can accept this pulse
       Node * next_state = (ci->second)->advance_by_pulse(p);
 
-      if (!next_state) {
-        ++ci;
+      if (! next_state)
         continue;
-      }
+
+      // clone the candidate to fork over the "add pulse or don't add pulse" choice
 
       Tag_Candidate * clone = (ci->second)->clone();
-      //      cloned_candidates.push_back(clone);
       cloned_candidates.insert(std::make_pair(clone->min_next_pulse_ts(), clone));
 
+      // add the pulse
       if ((ci->second)->add_pulse(p, next_state)) {
         // this candidate tag just completed a burst at the CONFIRMED level
-
-        // now see what candidates should be deleted because they
-        // have the same ID or share any pulses
-
-        // We keep maintain the next value of ci, which might have
-        // to be bumped up if we delete its target because of points
-        // shared with the newly-confirmed candidate.
-        // Otherwise, we risk using an invalidated iterator on the
-        // next iteration of the inner loop.
-
-        auto nextci = ci;
-        ++nextci;
-
-        for (int j = 0; j < NUM_CAND_LISTS + 1; ++j) { // + 1 because we want to check for clones, too
-          for (Cand_List::iterator cci = cands[j].begin(); cci != cands[j].end(); /**/ ) {
-            if ((cci->second) != (ci->second)
-                && ((cci->second)->has_same_id_as(ci->second) || (cci->second)->shares_any_pulses(ci->second)))
-              {
-                Cand_List::iterator di = cci;
-                ++cci;
-                auto p = di->second;
-                if (j == i && nextci == di)
-                  ++nextci;
-                cands[j].erase(di);
-                delete p;
-              } else {
-              ++cci;
-            };
-          }
-        }
+        // So delete any other candidate for this tag, and delete any 
+        // other candidate that shares any of the same points.
+        delete_competitors(ci, nextci);
 
         // dump all complete bursts from this confirmed tag
         (ci->second)->dump_bursts(prefix);
 
-        // don't start a new candidate with this pulse
+        // mark that this pulse has been accepted by a candidate at the CONFIRMED level
         confirmed_acceptance = true;
+      } 
 
-        // if not already confirmed, add this candidate to the
-        // confirmed list so it has priority for accepting new hits
+      // this candidate has accepted a pulse, and needs to be re-indexed
+      // within its Cand_list, which might also have changed.
 
-        if (i > 0) {
-          // Cand_List &confirmed = cands[0];
-          // confirmed.splice(confirmed.end(), cs, ci);
-          nextci = ci;
-          ++nextci;
-          cands[0].insert(std::make_pair((ci->second)->min_next_pulse_ts(), ci->second));
-          cs.erase(ci);
-        }
+      cands[ci->second->tag_id_level].insert(std::make_pair((ci->second)->min_next_pulse_ts(), ci->second));
+      cs.erase(ci);
 
+      if (confirmed_acceptance) {
         // we won't try to add this pulse to other candidates
-        // so quit booth loops, unless it's time to reap
-        // stale candidates
+        // so quit booth loops
+
         i = NUM_CAND_LISTS;
         break;
-
-        // NOTE: if this algorithm changes and for some reason
-        // we no longer break from both loops here, then
-        // if the inner loop is to be continued, it must be
-        // with the nextci iterator, which has been protected
-        // from invalidation by deletion in the code above.
-        //
-        // ci = nextci;  // <- in case of not breaking out of
-        //               //    inner loop here
-
-      } else {
-        // a pulse has been accepted by this candidate; it will
-        // have to get re-ordered in its list
-        auto copyci = std::make_pair(ci->second->min_next_pulse_ts(), ci->second);
-        auto nci = ci;
-        ++nci;
-        cs.erase(ci);
-        cs.insert(copyci);
-        ci = nci;
       }
     } // continue trying letting other tag_candidates try this pulse
 
     // add any cloned candidates to the end of the list
-    //    cs.splice(cs.end(), cloned_candidates);
+
     cs.insert(cloned_candidates.begin(), cloned_candidates.end());
     cloned_candidates.clear();
   }
   // maybe start a new Tag_Candidate with this pulse
   if (! confirmed_acceptance) {
-    //    cands[2].push_back(new Tag_Candidate(this, graph->root(), p));
     auto ntc = new Tag_Candidate(this, graph->root(), p);
-    cands[2].insert(std::make_pair(ntc->min_next_pulse_ts(), ntc));
+    cands[Tag_Candidate::MULTIPLE].insert(std::make_pair(ntc->min_next_pulse_ts(), ntc));
   }
 };
 
@@ -188,6 +129,33 @@ Tag_Finder::~Tag_Finder() {
       (ci->second)->dump_bursts(prefix);
     }
     delete (ci->second);
+  }
+};
+
+void
+Tag_Finder::delete_competitors(Cand_List::iterator ci, Cand_List::iterator &nextci) {
+  // drop any candidates for the same tag as ci, or sharing any pulses
+  // with it.  We do this when ci has just accepted a pulse that completes
+  // a burst at the CONFIRMED tag_id_level
+
+  // nextci is bumped up in case we delete the candidate it points to
+
+  for (int j = 0; j < NUM_CAND_LISTS + 1; ++j) { // + 1 because we want to check for clones, too
+    for (Cand_List::iterator cci = cands[j].begin(); cci != cands[j].end(); /**/ ) {
+      if ((cci->second) != (ci->second)
+          && ((cci->second)->has_same_id_as(ci->second) || (cci->second)->shares_any_pulses(ci->second)))
+        {
+          Cand_List::iterator di = cci;
+          ++cci;
+          auto p = di->second;
+          if (nextci == di)
+            ++nextci;
+          cands[j].erase(di);
+          delete p;
+        } else {
+        ++cci;
+      };
+    }
   }
 };
 

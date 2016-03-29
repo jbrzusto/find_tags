@@ -87,6 +87,8 @@ public:
 
   void dump(Timestamp latest); //!< for debugging, dump all current candidates with numbers of pulses and min_timestamp
 
+  void delete_competitors(Cand_List::iterator ci, Cand_List::iterator &nextci); //!< delete any candidates for the same tag or sharing any pulses with * ci
+
 public:
   
   // public serialize function.
