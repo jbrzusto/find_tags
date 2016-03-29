@@ -6,7 +6,7 @@ Tag_Finder::Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, TagSe
   last_reap(0),
   tags(tags),
   graph(g),
-  cands(NUM_CAND_LISTS + 1), // extra is for clone list
+  cands(NUM_CAND_LISTS),
   prefix(prefix)
 {
 };
@@ -46,9 +46,6 @@ Tag_Finder::process(Pulse &p) {
 
   bool confirmed_acceptance = false; // has hit been accepted by a confirmed candidate?
 
-  // the clone list
-  Cand_List & cloned_candidates = cands[NUM_CAND_LISTS];
-
   for (int i = 0; i < NUM_CAND_LISTS; ++i) {
 
     Cand_List & cs = cands[i];
@@ -75,7 +72,21 @@ Tag_Finder::process(Pulse &p) {
       // clone the candidate to fork over the "add pulse or don't add pulse" choice
 
       Tag_Candidate * clone = (ci->second)->clone();
-      cloned_candidates.insert(std::make_pair(clone->min_next_pulse_ts(), clone));
+
+      // NB: DANGEROUS ASSUMPTION!!  Because we've already computed
+      // the next value for ci as nextci, inserting the clone (which
+      // has the same key as ci does before it accepts the pulse) into
+      // the same Cand_List at the position for ci *should* mean the
+      // clone is not reached on the remaining iterations of the
+      // current loop.  This assumes the hinted insert is placing the
+      // new element either before or after the hint, since they share
+      // a key.  This assumption will fail if the hinted insert method
+      // ever places the new element later in the portion of the list
+      // sharing the same key, and if the candidate pointed to
+      // by nextci also has the same key.  If the algorithm crashes
+      // due to out of memory, we'll know not to do this!
+
+      cs.insert(ci, std::make_pair(clone->min_next_pulse_ts(), clone));
 
       // add the pulse
       if ((ci->second)->add_pulse(p, next_state)) {
@@ -106,10 +117,6 @@ Tag_Finder::process(Pulse &p) {
       }
     } // continue trying letting other tag_candidates try this pulse
 
-    // add any cloned candidates to the end of the list
-
-    cs.insert(cloned_candidates.begin(), cloned_candidates.end());
-    cloned_candidates.clear();
   }
   // maybe start a new Tag_Candidate with this pulse
   if (! confirmed_acceptance) {
@@ -140,7 +147,7 @@ Tag_Finder::delete_competitors(Cand_List::iterator ci, Cand_List::iterator &next
 
   // nextci is bumped up in case we delete the candidate it points to
 
-  for (int j = 0; j < NUM_CAND_LISTS + 1; ++j) { // + 1 because we want to check for clones, too
+  for (int j = 0; j < NUM_CAND_LISTS; ++j) {
     for (Cand_List::iterator cci = cands[j].begin(); cci != cands[j].end(); /**/ ) {
       if ((cci->second) != (ci->second)
           && ((cci->second)->has_same_id_as(ci->second) || (cci->second)->shares_any_pulses(ci->second)))
