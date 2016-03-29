@@ -119,9 +119,6 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
   pulses.push_back(p);
   last_ts = p.ts;
 
-  // extend the range of frequencies seen in this run of bursts
-  // (we already know that of the new pulse is compatible)
-  freq_range.extend_by(p.dfreq);
 
   bool pulse_completes_burst = num_pulses > 0 && new_state->get_phase() % num_pulses == num_pulses - 1;
 
@@ -130,12 +127,18 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
   // orientation of antennas can change significantly between
   // bursts, so we don't want to enforce signal strength
   // uniformity across bursts, hence we reset the bounds after
-  // each burst.
+  // each burst.  For frequency offset, the change from burst to burst
+  // will be smaller, as it is due to slowly-varying temperature changes
+  // and a bit to dopller effects, so for frequency, we recentre the bounded
+  // range after each burst.
 
-  if (pulse_completes_burst)
+  if (pulse_completes_burst) {
     sig_range.clear_bounds();
-  else
+    freq_range.pin_to_centre(); // range can now grow in either direction from centre of current range.
+  } else {
     sig_range.extend_by(p.sig);
+    freq_range.extend_by(p.dfreq);
+  }
 
   // adjust use counts for states
   new_state->tcLink();

@@ -3,8 +3,10 @@
 
 template < class VALTYPE > class  Bounded_Range {
 
-  // class template for bounded ranges
-  // VALTYPE must be an ordered class closed under substraction
+  // class template for bounded ranges VALTYPE must be an ordered
+  // class closed under subtraction, and must have addition and
+  // division operators, as these are used to obtain the centre of the
+  // range.
 
   friend class Tag_Foray;
 
@@ -68,6 +70,16 @@ public:
 
   void clear_bounds() {
     have_bounds = false;
+  };
+
+  void pin_to_centre() {
+    // reset both bounds to centre of current interval.
+    // This allows the interval to grow in either direction
+    // away from that value.
+    if (! have_bounds) 
+      return;
+    VALTYPE c = (high + low) / 2.0;
+    high = low = c;
   };
 
   bool extend_by (VALTYPE p) {
