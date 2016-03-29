@@ -179,8 +179,9 @@ DB_Filer::begin_run(Motus_Tag_ID mid, int ant) {
 };
 
 const char *
-DB_Filer::q_end_run = "update runs set len=?, batchIDend=? where runID=?";
-//                                  1       2              3
+DB_Filer::q_end_run = "update runs set len=max(ifnull(len, 0), ?), batchIDend=? where runID=?";
+//DB_Filer::q_end_run = "update runs set len=?, batchIDend=? where runID=?";
+//                                            1             2           3
 void
 DB_Filer::end_run(Run_ID rid, int n, bool countOnly) {
   sqlite3_bind_int(st_end_run, 1, n); // bind number of hits in run

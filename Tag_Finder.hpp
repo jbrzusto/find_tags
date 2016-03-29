@@ -13,7 +13,7 @@
 
 class Tag_Foray;
 
-// #include "Tag_Foray.hpp"
+//#include "Tag_Foray.hpp"
 
 // forward declaration for inclusion of Tag_Candidate
 
@@ -26,7 +26,7 @@ class Tag_Finder;
 
 // candidate list sorted in order of smallest gap they are ready
 // to accept
-typedef std::map < Gap, Tag_Candidate * > Cand_List;
+typedef std::multimap < Gap, Tag_Candidate * > Cand_List;
 
 typedef std::vector < Cand_List > Cand_List_Vec;
 
@@ -84,6 +84,8 @@ public:
 
   void reap(Timestamp now); //!< reap all tag candidates which have expired by time now; used in case pulse stream from a given
   // slot ends, so we can free up memory and correctly end runs.
+
+  void dump(Timestamp latest); //!< for debugging, dump all current candidates with numbers of pulses and min_timestamp
 
 public:
   

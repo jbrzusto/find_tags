@@ -123,7 +123,8 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
   // (we already know that of the new pulse is compatible)
   freq_range.extend_by(p.dfreq);
 
-  bool pulse_completes_burst = tag_id_level == CONFIRMED && new_state->get_phase() % num_pulses == num_pulses - 1;
+  bool pulse_completes_burst = num_pulses > 0 && new_state->get_phase() % num_pulses == num_pulses - 1;
+
   // Extend the range of signal strengths seen in this burst, but
   // only if this is not the last pulse in a burst.  The range and
   // orientation of antennas can change significantly between
@@ -146,8 +147,11 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
 
   switch (tag_id_level) {
   case MULTIPLE:
+
+#ifdef DEBUG
     if (pulses.size() > pulses_to_confirm_id)
       throw std::runtime_error("Still at MULTIPLE tag_id_level but with pulses_to_confirm bursts");
+#endif
 
     if (state->is_unique()) {
       tag = state->get_tag();
@@ -157,8 +161,10 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     break;
 
   case SINGLE:
-    if (pulses.size() >= pulses_to_confirm_id)
+    if (pulses.size() >= pulses_to_confirm_id) {
       tag_id_level = CONFIRMED;
+      pulse_completes_burst = true;
+    }
     break;
 
   case CONFIRMED:

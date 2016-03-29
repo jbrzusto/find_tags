@@ -44,7 +44,7 @@ protected:
   Tag_ID_Level   tag_id_level;   // how well-resolved is the current tag ID?
 
   DB_Filer::Run_ID	run_id;	// ID for the run formed by bursts from this candidate (i.e. consecutive in-phase hits on a tag)
-  unsigned int		hit_count;	// counter of bursts output by this tag
+  unsigned int		hit_count;	// counter of bursts output by this tag candidate
 
   unsigned short num_pulses; // number of pulses in burst (once tag has been identified)
 

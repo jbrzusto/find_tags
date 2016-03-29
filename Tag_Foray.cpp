@@ -157,6 +157,9 @@ Tag_Foray::start() {
             process_event(cron.get());
 							       
           tag_finders[key]->process(p);
+#ifdef DEBUG
+          tag_finders[key]->dump(ts);
+#endif
         }
         break;
       case '!':
@@ -251,6 +254,7 @@ Tag_Foray::pause() {
   // this is the top-level of the serializer,
   // so we dump class static members from here.
 
+
   // before doing so, reap candidates from all tag finders so
   // we finish runs which have expired. (needed e.g. when no
   // pulses have been received for an antenna in a long time)
@@ -263,7 +267,6 @@ Tag_Foray::pause() {
   // this.
 
   Tag_Candidate::ending_batch = true;
-
   std::ostringstream ofs;
 
   Tag_Candidate::filer->end_batch(tsBegin, ts);

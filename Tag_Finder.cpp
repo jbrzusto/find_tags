@@ -6,7 +6,7 @@ Tag_Finder::Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, TagSe
   last_reap(0),
   tags(tags),
   graph(g),
-  cands(NUM_CAND_LISTS),
+  cands(NUM_CAND_LISTS + 1), // extra is for clone list
   prefix(prefix)
 {
 };
@@ -46,11 +46,11 @@ Tag_Finder::process(Pulse &p) {
 
   bool confirmed_acceptance = false; // has hit been accepted by a confirmed candidate?
 
-  // check lists of candidates to
+  // the clone list
+  Cand_List & cloned_candidates = cands[NUM_CAND_LISTS];
+
   for (int i = 0; i < NUM_CAND_LISTS; ++i) {
 
-    // the clone list
-    Cand_List cloned_candidates;
 
 
     Cand_List & cs = cands[i];
@@ -68,6 +68,7 @@ Tag_Finder::process(Pulse &p) {
       }
 
       // if the pulse has already been accepted at the "confirmed" level
+      // continue; (we're just looping to reap expired candidates)
       if (confirmed_acceptance) {
         ++ci;
         continue;
@@ -100,7 +101,7 @@ Tag_Finder::process(Pulse &p) {
         auto nextci = ci;
         ++nextci;
 
-        for (int j = 0; j < NUM_CAND_LISTS; ++j) {
+        for (int j = 0; j < NUM_CAND_LISTS + 1; ++j) { // + 1 because we want to check for clones, too
           for (Cand_List::iterator cci = cands[j].begin(); cci != cands[j].end(); /**/ ) {
             if ((cci->second) != (ci->second)
                 && ((cci->second)->has_same_id_as(ci->second) || (cci->second)->shares_any_pulses(ci->second)))
@@ -118,22 +119,23 @@ Tag_Finder::process(Pulse &p) {
           }
         }
 
+        // dump all complete bursts from this confirmed tag
+        (ci->second)->dump_bursts(prefix);
+
+        // don't start a new candidate with this pulse
+        confirmed_acceptance = true;
+
         // if not already confirmed, add this candidate to the
         // confirmed list so it has priority for accepting new hits
 
         if (i > 0) {
           // Cand_List &confirmed = cands[0];
           // confirmed.splice(confirmed.end(), cs, ci);
-          auto di=ci;
-          ci = cands[0].insert(std::make_pair((ci->second)->min_next_pulse_ts(), ci->second)).first;
-          cs.erase(di);
+          nextci = ci;
+          ++nextci;
+          cands[0].insert(std::make_pair((ci->second)->min_next_pulse_ts(), ci->second));
+          cs.erase(ci);
         }
-
-        // dump all complete bursts from this confirmed tag
-        (ci->second)->dump_bursts(prefix);
-
-        // don't start a new candidate with this pulse
-        confirmed_acceptance = true;
 
         // we won't try to add this pulse to other candidates
         // so quit booth loops, unless it's time to reap
@@ -152,12 +154,12 @@ Tag_Finder::process(Pulse &p) {
 
       } else {
         // a pulse has been accepted by this candidate; it will
-        // have to get re-orderd in its list
-        auto tc = ci->second;
+        // have to get re-ordered in its list
+        auto copyci = std::make_pair(ci->second->min_next_pulse_ts(), ci->second);
         auto nci = ci;
         ++nci;
         cs.erase(ci);
-        cs.insert(std::make_pair(tc->min_next_pulse_ts(), tc));
+        cs.insert(copyci);
         ci = nci;
       }
     } // continue trying letting other tag_candidates try this pulse
@@ -165,6 +167,7 @@ Tag_Finder::process(Pulse &p) {
     // add any cloned candidates to the end of the list
     //    cs.splice(cs.end(), cloned_candidates);
     cs.insert(cloned_candidates.begin(), cloned_candidates.end());
+    cloned_candidates.clear();
   }
   // maybe start a new Tag_Candidate with this pulse
   if (! confirmed_acceptance) {
@@ -230,3 +233,17 @@ Tag_Finder::reap(Timestamp now) {
   }
   last_reap = now;
 }
+
+void
+Tag_Finder::dump(Timestamp latest) {
+  std::cerr << "Tag_Finder::dump @ " << std::setprecision(14) << latest << std::endl;
+  for (int i = 0; i < NUM_CAND_LISTS; ++i) {
+    std::cerr << "List " << i << std::endl;
+
+    Cand_List & cs = cands[i];
+    for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); ++ci) {
+      std::cerr << "Candidate with " << ci->second->pulses.size() << " pulses (ID_level = " << ci->second->tag_id_level << ", hit count=" << ci->second->hit_count << ") min next pulse ts: " << ci->second->min_next_pulse_ts() << "," << " expired? " << (ci->second)->expired(latest) << std::endl;
+    }
+  }
+}
+  

@@ -125,7 +125,7 @@ protected:
 
   double ts;      // last timestamp parsed from input file
   double tsBegin; // first timestamp parsed from input file
-
+  
   static Gap default_pulse_slop;
   static float default_clock_fuzz;
   static Gap default_max_skipped_time;
