@@ -13,22 +13,24 @@
   of n entries is made in the batchAmbig table: one for each
   tag in the ambiguity.
 
-  - an ambiguity is only final when it has been detected; otherwise,
-  new tags might be added, or existing ones dropped.  We only 
-  record an ambiguity group (and allocate a negative motusID) for 
+  - an ambiguity is only realized when it has been detected;
+  otherwise, new tags might be added, or existing ones dropped.  We
+  only record an ambiguity group (and allocate a negative motusID) for
   detected amibguities.
 
-  - so an amibiguity can be augmented or reduced by further motus tag IDs
-  so long as it hasn't yet been detected.
+  - so an amibiguity can be augmented or reduced by further motus tag
+  IDs so long as it hasn't yet been detected.
 
-  - once detected, the ambiguity is recorded to the DB's batchAmbig table.
+  - once detected, the ambiguity is recorded to the DB's batchAmbig
+  table, thereby "realizing" it.
 
-  - within a single batch, a given set of ambiguous tags is assigned a 
-    single unique (negative) motusID; this negative motusID has no relation
-    to such values in other batches.
+  - ambiguity groups and runs of detections of a given ambiguity group
+  can both span multiple batches.  For a given receiver, ambiguity IDs
+  are never re-used; i.e. once a realized ambiguity group is no longer
+  active, its ID will never be used again.
 
-  - maintain a map from set < motusTagID > to int where value is always
-    negative. 
+  - we maintain a map from set < motusTagID > to int where value is
+  always negative.
 
 */
 #include "find_tags_common.hpp"
