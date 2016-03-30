@@ -330,7 +330,7 @@ DB_Filer::add_ambiguity(Motus_Tag_ID proxyID, Motus_Tag_ID mid) {
   if (proxyID >= 0)
     throw std::runtime_error("Called add_ambiguity with non-negative proxyID");
   sqlite3_reset(st_add_ambig);
-  sqlite3_bind_int(st_add_ambig, 1, proxyID);
+  sqlite3_bind_int(st_add_ambig, 1, - proxyID);
   sqlite3_bind_int(st_add_ambig, 2, bid);
   sqlite3_bind_int(st_add_ambig, 3, mid);
   step_commit(st_add_ambig);
