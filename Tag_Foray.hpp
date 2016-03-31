@@ -67,6 +67,8 @@ public:
 
   Timestamp last_seen() {return ts;}; // return last timestamp seen on input
 
+  static constexpr double MIN_VALID_TIMESTAMP = 1262304000; // unix timestamp for 1 Jan 2010, GMT
+
 protected:
                                      // settings
   Data_Source * data;                // stream from which data records are read
@@ -123,7 +125,8 @@ protected:
   History *hist;
   Ticker cron;
 
-  double ts;      // last timestamp parsed from input file
+  double ts;      // most recent timestamp parsed from input file
+  double tsPrev;  // previous timestamp; used to detect jumps
   double tsBegin; // first timestamp parsed from input file
   
   static Gap default_pulse_slop;

@@ -62,6 +62,9 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
     lastGPSts = +1.0 / 0.0; // ensures new timestamp is never late enough to record a GPS fix
   }
 
+  Check(sqlite3_prepare_v2(outdb, q_add_time_jump, -1, &st_add_time_jump, 0),
+        "output DB does not have valid 'timeJumps' table.");
+
   sqlite3_stmt * st_check_batchprog;
   msg = "output DB does not have valid 'batchProgs' table.";
 
@@ -233,6 +236,22 @@ DB_Filer::add_GPS_fix(double ts, double lat, double lon, double alt) {
   sqlite3_bind_double   (st_add_GPS_fix, 4, lon);
   sqlite3_bind_double   (st_add_GPS_fix, 5, alt);
   step_commit(st_add_GPS_fix);
+};
+
+
+const char *
+DB_Filer::q_add_time_jump =
+"insert or ignore into timeJumps (batchID, tsBefore, tsAfter, jumpType) \
+                           values(?,       ?,        ?,       ?)";
+//                            1       2        3       4
+
+void 
+DB_Filer::add_time_jump(double tsBefore, double tsAfter, char jumpType) {
+  sqlite3_bind_int    (st_add_time_jump, 1, bid);
+  sqlite3_bind_double (st_add_time_jump, 2, tsBefore);
+  sqlite3_bind_double (st_add_time_jump, 3, tsAfter);
+  sqlite3_bind_text   (st_add_time_jump, 4, & jumpType, 1, SQLITE_TRANSIENT);
+  step_commit(st_add_time_jump);
 };
 
 void

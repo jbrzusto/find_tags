@@ -8,6 +8,7 @@ Tag_Foray::Tag_Foray () :  // default ctor for deserializing into
   line_no(0),   // line numbers reset even when resuming
   hist(0),      // we recreate history on resume
   ts(0),        // end and start timestamps for new batch set to 0
+  tsPrev(0),
   tsBegin(0)
 {};
 
@@ -29,6 +30,7 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   hist(tags->get_history()),
   cron(hist->getTicker()),
   ts(0),
+  tsPrev(0),
   tsBegin(0)
 {
   // create one empty graph for each nominal frequency
@@ -172,6 +174,10 @@ Tag_Foray::start() {
       }
       if (! tsBegin)
         tsBegin = ts;
+
+      if (tsPrev && tsPrev < MIN_VALID_TIMESTAMP && ts >= MIN_VALID_TIMESTAMP)
+        Tag_Candidate::filer->add_time_jump(tsPrev, ts, 'S'); // indicate jump due to (presumably) setting clock from GPS
+      tsPrev = ts;
   }
 };
 
