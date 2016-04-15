@@ -65,6 +65,9 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
   Check(sqlite3_prepare_v2(outdb, q_add_time_jump, -1, &st_add_time_jump, 0),
         "output DB does not have valid 'timeJumps' table.");
 
+  Check(sqlite3_prepare_v2(outdb, q_add_pulse_count, -1, &st_add_pulse_count, 0),
+        "output DB does not have valid 'pulseCounts' table.");
+
   sqlite3_stmt * st_check_batchprog;
   msg = "output DB does not have valid 'batchProgs' table.";
 
@@ -253,6 +256,22 @@ DB_Filer::add_time_jump(double tsBefore, double tsAfter, char jumpType) {
   sqlite3_bind_text   (st_add_time_jump, 4, & jumpType, 1, SQLITE_TRANSIENT);
   step_commit(st_add_time_jump);
 };
+
+const char *
+DB_Filer::q_add_pulse_count =
+"insert or replace into pulseCounts (batchID, ant, hourBin, count) \
+                           values(?,       ?,        ?,       ?)";
+//                            1       2        3       4
+
+void
+DB_Filer::add_pulse_count(double hourBin, int ant, int count) {
+  sqlite3_bind_int    (st_add_pulse_count, 1, bid);
+  sqlite3_bind_int    (st_add_pulse_count, 2, ant);
+  sqlite3_bind_double (st_add_pulse_count, 3, hourBin);
+  sqlite3_bind_int    (st_add_pulse_count, 4, count);
+  step_commit(st_add_pulse_count);
+};
+
 
 void
 DB_Filer::step_commit(sqlite3_stmt * st) {

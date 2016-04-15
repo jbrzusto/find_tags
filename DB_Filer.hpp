@@ -30,6 +30,8 @@ public:
 
   void add_time_jump(double tsBefore, double tsAfter, char jumpType); // record a time jump
 
+  void add_pulse_count(double hourBin, int ant, int count); // record a count of pulses on from an antenna during an hour
+
   void begin_batch(int bootnum); // start new batch; uses 1 + ID of latest ended batch
 
   void end_batch(Timestamp tsBegin, Timestamp tsEnd); //!< end current batch
@@ -55,6 +57,7 @@ protected:
   sqlite3_stmt * st_add_prog; //!< add batch program entry
   sqlite3_stmt * st_add_GPS_fix; //!< add a GPS fix
   sqlite3_stmt * st_add_time_jump; //!< add a time jump
+  sqlite3_stmt * st_add_pulse_count; //!< add a count of pulses from an antenna during an hour bin
   sqlite3_stmt * st_check_param; //!< check whether parameter value has changed
   sqlite3_stmt * st_add_param; //!< add batch parameter entry
   sqlite3_stmt * st_add_ambig; //!< add ambiguity entry
@@ -106,6 +109,7 @@ protected:
   static const char * q_add_hit;
   static const char * q_add_GPS_fix;
   static const char * q_add_time_jump;
+  static const char * q_add_pulse_count;
   static const char * q_load_findtags_state;
   static const char * q_save_findtags_state;
 

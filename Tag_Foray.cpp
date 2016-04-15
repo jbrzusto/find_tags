@@ -3,13 +3,16 @@
 #include <string.h>
 #include <sstream>
 #include <time.h>
+#include <cmath>
 
 Tag_Foray::Tag_Foray () :  // default ctor for deserializing into
   line_no(0),   // line numbers reset even when resuming
+  pulse_count(MAX_PORT_NUM + 1),
   hist(0),      // we recreate history on resume
   ts(0),        // end and start timestamps for new batch set to 0
   tsPrev(0),
-  tsBegin(0)
+  tsBegin(0),
+  prevHourBin(0)
 {};
 
 Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq) :
@@ -24,6 +27,7 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   min_bogus_spacing(min_bogus_spacing),
   unsigned_dfreq(unsigned_dfreq),
   line_no(0),
+  pulse_count(MAX_PORT_NUM + 1),
   pulse_slop(default_pulse_slop),
   clock_fuzz(default_clock_fuzz),
   max_skipped_time(default_max_skipped_time),
@@ -127,6 +131,19 @@ Tag_Foray::start() {
             std::cerr << "Warning: malformed line in input\n  at line " << line_no << ":\n" << (string("") + buf) << std::endl;
             continue;
           }
+          double hourBin = round(ts / 3600);
+          if (hourBin != prevHourBin && prevHourBin > 0) {
+            for (int i = 0; i <= MAX_PORT_NUM; ++i) {
+              if (pulse_count[i] > 0) {
+                Tag_Candidate::filer->add_pulse_count(prevHourBin, i, pulse_count[i]);
+                pulse_count[i] = 0;
+              }
+            }
+            prevHourBin = hourBin;
+          }
+
+          ++pulse_count[port_num];
+
 
           if (dfreq > max_dfreq || dfreq < min_dfreq)
             continue;
