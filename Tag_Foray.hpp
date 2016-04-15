@@ -70,6 +70,7 @@ public:
   Timestamp last_seen() {return ts;}; // return last timestamp seen on input
 
   static constexpr double MIN_VALID_TIMESTAMP = 1262304000; // unix timestamp for 1 Jan 2010, GMT
+  static constexpr double BEAGLEBONE_POWERUP_TS = 946684800; // unix timestamp for 1 Jan 2000, GMT
 
 protected:
                                      // settings
@@ -128,10 +129,39 @@ protected:
   History *hist;
   Ticker cron;
 
+  // -------- FIXME? ----------------------------------------
+  // None of the following members are serialized, so time
+  // corrections can only occur within a batch; so if we get a batch
+  // of data from an SG with no GPS fix within boot session B, and
+  // then a later batch from the same boot session which contains
+  // a GPS fix, the correction of timestamps will only be applied
+  // to detections in the second batch.  This can be corrected
+  // later by re-runing sgFindTags with all those data in a single batch.
+
   double ts;      // most recent timestamp parsed from input file
   double tsPrev;  // previous timestamp; used to detect jumps
   double tsBegin; // first timestamp parsed from input file
-  
+  double prevHourBin; // previous hourly bin, for counting pulses
+
+  bool clockMonotonic; // true iff the SG was recording pulse
+  // timestamps uing the MONOTONIC rather
+  // REALTIME clock.  If true, we need to
+  // pin the MONOTONIC clock by the tightest
+  // possible bracket around a GPS timefix
+
+  bool GPSstuck; // true iff we see the GPS is stuck; e.g. if two 
+  // consecutive GPS valid timestamps are the same, or differ by
+  // less than 4 minutes (they should be roughly 5 minutes apart).
+
+  double tsGPS; // most recent (valid) GPS timestamp, if > 0.
+  double prevMonoTS; // most recent monotonic clock timestamp, if > 0.
+  double bestMonoBracketWidth; // width of best GPS time bracket so far, in seconds
+  double bestMonoBracketMidpoint; // midpoint of best GPS time bracket
+  double bestMonoBracketGPSts; // GPS ts being bracketed
+
+  // -------- END OF FIXME ------------------------------
+
+
   static Gap default_pulse_slop;
   static float default_clock_fuzz;
   static Gap default_max_skipped_time;
