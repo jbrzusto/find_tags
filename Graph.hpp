@@ -75,18 +75,25 @@ protected:
     
   void insertRec (Gap_Ranges & gr, TagPhase tFrom, TagPhase tTo);
 
-  void insertRec (Node *n, Gap_Ranges & gr, TagPhase tFrom, TagPhase tTo);
+  void insertRec (Node * n, Gap_Ranges & gr, TagPhase tFrom, TagPhase tTo);
 
-  void erase (Node *n, Gap_Ranges & gr, TagPhase tp);
+  void erase (Node * n, Gap_Ranges & gr, TagPhase tp);
 
   void eraseRec (Gap_Ranges & gr, TagPhase tpFrom, TagPhase tpTo);
 
-  void eraseRec (Node *n, Gap_Ranges & gr, TagPhase tpFrom, TagPhase tpTo);
+  void eraseRec (Node * n, Gap_Ranges & gr, TagPhase tpFrom, TagPhase tpTo);
 
   void renTagRec(Node * n, Tag *t1, Tag *t2); //!< rename a tag from t1 to t2, starting at node n, and recursing
 
   void _addTag(Tag * tag, double tol, double timeFuzz, double maxTime);  //!< add a tag to the tree, but no handling of ambiguity
   void _delTag(Tag * tag, double tol, double timeFuzz, double maxTime); //!< remove a tag from the tree, but no handling of ambiguity
+
+#ifdef DEBUG
+public:
+  void findTag(Tag *tag, bool expected = true); //!< dump a list of nodes mentioning the given tag
+protected:
+  void findTagRec(Node * n, Tag *tag); //!< dump a list of nodes mentioning the given tag
+#endif
 
 public: 
   

@@ -74,9 +74,10 @@ Ticker.o: Ticker.hpp Ticker.cpp History.hpp
 
 Ambiguity.o: Ambiguity.hpp Ambiguity.cpp
 
-testAddRemoveTag.o: testAddRemoveTag.cpp Graph.o Tag_Database.o Freq_Setting.o DB_Filer.o
+testAddRemoveTag.o: testAddRemoveTag.cpp find_tags_unifile.cpp find_tags_common.hpp Freq_History.hpp Freq_Setting.hpp DFA_Node.hpp DFA_Graph.hpp Tag.hpp Tag_Database.hpp Pulse.hpp Burst_Params.hpp Bounded_Range.hpp Tag_Candidate.hpp Tag_Finder.hpp Rate_Limiting_Tag_Finder.hpp Tag_Foray.hpp
 
-testAddRemoveTag: testAddRemoveTag.o Tag_Database.o Tag.o Node.o Set.o Graph.o Freq_Setting.o History.o Ticker.o Ambiguity.o DB_Filer.o Tag_Candidate.o
+## Note: to make testAddRemoteTag, Graph.cpp must be compiled with -DDEBUG
+testAddRemoveTag: testAddRemoveTag.o Ambiguity.o  Freq_Setting.o  History.o  Pulse.o Set.o Tag_Candidate.o  Tag_Finder.o  Tag.o Ticker.o DB_Filer.o Freq_History.o Graph.o Node.o Rate_Limiting_Tag_Finder.o Tag_Database.o Tag_Foray.o Data_Source.o Lotek_Data_Source.o SG_Data_Source.o
 	g++ $(PROFILING) -o testAddRemoveTag $^ $(LDFLAGS)
 
 testum.o: testum.cpp

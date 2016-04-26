@@ -541,14 +541,16 @@ Graph::renTagRec(Node * n, Tag *t1, Tag *t2) {
 
   // for this node's set, replace any tagphase having t1
   // with a tagphase having t2
-  auto s = n->s->s;
+
+  TagPhaseSet & s = n->s->s;
   auto r = s.equal_range(t1);
+  
   for (auto i = r.first; i != r.second; /**/) {
     auto j = i;
     ++j;
     auto p = i->second;
     s.erase(i);
-    s.insert(std::make_pair(t1, p));
+    s.insert(std::make_pair(t2, p));
     i = j;
   }
 };
@@ -609,3 +611,31 @@ Graph::eraseRec (Node *n, Gap_Ranges & grs, TagPhase tpFrom, TagPhase tpTo) {
   if (usedHere)
     erase(n, grs, tpTo);
 };
+
+#ifdef DEBUG
+static int findCount;
+
+void
+Graph::findTag(Tag *tag, bool expected) {
+  newStamp();
+  findCount = 0;
+  findTagRec(_root, tag);
+  if ((findCount > 0) ^ expected)
+    std::cerr << "Tag " << tag->motusID << " found in " << findCount << " node sets.\n";
+};
+
+void
+Graph::findTagRec(Node * n, Tag * tag)
+{
+    n->stamp = stamp;
+    for(auto i = n->e.begin(); i != n->e.end(); ++i) {
+      if (i->second->stamp != stamp) {
+        findTagRec(i->second, tag);
+      }
+    }
+    // see whether tag is in this node's set (at any phase)
+    if (n->s->count(tag)) {
+      ++findCount;
+    }
+};
+#endif

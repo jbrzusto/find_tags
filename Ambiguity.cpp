@@ -30,7 +30,7 @@ Ambiguity::add(Tag *t1, Tag * t2) {
     s.insert(t1);
   }
 
-  // ns now holds IDs from t1 (whether proxy or not) and we need a new
+  // s now holds IDs from t1 (whether proxy or not) and we need a new
   // proxy to represent union(t1, t2);
 
   // add the new tag
@@ -62,21 +62,10 @@ Ambiguity::remove(Tag * t1, Tag *t2) {
   if (i == abm.right.end())
     throw std::runtime_error("Sanity check failed: proxy tag is not in ambiguity map");
 
-
   auto s = i->second; // get the set of tags so far
 
   if (! s.count(t2))
-    throw std::runtime_error("Trying to remove tag from a proxy that does not represent it");
-
-  if (t1->count == 0) {
-      // this proxy tag has not been detected yet, so we can reduce it
-      // to remove t2
-    s.erase(t2); // remove the tag
-    abm.right.replace_data(i, s); // alter the bimap
-    return t1;
-  }
-  // t1 is a proxy not containing t2 and it has been detected, so
-  // make a new proxy
+     throw std::runtime_error("Trying to remove tag from a proxy that does not represent it");
   
   s.erase(t2);
   if (s.size() == 1) {

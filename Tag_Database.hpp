@@ -13,15 +13,15 @@ class Tag_Database {
 
 private:
   typedef std::map < Nominal_Frequency_kHz, TagSet > TagSetSet;
-  
+
   TagSetSet tags;
-  
+
   Freq_Set nominal_freqs;
 
   std::map < Motus_Tag_ID, Tag * > motusIDToPtr;
 
   History *h;
-  
+
 public:
   Tag_Database (); //!< default ctor for deserializing into
 
@@ -34,6 +34,10 @@ public:
   Freq_Set & get_nominal_freqs();
 
   TagSet * get_tags_at_freq(Nominal_Frequency_kHz freq);
+
+#ifdef DEBUG
+  Tag * getTagForMotusID (Motus_Tag_ID mid);
+#endif
 
   History * get_history();
 

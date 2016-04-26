@@ -27,7 +27,7 @@ int main (int argc, char * argv[] ) {
   if (argc > 1)
     fn = std::string(argv[1]);
   else
-    fn = std::string("/sgm/2015_normalized_full_motus_database.sqlite");
+    fn = std::string("/sgm/cleaned_motus_tag_db.sqlite");
 
   Tag_Database T(fn);
 
@@ -66,6 +66,7 @@ int main (int argc, char * argv[] ) {
       std::cout << "-" << tags[r].motusID << std::endl;
 #endif
       g.delTag(tags[r], tol, timeFuzz, 370);
+      g.findTag(tags[r], false);
       inTree[r] = false;
       --numTags;
     } else {
