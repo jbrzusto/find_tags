@@ -36,6 +36,7 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   ts(0),
   tsPrev(0),
   tsBegin(0),
+  prevHourBin(0),
   clockMonotonic(false),
   GPSstuck(false),
   tsGPS(0),
@@ -77,7 +78,7 @@ void
 Tag_Foray::start() {
   Tag_Candidate::ending_batch = false;
 
-  char buf[MAX_LINE_SIZE + 1]; // input buffer
+  char buf[MAX_LINE_SIZE + 1] = {}; // input buffer
   bool prevRecordWasGPS = false; // true iff the previous record was a GPS fix
   for (;;) {
       // read and parse a line from a SensorGnome file
@@ -98,7 +99,7 @@ Tag_Foray::start() {
              G,1458001712,44.34021,-66.118733333,21.6
                  ts        lat        lon        alt
           */
-          double lat, lon, alt;
+          double lat=0.0, lon=0.0, alt=0.0;
           if (4 == sscanf(buf+2, "%lf,%lf,%lf,%lf", &ts, &lat, &lon, &alt)) {
             // line is okay, so maybe file it, if GPS isn't stuck
             if (tsGPS == 0 || ts - tsGPS > 60) {
@@ -122,10 +123,10 @@ Tag_Foray::start() {
              S,1366227448.192,5,-m,166.376,0,
              is S, timestamp, port_num, param flag, value, return code, other error
           */
-          short port_num;
-          char param_flag[16];
-          double param_value;
-          int return_code;
+          short port_num = 0;
+          char param_flag[16] = {};
+          double param_value = 0;
+          int return_code = 0;
           char error[256];
           if (5 > sscanf(buf+2, "%lf,%hd,%[^,],%lf,%d,%[^\n]", &ts, &port_num, param_flag, &param_value, &return_code, error)) {
             // silently ignore malformed line (note:  %[^\n] field doesn't increase count if remainder of line is empty, so sscanf here can return 5 or 6
@@ -145,8 +146,8 @@ Tag_Foray::start() {
         break;
       case 'p':
         {
-          short port_num;
-          float dfreq, sig, noise;
+          short port_num = 0;
+          float dfreq = 0, sig = 0, noise = 0;
           if (5 != sscanf(buf+1, "%hd,%lf,%f,%f,%f", &port_num, &ts, &dfreq, &sig, &noise)) {
             std::cerr << "Warning: malformed line in input\n  at line " << line_no << ":\n" << (string("") + buf) << std::endl;
             continue;
@@ -166,7 +167,8 @@ Tag_Foray::start() {
             prevHourBin = hourBin;
           }
 
-          ++pulse_count[port_num];
+          if (port_num >= 0 && port_num < MAX_PORT_NUM)
+            ++pulse_count[port_num];
 
           // if timestamps are using CLOCK_MONOTONIC and the GPS fix
           // is valid, see whether we have a tighter CLOCK_MONOTONIC
