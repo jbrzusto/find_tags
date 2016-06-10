@@ -1,12 +1,12 @@
-#include "SG_Data_Source.hpp"
+#include "SG_File_Data_Source.hpp"
 
-SG_Data_Source::SG_Data_Source(std::istream * data) : 
+SG_File_Data_Source::SG_File_Data_Source(std::istream * data) : 
   data(data)
 {
 };
 
 bool
-SG_Data_Source::getline(char * buf, int maxLen) {
+SG_File_Data_Source::getline(char * buf, int maxLen) {
   
   for(;;) {
     if (! data->getline(buf, maxLen)) {

@@ -204,8 +204,7 @@ All output from a run of this program forms a new batch.
 #include "Tag_Finder.hpp"
 #include "Rate_Limiting_Tag_Finder.hpp"
 #include "Tag_Foray.hpp"
-#include "Lotek_Data_Source.hpp"
-#include "SG_Data_Source.hpp"
+#include "Data_Source.hpp"
 
 //#define FIND_TAGS_DEBUG 
 
@@ -213,7 +212,7 @@ void
 usage() {
   puts (
 	"Usage:\n"
-	"    find_tags_motus [OPTIONS] TAGFILE.sqlite OUTFILE.sqlite [INFILE.CSV]\n"
+	"    find_tags_motus [OPTIONS] TAGFILE.sqlite OUTFILE.sqlite [INFILE.csv | INFILE.sqlite]\n"
 	"where:\n\n"
 
 	"Data are read from stdin. Only lines of the following types are used:\n"
@@ -250,7 +249,10 @@ usage() {
 	"OUTFILE.sqlite is a database with various required tables; see the\n"
          "   source file find_tags_motus.cpp for details\n\n"
 
-        "INFILE.CSV is a raw input file; stdin is used if not specified.\n\n"
+        "INFILE.csv is a raw input file; stdin is used if not specified.\n\n"
+
+        "INFILE.sqlite is a .motus input file, which is an sqlite database\n"
+        "    with files stored as documented in R package motus::sgEnsureTables\n\n"
 
 	"and OPTIONS can be any of:\n\n"
 
@@ -612,17 +614,9 @@ main (int argc, char **argv) {
       // set up the data source
       Data_Source * pulses;
       if (! lotek_data) {
-        if (optind < argc) {
-          pulses = new SG_Data_Source(new ifstream(argv[optind++]));
-        } else {
-          pulses = new SG_Data_Source(& std::cin);
-        }
+        pulses = Data_Source::make_SG_source(optind < argc ? argv[optind++] : "", bootNum);
       } else {
-        if (optind < argc) {
-          pulses = new Lotek_Data_Source(new ifstream(argv[optind++]), & tag_db, default_freq);
-        } else {
-          pulses = new Lotek_Data_Source(& std::cin, & tag_db, default_freq);
-        }
+        pulses = Data_Source::make_Lotek_source(optind < argc ? argv[optind++] : "", & tag_db, default_freq);
       }
 
       Tag_Foray foray;
