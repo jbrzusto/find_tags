@@ -54,6 +54,9 @@ find_tags_motus.o: find_tags_motus.cpp find_tags_common.hpp Freq_History.hpp Fre
 find_tags_motus: $(OBJS) find_tags_motus.o
 	g++ $(PROFILING) -o find_tags_motus $^ $(LDFLAGS)
 
+ftmdbg: $(OBJS) find_tags_motus.o
+	g++ $(PROFILING) -o ftmdbg $^ $(LDFLAGS)
+
 Data_Source.o: Data_Source.hpp find_tags_common.hpp
 
 SG_Data_Source.o: SG_Data_Source.hpp Data_Source.hpp find_tags_common.hpp
