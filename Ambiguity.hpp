@@ -49,8 +49,6 @@ struct Ambiguity {              //!< manage groups of indistinguishable tags
 
   // methods
   
-  static void init();              //!< class initializer
-
   static Tag * add(Tag *t1, Tag * t2);    //!< return the proxy tag representing both t1 and t2 (t1 might already be a proxy)
   static Tag * remove(Tag * t1, Tag *t2); //!< return a real or proxy tag representing the proxy tag t1 with any t2 removed
   static Tag * proxyFor(Tag *t);          //!< return the proxy for a tag, if it is ambiguous; otherwise, returns 0;
