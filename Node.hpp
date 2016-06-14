@@ -63,7 +63,7 @@ public:
   void dump(bool skipEdges=false);
   bool valid(); //!< is this state still valid (i.e. part of a graph)
   void tcLink(); //!< indicate a Tag Candidate is pointing to this state
-  void tcUnlink(); //!< indicate a Tag Candidate no longer points to this state
+  bool tcUnlink(); //!< indicate a Tag Candidate no longer points to this state; returns true iff this call deletes the state
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {

@@ -26,11 +26,14 @@ Node::tcLink() {
   ++ tcUseCount;
 };
 
-void
+bool
 Node::tcUnlink() {
   -- tcUseCount;
-  if (tcUseCount == 0 && useCount == 0)
+  if (tcUseCount == 0 && useCount == 0) {
     drop();
+    return true;
+  }
+  return false;
 };
 
 void
