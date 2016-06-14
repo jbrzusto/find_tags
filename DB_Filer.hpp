@@ -42,6 +42,12 @@ public:
 
   bool load_findtags_state(Timestamp & tsData, Timestamp & tsRun, std::string & state);
 
+  void start_blob_reader(int monoBN); //!< initialize reading of filecontents blobs for a given boot number
+
+  bool get_blob (const char **bufout, int * lenout); //!< get the next available blob; return true on success, false if none; set caller's pointer and length 
+
+  void end_blob_reader(); //!< finalize blob reader
+
 protected:
   // settings
 
@@ -63,6 +69,7 @@ protected:
   sqlite3_stmt * st_add_ambig; //!< add ambiguity entry
   sqlite3_stmt * st_save_findtags_state; //!< save state of running findtags, for pause
   sqlite3_stmt * st_load_findtags_state; //!< load state of paused findtags, for resume
+  sqlite3_stmt * st_get_blob; //!< grab and decompress file contents
 
   string prog_name; //!< name of program, for recording in DB
 
@@ -112,6 +119,7 @@ protected:
   static const char * q_add_pulse_count;
   static const char * q_load_findtags_state;
   static const char * q_save_findtags_state;
+  static const char * q_get_blob;
 
 };
 

@@ -7,6 +7,7 @@
 
 #include "find_tags_common.hpp"
 #include "Tag_Database.hpp"
+#include "DB_Filer.hpp"
 
 using boost::serialization::make_nvp;
 
@@ -23,7 +24,9 @@ public:
 
   virtual void serialize(boost::archive::binary_oarchive & ar, const unsigned int version){};
 
-  static Data_Source * make_SG_source(std::string infile, unsigned int monoBN=0);
+  static Data_Source * make_SQLite_source(DB_Filer * dbf, unsigned int monoBN=0);
+
+  static Data_Source * make_SG_source(std::string infile);
 
   static Data_Source * make_Lotek_source(std::string infile, Tag_Database *tdb, Frequency_MHz defFreq);
 

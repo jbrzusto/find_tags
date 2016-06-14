@@ -212,10 +212,11 @@ void
 usage() {
   puts (
 	"Usage:\n"
-	"    find_tags_motus [OPTIONS] TAGFILE.sqlite OUTFILE.sqlite [INFILE.csv | INFILE.sqlite]\n"
+	"    find_tags_motus [OPTIONS] TAGFILE.sqlite OUTFILE.sqlite [INFILE.csv]\n"
 	"where:\n\n"
 
-	"Data are read from stdin. Only lines of the following types are used:\n"
+	"Data are read from INFILE.csv or stdin, or OUTFILE.sqlite, if --src_sqlite is specified."
+        "Only lines of the following types are used:\n"
         "    Pulse records: pANT,TS,DFREQ,SIG,NOISE\n"
 	"    with:\n"
         "        ANT:    port code 'pX'\n"
@@ -351,6 +352,9 @@ usage() {
 	"    in milliseconds\n"
 	"    default: 1.5 ms\n\n"
 
+        "-Q, --src_sqlite\n"
+        "    read compressed data files directly from the 'content' column in the 'fileContents'\n"
+        "    table of OUTFILE.sqlite; this is preferred, as it is much faster."
 
         "-r, --resume\n"
         "    If a table called 'findtagsState' exists in the output database, with columns\n"
@@ -426,6 +430,7 @@ main (int argc, char **argv) {
 	OPT_MAX_DFREQ            = 'M',
         OPT_BOOT_NUM             = 'n',
         OPT_PULSE_SLOP	         = 'p',
+        OPT_SRC_SQLITE           = 'Q',
         OPT_RESUME               = 'r',
 	OPT_MAX_PULSE_RATE       = 'R',
 	OPT_FREQ_SLOP	         = 's',
@@ -436,7 +441,7 @@ main (int argc, char **argv) {
     };
 
     int option_index;
-    static const char short_options[] = "c:C:ef:FgG:hi:l:Lm:M:n:p:rR:s:S:tuw:";
+    static const char short_options[] = "c:C:ef:FgG:hi:l:Lm:M:n:p:QrR:s:S:tuw:";
     static const struct option long_options[] = {
 	{"pulses_to_confirm"	   , 1, 0, OPT_PULSES_TO_CONFIRM},
         {"clock_fuzz"              , 1, 0, OPT_CLOCK_FUZZ},
@@ -452,6 +457,7 @@ main (int argc, char **argv) {
 	{"min_dfreq"               , 1, 0, OPT_MIN_DFREQ},
 	{"max_dfreq"               , 1, 0, OPT_MAX_DFREQ},
         {"pulse_slop"		   , 1, 0, OPT_PULSE_SLOP},
+        {"src_sqlite"              , 0, 0, OPT_SRC_SQLITE},
         {"resume"                  , 0, 0, OPT_RESUME},
 	{"max_pulse_rate"          , 1, 0, OPT_MAX_PULSE_RATE},
         {"frequency_slop"	   , 1, 0, OPT_FREQ_SLOP},
@@ -484,6 +490,7 @@ main (int argc, char **argv) {
     Gap min_bogus_spacing = 600; // emit bogus tag ID at most once every 10 minutes
 
     Gap pulse_slop = 1.5; // ms
+    bool src_sqlite = false;
     float clock_fuzz = 50; // ppm
     Gap max_skipped_time = 1000; // seconds
 
@@ -536,6 +543,9 @@ main (int argc, char **argv) {
         case OPT_PULSE_SLOP:
           pulse_slop = atof(optarg);
 	  break;
+        case OPT_SRC_SQLITE:
+          src_sqlite = true;
+          break;
         case OPT_RESUME:
           resume = true;
           break;
@@ -613,10 +623,12 @@ main (int argc, char **argv) {
 
       // set up the data source
       Data_Source * pulses;
-      if (! lotek_data) {
-        pulses = Data_Source::make_SG_source(optind < argc ? argv[optind++] : "", bootNum);
-      } else {
+      if (lotek_data) {
         pulses = Data_Source::make_Lotek_source(optind < argc ? argv[optind++] : "", & tag_db, default_freq);
+      } else if (src_sqlite) {
+        pulses = Data_Source::make_SQLite_source(& dbf, bootNum);
+      } else {
+        pulses = Data_Source::make_SG_source(optind < argc ? argv[optind++] : "");
       }
 
       Tag_Foray foray;

@@ -248,7 +248,7 @@ DB_Filer::q_add_time_jump =
                            values(?,       ?,        ?,       ?)";
 //                            1       2        3       4
 
-void 
+void
 DB_Filer::add_time_jump(double tsBefore, double tsAfter, char jumpType) {
   sqlite3_bind_int    (st_add_time_jump, 1, bid);
   sqlite3_bind_double (st_add_time_jump, 2, tsBefore);
@@ -409,4 +409,51 @@ DB_Filer::load_findtags_state(Timestamp & tsData, Timestamp & tsRun, std::string
   tsRun = sqlite3_column_double  (st_load_findtags_state, 2);
   state = std::string(reinterpret_cast < const char * > (sqlite3_column_blob(st_load_findtags_state, 3)), sqlite3_column_bytes(st_load_findtags_state, 3));
   return true;
+};
+
+
+const char *
+DB_Filer::q_get_blob = "select bz2uncompress(t2.contents, t1.size) from files as t1 left join fileContents as t2 on t1.fileID=t2.fileID where t1.monoBN=? order by ts";
+
+
+void
+DB_Filer::start_blob_reader(int monoBN) {
+
+  sqlite3_enable_load_extension(outdb, 1);
+
+  Check(sqlite3_exec(outdb,
+                     "select load_extension('/SG/code/Sqlite_Compression_Extension.so')",
+                     0,
+                     0,
+                     0),
+        "Unable to load required library Sqlite_Compression_Extension.so from /SG/code");
+
+  Check( sqlite3_prepare_v2(outdb,
+                            q_get_blob,
+                            -1,
+                            &st_get_blob,
+                            0),
+         "SQLite input database does not have valid 'files' or 'fileContents' table.");
+
+  sqlite3_bind_int(st_get_blob, 1, monoBN);
+};
+
+bool
+DB_Filer::get_blob (const char **bufout, int * lenout) {
+  int res = sqlite3_step(st_get_blob);
+  if (res == SQLITE_DONE)
+    return false; // indicate we're done
+
+  if (res != SQLITE_ROW)
+    throw std::runtime_error("Problem getting next blob.");
+
+  * lenout = sqlite3_column_bytes(st_get_blob, 0);
+  * bufout = reinterpret_cast < const char * > (sqlite3_column_blob(st_get_blob, 0));
+
+  return true;
+}
+
+void
+DB_Filer::end_blob_reader () {
+  sqlite3_finalize (st_get_blob);
 };

@@ -10,12 +10,15 @@ Data_Source::Data_Source() {};
 Data_Source::~Data_Source(){};
 
 Data_Source *
-Data_Source::make_SG_source(std::string infile, unsigned int monoBN) {
+Data_Source::make_SG_source(std::string infile) {
   if (infile.length() == 0)
     return new SG_File_Data_Source(& std::cin);
-  if (infile.find(".sqlite") != infile.length() - 7)
-    return new SG_File_Data_Source(new std::ifstream(infile));
-  return new SG_SQLite_Data_Source(infile, monoBN);
+  return new SG_File_Data_Source(new std::ifstream(infile));
+};
+
+Data_Source *
+Data_Source::make_SQLite_source(DB_Filer * db, unsigned int monoBN) {
+  return new SG_SQLite_Data_Source(db, monoBN);
 };
 
 Data_Source *

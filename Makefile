@@ -61,7 +61,7 @@ Data_Source.o: Data_Source.hpp find_tags_common.hpp
 
 SG_File_Data_Source.o: SG_File_Data_Source.hpp Data_Source.hpp find_tags_common.hpp
 
-SG_SQLite_Data_Source.o: SG_SQLite_Data_Source.hpp Data_Source.hpp find_tags_common.hpp
+SG_SQLite_Data_Source.o: SG_SQLite_Data_Source.hpp Data_Source.hpp find_tags_common.hpp DB_Filer.hpp
 
 Lotek_Data_Source.o: Lotek_Data_Source.hpp Data_Source.hpp find_tags_common.hpp
 
