@@ -149,19 +149,20 @@ Tag_Finder::delete_competitors(Cand_List::iterator ci, Cand_List::iterator &next
 
   for (int j = 0; j < NUM_CAND_LISTS; ++j) {
     for (Cand_List::iterator cci = cands[j].begin(); cci != cands[j].end(); /**/ ) {
-      if ((cci->second) != (ci->second)
-          && ((cci->second)->has_same_id_as(ci->second) || (cci->second)->shares_any_pulses(ci->second)))
-        {
-          Cand_List::iterator di = cci;
-          ++cci;
-          auto p = di->second;
-          if (nextci == di)
-            ++nextci;
-          cands[j].erase(di);
-          delete p;
-        } else {
+      if ((cci->second) != (ci->second) 
+          && ((cci->second)->has_same_id_as(ci->second)
+              || (cci->second)->shares_any_pulses(ci->second))) {
+        Cand_List::iterator di = cci;
         ++cci;
-      };
+        auto p = di->second;
+        if (nextci == di) {
+          ++nextci;
+        }
+        cands[j].erase(di);
+        delete p;
+      } else {
+        ++cci;
+      }
     }
   }
 };
