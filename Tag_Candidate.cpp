@@ -36,6 +36,7 @@ Tag_Candidate::~Tag_Candidate() {
 Tag_Candidate *
 Tag_Candidate::clone() {
   auto tc = new Tag_Candidate(* this);
+  tc->state->tcLink();
   if (++num_cands > max_num_cands) {
     max_num_cands = num_cands;
     max_cand_time = last_ts;
