@@ -57,9 +57,10 @@ Tag_Finder::process(Pulse &p) {
       ++nextci;
 
       // check whether candidate has expired
-      if ((ci->second)->expired(p.ts)) {
-        delete ci->second;
+      if (ci->second->expired(p.ts)) {
+        auto p = ci->second;
         cs.erase(ci);
+        delete p;
         continue;
       }
 

@@ -80,11 +80,13 @@ Tag_Candidate::expired(Timestamp ts) {
     std::cerr << "whoops - checking for expiry of Tag Candidate with NULL state!" << std::endl;
     return true;
   }
+  bool rv = ts - last_ts > state->get_max_age();
+
   if (! state->valid()) {
-    state->tcUnlink();
+    if (state->tcUnlink())
+      state = 0;
     return true;
   }
-  bool rv = ts - last_ts > state->get_max_age();
   return rv;
 };
 
