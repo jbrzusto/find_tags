@@ -121,7 +121,7 @@ Node::Node::is_unique() {
 Gap
 Node::get_max_age() {
   auto i = e.rbegin();
-  --i;
+  ++i;
   if (std::isfinite(i->first))
     return i->first;
   return 0;
