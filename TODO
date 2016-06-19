@@ -1,11 +1,11 @@
 2014-10-01
-- allow more flexible run structure:  currently, a tag run must begin
+- 2016-05: DONE: allow more flexible run structure:  currently, a tag run must begin
   with a pair of consecutive bursts, because of the 'sanity check'
   in Tag_Finder.cpp::setup_graph().  But why can't we just allow that
   some sequences of consecutive bursts are ambiguous, and use the
   tagID level to determine when a candidate is finally confirmed?
 
-- allow adding and removing a single tag to the graph, so that the
+- 2016-05: DONE: allow adding and removing a single tag to the graph, so that the
   list of tags being sought can change over time
 
 - allow for missing pulses in a burst
