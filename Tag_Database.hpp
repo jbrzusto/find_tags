@@ -35,9 +35,7 @@ public:
 
   TagSet * get_tags_at_freq(Nominal_Frequency_kHz freq);
 
-#ifdef DEBUG
   Tag * getTagForMotusID (Motus_Tag_ID mid);
-#endif
 
   History * get_history();
 

@@ -1,0 +1,22 @@
+2016-06-20  john  <john@asus>
+
+	* find_tags_motus.cpp: call Tag_Database::load_ambiguity() to restore
+	Ambiguity map from database; could instead add Tag_Database * to
+	c'tor for DB_Filer
+
+	* Ambiguity.hpp, Ambiguity.cpp: extend newProxy to allow specifying
+	the proxyID, as when reconstructing a group from the database; make
+	this method public so DB_Filer class can do that.
+
+	* Tag_Foray.cpp (pause, resume): don't serialize/deserialize
+	Ambiguity map as part of batch pause/resume; instead, maintain a
+	global tagAmbig table in receiver DB
+
+	* Tag_Database.hpp, Tag_Database.cpp: include getTagForMotusID in
+	RELEASE build for use by DB_Filer::load_ambig
+
+	* DB_Filer.hpp, DB_Filer.cpp: replace previous Ambiguity-related
+	methods with new methods save_ambiguity() to save a single ambiguity group
+	and load_ambiguity() to restore all existing ambiguities from the database
+
+

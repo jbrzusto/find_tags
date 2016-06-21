@@ -102,7 +102,6 @@ Tag_Database::get_history() {
   return h;
 };
 
-#ifdef DEBUG
 Tag *
 Tag_Database::getTagForMotusID (Motus_Tag_ID mid) {
   if (motusIDToPtr.count(mid) > 0)
@@ -110,4 +109,3 @@ Tag_Database::getTagForMotusID (Motus_Tag_ID mid) {
   else
     return 0;
 };
-#endif

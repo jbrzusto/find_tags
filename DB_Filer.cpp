@@ -105,12 +105,40 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
   sqlite3_finalize(st_get_rid);
   st_get_rid = 0;
 
+  // get the next ambigID to use; this is the most negative existing value minus 1.
+  // if there are no entries in batchAmbig so far, this is -1.
+
+  msg = "SQLite output database does not have valid 'tagAmbig' table";
+  
+  sqlite3_stmt * st_get_last_ambigID;
   Check( sqlite3_prepare_v2(outdb,
-                            "insert into batchAmbig (ambigID, batchID, motusTagID) values (?, ?, ?);",
+                            "select coalesce(-1, min(ambigID) - 1) from tagAmbig",
                             -1,
-                            & st_add_ambig,
+                            & st_get_last_ambigID,
                             0),
-         "SQLite output database does not have valid 'batchAmbig' table");
+         msg);
+
+  sqlite3_step(st_get_last_ambigID);
+  next_proxyID = sqlite3_column_int(st_get_last_ambigID, 0);
+  sqlite3_finalize(st_get_last_ambigID);
+  st_get_last_ambigID = 0;
+
+  // prepare queries for loading/saving ambiguity groups
+
+  Check( sqlite3_prepare_v2(outdb,
+                            q_load_ambig,
+                            -1,
+                            & st_load_ambig,
+                            0),
+         msg);
+
+  Check( sqlite3_prepare_v2(outdb,
+                            q_save_ambig,
+                            -1,
+                            & st_save_ambig,
+                            0),
+         msg);
+
 
   const char * ftsm = "SQLite output database does not have valid 'batchState' table";
 
@@ -361,17 +389,65 @@ DB_Filer::end_tx() {
   Check( sqlite3_exec(outdb, "commit", 0, 0, 0), "Failed to commit remaining inserts.");
 };
 
+const char *
+DB_Filer::q_load_ambig = 
+  "select ambigID, motusTagID1, motusTagID2, motusTagID3, motusTagID4, motusTagID5, motusTagID6 from tagAmbig order by ambigID desc;";
+  //        0           1            2            3            4            5            6
+
+
 void
-DB_Filer::add_ambiguity(Motus_Tag_ID proxyID, Motus_Tag_ID mid) {
+DB_Filer::load_ambiguity(Tag_Database & tdb) {
+  // recreate the tag ambiguity map from the database
+  // For each record in tagAmbig, we create an ambiguity group
+  Ambiguity::setNextProxyID(next_proxyID);
+
+  sqlite3_reset(st_load_ambig);
+  for (;;) {
+    if (SQLITE_DONE == sqlite3_step(st_load_ambig))
+      break;
+    // build this ambiguity group, starting with the first two tags, and using the
+    // existing (negative) proxyID
+    auto
+      proxy = Ambiguity::add(
+                             tdb.getTagForMotusID(sqlite3_column_int(st_load_ambig, 1)),
+                             tdb.getTagForMotusID(sqlite3_column_int(st_load_ambig, 2)),
+                             sqlite3_column_int(st_load_ambig, 0));
+    // add any remaining tags
+    for (int i = 3; i <= MAX_TAGS_PER_AMBIGUITY_GROUP; ++i) {
+      if (SQLITE_NULL == sqlite3_column_type(st_load_ambig, i))
+        break;
+      // add subsequent tag to this ambiguity group 
+      proxy = Ambiguity::add(proxy, tdb.getTagForMotusID(sqlite3_column_int(st_load_ambig, i)));
+    }
+    // set the count to non-zero to indicate this amiguity group
+    // is immutable:  adding or removing a tag will generate a new
+    // ambiguity group
+    proxy->count = 1;
+
+  }
+};
+
+const char *
+DB_Filer::q_save_ambig = 
+  "insert into tagAmbig (ambigID, motusTagID1, motusTagID2, motusTagID3, motusTagID4, motusTagID5, motusTagID6) values (?, ?, ?, ?, ?, ?, ?);";
+  //                       1           2            3            4            5            6            7
+
+void
+DB_Filer::save_ambiguity(Motus_Tag_ID proxyID, const Ambiguity::AmbigTags & tags) {
   // proxyID must be a negative integer
   // add mid to its ambiguity group.
   if (proxyID >= 0)
     throw std::runtime_error("Called add_ambiguity with non-negative proxyID");
-  sqlite3_reset(st_add_ambig);
-  sqlite3_bind_int(st_add_ambig, 1, proxyID);
-  sqlite3_bind_int(st_add_ambig, 2, bid);
-  sqlite3_bind_int(st_add_ambig, 3, mid);
-  step_commit(st_add_ambig);
+  sqlite3_reset(st_save_ambig);
+  sqlite3_bind_int(st_save_ambig, 1, proxyID);
+  auto t = tags.begin();
+  for (int i = 1; i <= MAX_TAGS_PER_AMBIGUITY_GROUP; ++i) {
+    if (t != tags.end())
+      sqlite3_bind_int( st_save_ambig, 1 + i, (*t++) -> motusID);
+    else
+      sqlite3_bind_null(st_save_ambig, 1 + i);
+  }
+  step_commit(st_save_ambig);
 };
 
 const char *
@@ -397,7 +473,7 @@ DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string sta
 
 const char *
 DB_Filer::q_load_findtags_state = "select batchID, tsData, tsRun, state from batchState where progName=? order by tsRun desc limit 1;";
-//                                    0      1      2     3
+//                                             0      1      2     3
 
 bool
 DB_Filer::load_findtags_state(Timestamp & tsData, Timestamp & tsRun, std::string & state) {
@@ -451,7 +527,7 @@ DB_Filer::get_blob (const char **bufout, int * lenout) {
   * bufout = reinterpret_cast < const char * > (sqlite3_column_blob(st_get_blob, 0));
 
   return true;
-}
+};
 
 void
 DB_Filer::end_blob_reader () {

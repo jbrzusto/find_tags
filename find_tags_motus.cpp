@@ -616,6 +616,8 @@ main (int argc, char **argv) {
       dbf.add_param("min_bogus_spacing", min_bogus_spacing);
       dbf.add_param("unsigned_dfreq", unsigned_dfreq);
 
+      dbf.load_ambiguity(tag_db);
+
       Tag_Candidate::set_filer(& dbf);
 
       // Freq_Setting needs to know the set of nominal frequencies

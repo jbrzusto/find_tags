@@ -1,12 +1,13 @@
 #include "Ambiguity.hpp"
 #include "Tag.hpp"
 #include "Tag_Candidate.hpp"
+#include "DB_Filer.hpp"
 
 Ambiguity::AmbigBimap Ambiguity::abm;//  = AmbigMap();
-int Ambiguity::nextID = -1;
+int Ambiguity::nextID = 0;
   
 Tag *
-Ambiguity::add(Tag *t1, Tag * t2) {
+Ambiguity::add(Tag *t1, Tag * t2, Motus_Tag_ID proxyID) {
   // return a proxy tag representing the ambiguous tags t1 and t2; t1
   // might already be a proxy
   AmbigTags s; // set of ambiguous tags
@@ -41,7 +42,8 @@ Ambiguity::add(Tag *t1, Tag * t2) {
     // a proxy already exists for this set of ambiguous tags
     return j->second;
   // create a new proxy tag for this set
-  Tag * t = newProxy(t1);
+  Tag * t = newProxy(t1, proxyID);
+
   abm.insert(AmbigSetProxy(s, t));
   return t;
 };
@@ -57,7 +59,6 @@ Ambiguity::remove(Tag * t1, Tag *t2) {
     // fail: this is not a proxy
     throw std::runtime_error("Attempt to remove a tag from a non-proxy tag");
 
-  // 
   auto i = abm.right.find(t1);
   if (i == abm.right.end())
     throw std::runtime_error("Sanity check failed: proxy tag is not in ambiguity map");
@@ -99,15 +100,30 @@ void
 Ambiguity::detected(Tag * t) {
   // first detection, so record this ambiguity group in the DB
   auto i = abm.right.find(t);
-  for (auto j = i->second.begin(); j != i->second.end(); ++j)
-    Tag_Candidate::filer->add_ambiguity(t->motusID, (*j)->motusID);
+  Tag_Candidate::filer->save_ambiguity(t->motusID, i->second);
 };
 
 Tag * 
-Ambiguity::newProxy(Tag * t) {
+Ambiguity::newProxy(Tag * t, Motus_Tag_ID proxyID) {
   Tag * nt = new Tag();
   *nt = *t;
-  nt->motusID = nextID--;
-  nt->count = 0;
+  if (proxyID) {
+    // caller is restoring an existing ambiguity group from the
+    // database
+    nt->motusID = proxyID;
+  } else {
+    // caller is building a new ambiguity group
+    nt->motusID = nextID--;
+    // set the count to zero to indicate this ambiguity group
+    // has not yet been detected so is mutable: tags can be added
+    // to it until a detection renders it immutable.
+    nt->count = 0;
+  }
   return nt;
 };
+
+void
+Ambiguity::setNextProxyID(Motus_Tag_ID proxyID) {
+  nextID = proxyID;
+};
+
