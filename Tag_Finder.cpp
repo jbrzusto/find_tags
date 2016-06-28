@@ -44,7 +44,7 @@ Tag_Finder::process(Pulse &p) {
      Tag_Candidate at this pulse.
   */
 
-  bool confirmed_acceptance = false; // has hit been accepted by a confirmed candidate?
+  bool confirmed_acceptance = false; // has pulse been accepted by a confirmed candidate?
 
   for (int i = 0; i < NUM_CAND_LISTS; ++i) {
 
