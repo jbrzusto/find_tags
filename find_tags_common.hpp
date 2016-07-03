@@ -30,6 +30,9 @@ typedef float Frequency_Offset_kHz;
 
 typedef int Nominal_Frequency_kHz;
 
+// type representing a signal strength, in dB max
+typedef float SignaldB;
+
 // Tag IDs: we use integer primary keys into the Motus master tag database
 // These are obtained by the harness code when it queries that database
 // for tags to be sought.
@@ -57,6 +60,14 @@ typedef std::unordered_multimap < TagID, Phase > TagPhaseSet;
 // On the embedded version for beaglebone / RPi, we should use float.
 
 typedef double Gap;
+
+//!< the type representing a port number (e.g. antenna number)
+// which is the USB port on which a device is attached,
+// if applicable
+
+typedef int16_t Port_Num;
+static const int MAX_PORT_NUM = 10; //!< largest possible port number
+static const int BOGUS_PORT_NUM = -999; //!< indicates port number not relevant
 
 // common standard stuff
 

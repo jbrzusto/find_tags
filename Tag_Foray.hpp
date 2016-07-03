@@ -35,8 +35,6 @@ class Tag_Foray {
 
 public:
 
-  static const int MAX_PORT_NUM = 10; //!< largest possible port number
-
   Tag_Foray (); //!< default ctor to give object into which resume() deserializes
   ~Tag_Foray (); //!< dtor which deletes Tag_Finders and their confirmed candidates, so runs are correctly ended
   Tag_Foray (Tag_Database * tags, Data_Source * data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq=false);
@@ -94,8 +92,6 @@ protected:
 
   unsigned long long line_no;                    // count lines of input seen
   
-  typedef short Port_Num;                        // port number can be represented as a short
-
   std::map < Port_Num, Freq_Setting > port_freq; // keep track of frequency settings on each port
 
   std::vector < int > pulse_count;     // keep track of hourly counts of pulses on each port

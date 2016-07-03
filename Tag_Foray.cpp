@@ -1,4 +1,5 @@
 #include "Tag_Foray.hpp"
+#include "SG_Record.hpp"
 
 #include <string.h>
 #include <sstream>
@@ -92,71 +93,47 @@ Tag_Foray::start() {
 
       ++line_no;
 
-      switch (buf[0]) {
-      case 'G':
-        {
-          /* a GPS fix line like:
-             G,1458001712,44.34021,-66.118733333,21.6
-                 ts        lat        lon        alt
-          */
-          double lat=0.0, lon=0.0, alt=0.0;
-          if (4 == sscanf(buf+2, "%lf,%lf,%lf,%lf", &ts, &lat, &lon, &alt)) {
-            // line is okay, so maybe file it, if GPS isn't stuck
-            if (tsGPS == 0 || ts - tsGPS > 60) {
-              // this is the first GPS timestamp, or it has advanced by at least
-              // 1 minute from the previous one, showing the GPS is not stuck
-              Tag_Candidate::filer-> add_GPS_fix( ts, lat, lon, alt );
-              prevRecordWasGPS = true;
-              tsGPS = ts;
-            } else {
-              GPSstuck = true;
-            }
-          } else {
-            // otherwise, quietly ignore malformed GPS fix line
-            ;
-          }
+      SG_Record r(buf);
+      ts = r.ts;
+
+      if (r.type == SG_Record::BAD) {
+        std::cerr << "Warning: malformed line in input\n  at line " << line_no << ":\n" << (string("") + buf) << std::endl;
+        continue;
+      }
+
+      switch (r.type) {
+      case SG_Record::GPS:
+        if (tsGPS == 0 || r.ts - tsGPS > 60) {
+          // this is the first GPS timestamp, or it has advanced by at least
+          // 1 minute from the previous one, showing the GPS is not stuck
+          Tag_Candidate::filer-> add_GPS_fix( r.ts, r.v.lat, r.v.lon, r.v.alt );
+          prevRecordWasGPS = true;
+          tsGPS = r.ts;
+        } else {
+          GPSstuck = true;
         }
         break;
-      case 'S':
-        {
-          /* a parameter-setting line like:
-             S,1366227448.192,5,-m,166.376,0,
-             is S, timestamp, port_num, param flag, value, return code, other error
-          */
-          short port_num = 0;
-          char param_flag[16] = {};
-          double param_value = 0;
-          int return_code = 0;
-          char error[256];
-          if (5 > sscanf(buf+2, "%lf,%hd,%[^,],%lf,%d,%[^\n]", &ts, &port_num, param_flag, &param_value, &return_code, error)) {
-            // silently ignore malformed line (note:  %[^\n] field doesn't increase count if remainder of line is empty, so sscanf here can return 5 or 6
-            continue;
-          }
-          prevRecordWasGPS = false;
 
-          if (strcmp("-m", param_flag) || return_code) {
-            // ignore non-frequency parameter setting
-            continue;
-          }
+      case SG_Record::PARAM:
+        prevRecordWasGPS = false;
 
-          if (! force_default_freq)
-            port_freq[port_num] = Freq_Setting(param_value);
+        if (strcmp("-m", r.v.param_flag) || r.v.return_code) {
+          // ignore non-frequency parameter setting, or failed frequency setting
           continue;
         }
+
+        if (! force_default_freq)
+          port_freq[r.port] = Freq_Setting(r.v.param_value);
+        continue;
         break;
-      case 'p':
+
+      case SG_Record::PULSE:
         {
-          short port_num = 0;
-          float dfreq = 0, sig = 0, noise = 0;
-          if (5 != sscanf(buf+1, "%hd,%lf,%f,%f,%f", &port_num, &ts, &dfreq, &sig, &noise)) {
-            std::cerr << "Warning: malformed line in input\n  at line " << line_no << ":\n" << (string("") + buf) << std::endl;
-            continue;
-          }
-          if (ts < BEAGLEBONE_POWERUP_TS)  // beaglebones power up with the clock set to 1 Jan 2000; if timestamps
+          if (r.ts < BEAGLEBONE_POWERUP_TS)  // beaglebones power up with the clock set to 1 Jan 2000; if timestamps
             clockMonotonic = true; // of pulses are before this, it's because the OS is using CLOCK_MONOTONIC
                                    // for alsa timestamps.
 
-          double hourBin = round(ts / 3600);
+          double hourBin = round(r.ts / 3600);
           if (hourBin != prevHourBin && prevHourBin > 0) {
             for (int i = 0; i <= MAX_PORT_NUM; ++i) {
               if (pulse_count[i] > 0) {
@@ -167,43 +144,49 @@ Tag_Foray::start() {
             prevHourBin = hourBin;
           }
 
-          if (port_num >= 0 && port_num < MAX_PORT_NUM)
-            ++pulse_count[port_num];
+          if (r.port >= 0 && r.port < MAX_PORT_NUM)
+            ++pulse_count[r.port];
 
           // if timestamps are using CLOCK_MONOTONIC and the GPS fix
           // is valid, see whether we have a tighter CLOCK_MONOTONIC
           // bracket around the GPS time fix
 
-          if (prevRecordWasGPS && clockMonotonic && ! GPSstuck && tsGPS > 0)  {
+          if (prevRecordWasGPS && clockMonotonic && tsGPS > 0)  {
             if (prevMonoTS > 0) {
-              Gap diff = ts - prevMonoTS;
+              Gap diff = r.ts - prevMonoTS;
               // small time reversals are common because of interleaved
               // reporting by pulse finders on different channels.
               // Here we're only interested in proper bracketing:
               //  prevMonoTS <= ts and the file line for tsGPS occurs
               // between those for prevMonoTS and ts.
-              if (diff >= 0 && diff < bestMonoBracketWidth) {
+
+
+              if (diff >= 0 && diff < bestMonoBracketWidth
+                  // detecting a stuck GPS is tricky, so we just
+                  // require that the new bracket can replace an older
+                  // one if it surrounds a new gps timestamp
+                  && (bestMonoBracketWidth == 0.0 || bestMonoBracketGPSts != tsGPS)) {
                 bestMonoBracketWidth = diff;
-                bestMonoBracketMidpoint = (ts + prevMonoTS) / 2.0;
+                bestMonoBracketMidpoint = (r.ts + prevMonoTS) / 2.0;
                 bestMonoBracketGPSts = tsGPS;
               }
             }
           }
-          prevMonoTS = ts;
+          prevMonoTS = r.ts;
           prevRecordWasGPS = false;
 
-          if (dfreq > max_dfreq || dfreq < min_dfreq)
+          if (r.v.dfreq > max_dfreq || r.v.dfreq < min_dfreq)
             continue;
 
-          if (! port_freq.count(port_num))
-            port_freq[port_num] = Freq_Setting(default_freq);
+          if (! port_freq.count(r.port))
+            port_freq[r.port] = Freq_Setting(default_freq);
 
-          Tag_Finder_Key key(port_num, port_freq[port_num].f_kHz);
+          Tag_Finder_Key key(r.port, port_freq[r.port].f_kHz);
 
           if (! tag_finders.count(key)) {
             Tag_Finder *newtf;
             std::ostringstream prefix;
-            prefix << port_num << ",";
+            prefix << r.port << ",";
             if (max_pulse_rate > 0)
               newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix.str());
             else
@@ -211,10 +194,10 @@ Tag_Foray::start() {
             tag_finders[key] = newtf;
           };
 
-          if (dfreq < 0 && unsigned_dfreq)
-            dfreq = - dfreq;
+          if (r.v.dfreq < 0 && unsigned_dfreq)
+            r.v.dfreq = - r.v.dfreq;
 
-          Pulse p = Pulse::make(ts, dfreq, sig, noise, port_freq[port_num].f_MHz);
+          Pulse p = Pulse::make(r.ts, r.v.dfreq, r.v.sig, r.v.noise, port_freq[r.port].f_MHz);
 
 
           // process any tag events up to this point in time
@@ -224,11 +207,11 @@ Tag_Foray::start() {
 
           tag_finders[key]->process(p);
 #ifdef DEBUG
-          tag_finders[key]->dump(ts);
+          tag_finders[key]->dump(r.ts);
 #endif
         }
         break;
-      case '!':
+      case SG_Record::EXTENSION:
         {
           // for future extension: in-band commands
         }
@@ -237,11 +220,11 @@ Tag_Foray::start() {
         break;
       }
       if (! tsBegin)
-        tsBegin = ts;
+        tsBegin = r.ts;
 
       if (tsPrev && tsPrev < MIN_VALID_TIMESTAMP && tsPrev > BEAGLEBONE_POWERUP_TS && ts >= MIN_VALID_TIMESTAMP)
-        Tag_Candidate::filer->add_time_jump(tsPrev, ts, 'S'); // indicate jump due to (presumably) setting clock from GPS
-      tsPrev = ts;
+        Tag_Candidate::filer->add_time_jump(tsPrev, r.ts, 'S'); // indicate jump due to (presumably) setting clock from GPS
+      tsPrev = r.ts;
   }
   // record a pinning timejump if pulses use monotonic clock
   if (clockMonotonic && std::isfinite(bestMonoBracketWidth)) {
