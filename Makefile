@@ -17,7 +17,7 @@ PROGRAM_BUILD_TS=$(shell date +%s)
 
 all: find_tags_motus testAddRemoveTag ## find_tags_unifile
 
-OBJS=Ambiguity.o  Freq_Setting.o  History.o  Pulse.o Set.o Tag_Candidate.o  Tag_Finder.o  Tag.o Ticker.o DB_Filer.o Freq_History.o Graph.o Node.o Rate_Limiting_Tag_Finder.o Tag_Database.o Tag_Foray.o Data_Source.o Lotek_Data_Source.o SG_File_Data_Source.o SG_SQLite_Data_Source.o
+OBJS=Ambiguity.o  Freq_Setting.o  History.o  Pulse.o Set.o Tag_Candidate.o  Tag_Finder.o  Tag.o Ticker.o DB_Filer.o Freq_History.o Graph.o Node.o Rate_Limiting_Tag_Finder.o Tag_Database.o Tag_Foray.o Data_Source.o Lotek_Data_Source.o SG_File_Data_Source.o SG_SQLite_Data_Source.o SG_Record.o
 
 clean:
 	rm -f $(OBJS) find_tags find_tags_unifile find_tags_motus  find_tags_motus.o  testAddRemoveTag.o
@@ -43,6 +43,8 @@ Tag_Finder.o: Tag_Finder.hpp Tag_Finder.cpp Tag_Candidate.hpp find_tags_common.h
 Tag_Foray.o: Tag_Foray.hpp Tag_Foray.cpp find_tags_common.hpp DB_Filer.hpp
 
 Rate_Limiting_Tag_Finder.o: Rate_Limiting_Tag_Finder.hpp find_tags_common.hpp
+
+SG_Record.o: SG_Record.cpp SG_Record.hpp
 
 find_tags_unifile.o: find_tags_unifile.cpp find_tags_common.hpp Freq_History.hpp Freq_Setting.hpp DFA_Node.hpp DFA_Graph.hpp Tag.hpp Tag_Database.hpp Pulse.hpp Burst_Params.hpp Bounded_Range.hpp Tag_Candidate.hpp Tag_Finder.hpp Rate_Limiting_Tag_Finder.hpp Tag_Foray.hpp
 
