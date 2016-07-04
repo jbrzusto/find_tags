@@ -7,7 +7,7 @@
 // handled as a tagged union
 
 struct SG_Record {
-  typedef enum {BAD, PULSE, GPS, PARAM, EXTENSION} Type;
+  typedef enum {BAD, PULSE, GPS, PARAM, CLOCK, EXTENSION} Type;
   Type type;  //!< type of record represented
 
   Timestamp ts;  //!< timestamp from file line; common to all record types
@@ -34,6 +34,13 @@ struct SG_Record {
       int      return_code;
       char     error[256];
     };
+
+    struct {
+      // Clock setting record
+      int      clock_level;
+      double   clock_remaining;
+    };
+
   } v; 
    
   SG_Record(char * buf);        //!< construct from buffer

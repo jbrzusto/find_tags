@@ -38,6 +38,17 @@ SG_Record::SG_Record(char * buf) {
     }
     break;
 
+  case 'C':
+    /* a clock-setting line like:
+       C,1466715518.311,6,0.00000196
+       which gives the new timestamp, level of correction (roughly 10^-X), residual correction
+       Mainly of interest because it provides a timestamp.
+    */
+    if (3 == sscanf(buf+2, "%lf,%d,%lf", &ts, &v.clock_level, &v.clock_remaining)) {
+      type = CLOCK;
+    }
+    break;
+
   default:
     break;
   };
