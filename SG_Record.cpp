@@ -3,17 +3,19 @@
 #include <string.h>
 #include <sstream>
 
-SG_Record::SG_Record(char * buf) {
+SG_Record
+SG_Record::from_buf(char * buf) {
   // assume invalid record
-  type = BAD;
+  SG_Record rv;
+  rv.type = BAD;
   switch (buf[0]) {
   case 'p':
     /* a pulse record line like:
        p1,14332651182.1235,3.234,-55.44,-77.33
        port    ts          dfreq  sig    noise
     */
-    if (5 == sscanf(buf+1, "%hd,%lf,%f,%f,%f", &port, &ts, &v.dfreq, &v.sig, &v.noise)) {
-      type = PULSE;
+    if (5 == sscanf(buf+1, "%hd,%lf,%f,%f,%f", &rv.port, &rv.ts, &rv.v.dfreq, &rv.v.sig, &rv.v.noise)) {
+      rv.type = PULSE;
     }
     break;
 
@@ -22,8 +24,8 @@ SG_Record::SG_Record(char * buf) {
        G,1458001712,44.34021,-66.118733333,21.6
        ts        lat        lon        alt
     */
-    if (4 == sscanf(buf+2, "%lf,%lf,%lf,%lf", &ts, &v.lat, &v.lon, &v.alt)) {
-      type = GPS;
+    if (4 == sscanf(buf+2, "%lf,%lf,%lf,%lf", &rv.ts, &rv.v.lat, &rv.v.lon, &rv.v.alt)) {
+      rv.type = GPS;
     }
     break;
 
@@ -32,9 +34,8 @@ SG_Record::SG_Record(char * buf) {
        S,1366227448.192,5,-m,166.376,0,
        is S, timestamp, port_num, param flag, value, return code, other error
     */
-    if (5 <= sscanf(buf+2, "%lf,%hd,%[^,],%lf,%d,%[^\n]", &ts, &port, (char *) &v.param_flag, &v.param_value, &v.return_code, (char *) &v.error)) {
-      // silently ignore malformed line (note:  %[^\n] field doesn't increase count if remainder of line is empty, so sscanf here can return 5 or 6
-      type = PARAM;
+    if (5 == sscanf(buf+2, "%lf,%hd,%[^,],%lf,%d,", &rv.ts, &rv.port, (char *) &rv.v.param_flag, &rv.v.param_value, &rv.v.return_code)) {
+      rv.type = PARAM;
     }
     break;
 
@@ -44,12 +45,13 @@ SG_Record::SG_Record(char * buf) {
        which gives the new timestamp, level of correction (roughly 10^-X), residual correction
        Mainly of interest because it provides a timestamp.
     */
-    if (3 == sscanf(buf+2, "%lf,%d,%lf", &ts, &v.clock_level, &v.clock_remaining)) {
-      type = CLOCK;
+    if (3 == sscanf(buf+2, "%lf,%d,%lf", &rv.ts, &rv.v.clock_level, &rv.v.clock_remaining)) {
+      rv.type = CLOCK;
     }
     break;
 
   default:
     break;
   };
+  return rv;
 };

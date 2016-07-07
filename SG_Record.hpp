@@ -32,7 +32,7 @@ struct SG_Record {
       char     param_flag[16];
       double   param_value;
       int      return_code;
-      char     error[256];
+      //      char     error[256];  // omit: too large when buffering
     };
 
     struct {
@@ -43,7 +43,38 @@ struct SG_Record {
 
   } v; 
    
-  SG_Record(char * buf);        //!< construct from buffer
+  static SG_Record from_buf(char * buf);        //!< construct from buffer
+
+
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version)
+  {
+    ar & BOOST_SERIALIZATION_NVP( type );
+    ar & BOOST_SERIALIZATION_NVP( ts );
+    ar & BOOST_SERIALIZATION_NVP( port );
+    switch(type) {
+    case PULSE:
+      ar & BOOST_SERIALIZATION_NVP( v.dfreq );
+      ar & BOOST_SERIALIZATION_NVP( v.sig );
+      ar & BOOST_SERIALIZATION_NVP( v.noise );
+      break;
+      
+    case GPS:
+      ar & BOOST_SERIALIZATION_NVP( v.lat );
+      ar & BOOST_SERIALIZATION_NVP( v.lon );
+      ar & BOOST_SERIALIZATION_NVP( v.alt );
+      break;
+
+    case PARAM:
+      ar & BOOST_SERIALIZATION_NVP( v.param_flag );
+      ar & BOOST_SERIALIZATION_NVP( v.param_value );
+      ar & BOOST_SERIALIZATION_NVP( v.return_code );
+      break;
+
+    default:
+      break;
+    } 
+  };  
 };
 
 #endif // SG_RECORD

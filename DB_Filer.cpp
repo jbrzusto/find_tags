@@ -62,8 +62,8 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
     lastGPSts = +1.0 / 0.0; // ensures new timestamp is never late enough to record a GPS fix
   }
 
-  Check(sqlite3_prepare_v2(outdb, q_add_time_jump, -1, &st_add_time_jump, 0),
-        "output DB does not have valid 'timeJumps' table.");
+  Check(sqlite3_prepare_v2(outdb, q_add_time_fix, -1, &st_add_time_fix, 0),
+        "output DB does not have valid 'timeFixes' table.");
 
   Check(sqlite3_prepare_v2(outdb, q_add_pulse_count, -1, &st_add_pulse_count, 0),
         "output DB does not have valid 'pulseCounts' table.");
@@ -271,18 +271,20 @@ DB_Filer::add_GPS_fix(double ts, double lat, double lon, double alt) {
 
 
 const char *
-DB_Filer::q_add_time_jump =
-"insert or ignore into timeJumps (batchID, tsBefore, tsAfter, jumpType) \
-                           values(?,       ?,        ?,       ?)";
-//                            1       2        3       4
+DB_Filer::q_add_time_fix =
+"insert into timeFixes (batchID, tsLow, tsHigh, fixedBy, error, comment) \
+                 values(?,       ?,     ?,    ?,       ?,     ?)";
+//                      1        2      3     4        5      6
 
 void
-DB_Filer::add_time_jump(double tsBefore, double tsAfter, char jumpType) {
-  sqlite3_bind_int    (st_add_time_jump, 1, bid);
-  sqlite3_bind_double (st_add_time_jump, 2, tsBefore);
-  sqlite3_bind_double (st_add_time_jump, 3, tsAfter);
-  sqlite3_bind_text   (st_add_time_jump, 4, & jumpType, 1, SQLITE_TRANSIENT);
-  step_commit(st_add_time_jump);
+DB_Filer::add_time_fix(Timestamp tsLow, Timestamp tsHigh, Timestamp by, Timestamp error, char fixType) {
+  sqlite3_bind_int    (st_add_time_fix, 1, bid);
+  sqlite3_bind_double (st_add_time_fix, 2, tsLow);
+  sqlite3_bind_double (st_add_time_fix, 3, tsHigh);
+  sqlite3_bind_double (st_add_time_fix, 4, by);
+  sqlite3_bind_double (st_add_time_fix, 5, error);
+  sqlite3_bind_text   (st_add_time_fix, 6, & fixType, 1, SQLITE_TRANSIENT);
+  step_commit(st_add_time_fix);
 };
 
 const char *

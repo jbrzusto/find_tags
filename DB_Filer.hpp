@@ -31,7 +31,7 @@ public:
 
   void add_GPS_fix(double ts, double lat, double lon, double alt); // record a GPS fix
 
-  void add_time_jump(double tsBefore, double tsAfter, char jumpType); // record a time jump
+  void add_time_fix(Timestamp tsLow, Timestamp tsHigh, Timestamp by, Timestamp error, char fixType); // record a time fix (i.e. correction)
 
   void add_pulse_count(double hourBin, int ant, int count); // record a count of pulses on from an antenna during an hour
 
@@ -68,7 +68,7 @@ protected:
   sqlite3_stmt * st_add_hit; //!< add a hit to a run
   sqlite3_stmt * st_add_prog; //!< add batch program entry
   sqlite3_stmt * st_add_GPS_fix; //!< add a GPS fix
-  sqlite3_stmt * st_add_time_jump; //!< add a time jump
+  sqlite3_stmt * st_add_time_fix; //!< add a time jump
   sqlite3_stmt * st_add_pulse_count; //!< add a count of pulses from an antenna during an hour bin
   sqlite3_stmt * st_check_param; //!< check whether parameter value has changed
   sqlite3_stmt * st_add_param; //!< add batch parameter entry
@@ -123,7 +123,7 @@ protected:
   static const char * q_end_run;
   static const char * q_add_hit;
   static const char * q_add_GPS_fix;
-  static const char * q_add_time_jump;
+  static const char * q_add_time_fix;
   static const char * q_add_pulse_count;
   static const char * q_load_ambig;
   static const char * q_save_ambig;
