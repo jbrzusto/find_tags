@@ -85,6 +85,9 @@ Clock_Repair::put( SG_Record & r) {
           correcting = true;
     }
     break;
+
+  default:
+    break;
   }
 };
 
