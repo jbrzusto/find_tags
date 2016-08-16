@@ -109,7 +109,7 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
   // if there are no entries in batchAmbig so far, this is -1.
 
   msg = "SQLite output database does not have valid 'tagAmbig' table";
-  
+
   sqlite3_stmt * st_get_last_ambigID;
   Check( sqlite3_prepare_v2(outdb,
                             "select coalesce(-1, min(ambigID) - 1) from tagAmbig",
@@ -351,7 +351,7 @@ const char *
 DB_Filer::q_begin_batch = "insert into batches (monoBN, ts) values (?, ?)";
 
 const char *
-DB_Filer::q_drop_saved_state = "delete from batchState where batchID=?";
+DB_Filer::q_drop_saved_state = "delete from batchState where monoBN=?";
 
 void
 DB_Filer::begin_batch(int bootnum) {
@@ -392,7 +392,7 @@ DB_Filer::end_tx() {
 };
 
 const char *
-DB_Filer::q_load_ambig = 
+DB_Filer::q_load_ambig =
   "select ambigID, motusTagID1, motusTagID2, motusTagID3, motusTagID4, motusTagID5, motusTagID6 from tagAmbig order by ambigID desc;";
   //        0           1            2            3            4            5            6
 
@@ -418,7 +418,7 @@ DB_Filer::load_ambiguity(Tag_Database & tdb) {
     for (int i = 3; i <= MAX_TAGS_PER_AMBIGUITY_GROUP; ++i) {
       if (SQLITE_NULL == sqlite3_column_type(st_load_ambig, i))
         break;
-      // add subsequent tag to this ambiguity group 
+      // add subsequent tag to this ambiguity group
       proxy = Ambiguity::add(proxy, tdb.getTagForMotusID(sqlite3_column_int(st_load_ambig, i)));
     }
     // set the count to non-zero to indicate this amiguity group
@@ -430,7 +430,7 @@ DB_Filer::load_ambiguity(Tag_Database & tdb) {
 };
 
 const char *
-DB_Filer::q_save_ambig = 
+DB_Filer::q_save_ambig =
   "insert into tagAmbig (ambigID, motusTagID1, motusTagID2, motusTagID3, motusTagID4, motusTagID5, motusTagID6) values (?, ?, ?, ?, ?, ?, ?);";
   //                       1           2            3            4            5            6            7
 
@@ -454,15 +454,18 @@ DB_Filer::save_ambiguity(Motus_Tag_ID proxyID, const Ambiguity::AmbigTags & tags
 
 const char *
 DB_Filer::q_save_findtags_state =
-  "insert into batchState (batchID, progName, monoBN, tsData, tsRun, state, lastfileID, lastCharIndex)\
-                   values (?,       ?,        ?,      ?,      ?,     ?,     -1,         -1);";
-  //                     1       2        3      4      5      6     7          8
+  "insert or replace into batchState \
+             (batchID, progName, monoBN, tsData, tsRun, state)\
+      values (?,       ?,        ?,      ?,      ?,     ? );";
+  //          1        2         3       4       5      6
 
 void
 DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string state) {
   // drop any saved state for previous batch
-  sqlite3_bind_int(st_drop_saved_state, 1, bid - 1);
-  step_commit(st_drop_saved_state);
+  // FIXME: we need a reasonable way to decide when we can drop saved state from
+  // boot session; i.e. when do we have all of its files?  This argues for a file counter...
+  // The primary key on the batchState table will permit only one saved state per boot session,
+  // and this will be the latest, given the use of "insert or replace" in q_save_findtags_state
 
   sqlite3_reset(st_save_findtags_state);
   sqlite3_bind_int(st_save_findtags_state,    1, bid);
@@ -491,7 +494,7 @@ DB_Filer::load_findtags_state(Timestamp & tsData, Timestamp & tsRun, std::string
 
 
 const char *
-DB_Filer::q_get_blob = "select bz2uncompress(t2.contents, t1.size) from files as t1 left join fileContents as t2 on t1.fileID=t2.fileID where t1.monoBN=? order by ts";
+DB_Filer::q_get_blob = "select t1.ts, bz2uncompress(t2.contents, t1.size) from files as t1 left join fileContents as t2 on t1.fileID=t2.fileID where t1.monoBN=? and t1.ts >= ? order by ts";
 
 
 void
@@ -514,10 +517,19 @@ DB_Filer::start_blob_reader(int monoBN) {
          "SQLite input database does not have valid 'files' or 'fileContents' table.");
 
   sqlite3_bind_int(st_get_blob, 1, monoBN);
+
+  // initially, assume we're starting at the first file in that boot session, by specifying fileTS=0.
+  // this might be changed by the resume() code.
+  sqlite3_bind_int(st_get_blob, 2, 0);
+};
+
+void
+DB_Filer::seek_blob (Timestamp tsseek) {
+  sqlite3_bind_int(st_get_blob, 2, tsseek);
 };
 
 bool
-DB_Filer::get_blob (const char **bufout, int * lenout) {
+DB_Filer::get_blob (const char **bufout, int * lenout, Timestamp *ts) {
   int res = sqlite3_step(st_get_blob);
   if (res == SQLITE_DONE)
     return false; // indicate we're done
@@ -525,8 +537,9 @@ DB_Filer::get_blob (const char **bufout, int * lenout) {
   if (res != SQLITE_ROW)
     throw std::runtime_error("Problem getting next blob.");
 
-  * lenout = sqlite3_column_bytes(st_get_blob, 0);
-  * bufout = reinterpret_cast < const char * > (sqlite3_column_blob(st_get_blob, 0));
+  * lenout = sqlite3_column_bytes(st_get_blob, 1);
+  * bufout = reinterpret_cast < const char * > (sqlite3_column_blob(st_get_blob, 1));
+  * ts = sqlite3_column_double(st_get_blob, 0);
 
   return true;
 };

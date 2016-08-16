@@ -49,7 +49,9 @@ public:
 
   void start_blob_reader(int monoBN); //!< initialize reading of filecontents blobs for a given boot number
 
-  bool get_blob (const char **bufout, int * lenout); //!< get the next available blob; return true on success, false if none; set caller's pointer and length 
+  void seek_blob (Timestamp tsseek); //!< skip to the first blob whose file timestamp >= ts.  This is used for resuming.
+
+  bool get_blob (const char **bufout, int * lenout, Timestamp *ts); //!< get the next available blob; return true on success, false if none; set caller's pointer and length
 
   void end_blob_reader(); //!< finalize blob reader
 
