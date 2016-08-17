@@ -272,13 +272,13 @@ DB_Filer::add_GPS_fix(double ts, double lat, double lon, double alt) {
 
 const char *
 DB_Filer::q_add_time_fix =
-"insert into timeFixes (batchID, tsLow, tsHigh, fixedBy, error, comment) \
+"insert into timeFixes (monoBN, tsLow, tsHigh, fixedBy, error, comment) \
                  values(?,       ?,     ?,    ?,       ?,     ?)";
 //                      1        2      3     4        5      6
 
 void
 DB_Filer::add_time_fix(Timestamp tsLow, Timestamp tsHigh, Timestamp by, Timestamp error, char fixType) {
-  sqlite3_bind_int    (st_add_time_fix, 1, bid);
+  sqlite3_bind_int    (st_add_time_fix, 1, bootnum);
   sqlite3_bind_double (st_add_time_fix, 2, tsLow);
   sqlite3_bind_double (st_add_time_fix, 3, tsHigh);
   sqlite3_bind_double (st_add_time_fix, 4, by);
@@ -367,6 +367,9 @@ DB_Filer::begin_batch(int bootnum) {
 
   // set batch ID for "insert run" query
   sqlite3_bind_int(st_begin_run, 2, bid);
+
+  // set bootnum (monotonic boot session) for this batch
+  this->bootnum = bootnum;
 };
 
 const char *
