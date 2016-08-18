@@ -66,7 +66,10 @@ public:
                                          //! for small time reversals
                                          //! and interleaving of
                                          //! output pulses
-  static const int MAX_ANTENNAS=10;      //!< maximum number of antennas
+  static const int MAX_ANTENNAS=12;      //!< maximum number of antennas (0: direct beaglebone; 1-10 USB hub ports; 11: Lotek master antenna A1+A2+A3+A4
+  static const int MAX_ANT_NAME_CHARS=11; //!< maximum number of chars in an antenna name; currently 11, for "A1+A2+A3+A4"
+  static const int MAX_LINE_FORMAT_CHARS=64; //!< maximum number of chars in scanf format string for an input line
+
 
 
 protected:
@@ -78,6 +81,8 @@ protected:
   Timestamp latestInputTS;                                                //!< timestamp of most recent input line
   std::vector < Frequency_MHz > antFreq;                                  //!< most recent listen frequency on each antenna, in MHz
   std::set < std::pair < short, short > > warned;                         //!< sets of tag/codeset combos for which 'non-existent' warning has been issued
+  char ltLineFormat[MAX_LINE_FORMAT_CHARS + 1];                           //!< sscanf-compatible format string; ctor fills in the width of the antenna name field
+
 
   // methods
 
