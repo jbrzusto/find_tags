@@ -620,6 +620,8 @@ main (int argc, char **argv) {
       dbf.add_param("pulse_rate_window", pulse_rate_window);
       dbf.add_param("min_bogus_spacing", min_bogus_spacing);
       dbf.add_param("unsigned_dfreq", unsigned_dfreq);
+      dbf.add_param("resume", resume);
+      dbf.add_param("lotek_data", lotek_data);
 
       dbf.load_ambiguity(tag_db);
 
