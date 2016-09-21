@@ -45,7 +45,7 @@ public:
 
   void save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string state);
 
-  bool load_findtags_state(Timestamp & tsData, Timestamp & tsRun, std::string & state);
+  bool load_findtags_state(long long monoBN, Timestamp & tsData, Timestamp & tsRun, std::string & state);
 
   void start_blob_reader(int monoBN); //!< initialize reading of filecontents blobs for a given boot number
 

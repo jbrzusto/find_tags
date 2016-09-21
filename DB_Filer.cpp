@@ -480,12 +480,13 @@ DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string sta
 };
 
 const char *
-DB_Filer::q_load_findtags_state = "select batchID, tsData, tsRun, state from batchState where progName=? order by tsRun desc limit 1;";
-//                                             0      1      2     3
+DB_Filer::q_load_findtags_state = "select (select max(batchID) from batchState) as batchID, tsData, tsRun, state from batchState where progName=? and monoBN=? order by tsRun desc limit 1;";
+//                                      0      1      2     3
 
 bool
-DB_Filer::load_findtags_state(Timestamp & tsData, Timestamp & tsRun, std::string & state) {
+DB_Filer::load_findtags_state(long long monoBN, Timestamp & tsData, Timestamp & tsRun, std::string & state) {
   sqlite3_reset(st_load_findtags_state);
+  sqlite3_bind_int64(st_load_findtags_state, 2, monoBN);
   if (SQLITE_DONE == sqlite3_step(st_load_findtags_state))
     return false; // no saved state
   bid = 1 + sqlite3_column_int   (st_load_findtags_state, 0);

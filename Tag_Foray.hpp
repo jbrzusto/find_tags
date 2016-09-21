@@ -53,7 +53,7 @@ public:
 
   void pause(); //!< serialize foray to output database
 
-  static bool resume(Tag_Foray &tf, Data_Source *data); //!< resume foray from state saved in output database
+  static bool resume(Tag_Foray &tf, Data_Source *data, long long bootnum); //!< resume foray from state saved in output database
   // returns true if successful
 
   static void set_default_pulse_slop_ms(float pulse_slop_ms);

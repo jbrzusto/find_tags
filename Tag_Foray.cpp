@@ -348,16 +348,17 @@ Tag_Foray::now() {
 };
 
 bool
-Tag_Foray::resume(Tag_Foray &tf, Data_Source *data) {
+Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, long long bootnum) {
   Timestamp paused;
   Timestamp lastLineTS;
   std::string blob;
 
   if (! Tag_Candidate::filer->
-    load_findtags_state( paused,
-                         lastLineTS,
-                         blob                      // serialized state
-                         ))
+      load_findtags_state( bootnum, 
+                           paused,
+                           lastLineTS,
+                           blob                      // serialized state
+                           ))
     return false;
 
   std::istringstream ifs (blob);
