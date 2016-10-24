@@ -6,10 +6,10 @@ CXX=~john/bin/gfilt
 #PROFILING=-g3 -pg
 
 ## DEBUG FLAGS:
-CPPFLAGS=-Wall -Wno-sign-compare -g -O3 -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS) -I/usr/local/include/boost_1.60
+##CPPFLAGS=-Wall -Wno-sign-compare -g3  -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS) -I/usr/local/include/boost_1.60 -DDEBUG
 
 ## PRODUCTION FLAGS:
-##CPPFLAGS=-Wall -Wno-sign-compare -O3 -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS)  -I/usr/local/include/boost_1.60
+CPPFLAGS=-Wall -Wno-sign-compare -g -O3 -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS)  -I/usr/local/include/boost_1.60
 
 LDFLAGS=-ldl -lrt -L /usr/local/lib/boost_1.60 -lboost_serialization -lsqlite3
 PROGRAM_VERSION=\""$(shell git describe)\""
@@ -115,7 +115,7 @@ ftmdbg: $(OBJS) find_tags_motus.o
 testAddRemoveTag.o: testAddRemoveTag.cpp find_tags_unifile.cpp find_tags_common.hpp Freq_History.hpp Freq_Setting.hpp DFA_Node.hpp DFA_Graph.hpp Tag.hpp Tag_Database.hpp Pulse.hpp Burst_Params.hpp Bounded_Range.hpp Tag_Candidate.hpp Tag_Finder.hpp Rate_Limiting_Tag_Finder.hpp Tag_Foray.hpp
 
 ## Note: to make testAddRemoteTag, Graph.cpp must be compiled with -DDEBUG
-testAddRemoveTag: testAddRemoveTag.o Ambiguity.o  Freq_Setting.o  History.o  Pulse.o Set.o Tag_Candidate.o  Tag_Finder.o  Tag.o Ticker.o DB_Filer.o Freq_History.o Graph.o Node.o Rate_Limiting_Tag_Finder.o Tag_Database.o Tag_Foray.o Data_Source.o Lotek_Data_Source.o SG_Data_Source.o
+testAddRemoveTag: testAddRemoveTag.o Ambiguity.o  Freq_Setting.o  History.o  Pulse.o Set.o Tag_Candidate.o  Tag_Finder.o  Tag.o Ticker.o DB_Filer.o Freq_History.o Graph.o Node.o Rate_Limiting_Tag_Finder.o Tag_Database.o Tag_Foray.o Data_Source.o Lotek_Data_Source.o SG_File_Data_Source.o Clock_Repair.o Clock_Pinner.o GPS_Validator.o SG_Record.o SG_SQLite_Data_Source.o
 	g++ $(PROFILING) -o testAddRemoveTag $^ $(LDFLAGS)
 
 testum.o: testum.cpp

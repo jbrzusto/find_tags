@@ -27,7 +27,7 @@ int main (int argc, char * argv[] ) {
   if (argc > 1)
     fn = std::string(argv[1]);
   else
-    fn = std::string("/sgm/cleaned_motus_tag_db.sqlite");
+    fn = std::string("/sgm/cache/motus_meta_db.sqlite");
 
   Tag_Database T(fn);
 
@@ -63,7 +63,7 @@ int main (int argc, char * argv[] ) {
     auto r = uni(rng);
     if (inTree[r]) {
 #ifdef DEBUG      
-      std::cout << "-" << tags[r].motusID << std::endl;
+      std::cout << "-" << tags[r]->motusID << std::endl;
 #endif
       g.delTag(tags[r], tol, timeFuzz, 370);
       g.findTag(tags[r], false);
@@ -71,7 +71,7 @@ int main (int argc, char * argv[] ) {
       --numTags;
     } else {
 #ifdef DEBUG
-      std::cout << "+" << tags[r].motusID << std::endl;
+      std::cout << "+" << tags[r]->motusID << std::endl;
 #endif
       g.addTag(tags[r], tol, timeFuzz, 370);
       inTree[r] = true;
