@@ -24,6 +24,7 @@ public:
                                                         // augmented or reduced without creating a new one.
   short                 mfgID;                          // manufacturer ID; only used for Lotek input data
   short                 codeSet;                        // codeset the ID is from; either '3' or '4', if a Lotek tag.  0 if undefined.
+  bool                  active;                         // is the tag transmitting?  This field is set by History events.
 
 public:
   Tag(){};
