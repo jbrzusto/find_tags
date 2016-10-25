@@ -10,7 +10,8 @@ Tag::Tag(Motus_Tag_ID motusID, Frequency_MHz freq, Frequency_Offset_kHz dfreq, s
   gaps(gaps),
   count(0),
   mfgID(mfgID),
-  codeSet(codeSet)
+  codeSet(codeSet),
+  active(false)
 {
   period = 0;
   for (auto i = gaps.begin(); i != gaps.end(); ++i)
