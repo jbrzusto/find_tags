@@ -58,9 +58,11 @@ public:
 
   static void set_default_pulse_slop_ms(float pulse_slop_ms);
 
-  static void set_default_clock_fuzz_ppm(float clock_fuzz);
+  static void set_default_burst_slop_ms(float burst_slop_ms);
 
-  static void set_default_max_skipped_time(Gap skip);
+  static void set_default_burst_slop_expansion_ms(float burst_slop_expansion_ms);
+
+  static void set_default_max_skipped_bursts(unsigned int skip);
 
   static int num_cands_with_run_id(DB_Filer::Run_ID rid, int delta); //!< return the number of candidates with the given run id
   // if delta is 0. Otherwise, adjust the count by delta, and return the new count.
@@ -124,11 +126,21 @@ protected:
   // corresponding pair in a registered
   // tag, and still match the tag.
 
-  float clock_fuzz;	// max allowed clock rate difference for timing, in ppm
+  Gap burst_slop;	// (seconds) allowed slop in timing between
+                        // consecutive tag bursts, in seconds this is
+                        // meant to allow for measurement error at tag
+                        // registration and detection times
 
-  // how much time can a tag run go without seeing a pulse?
 
-  Gap max_skipped_time;
+  Gap burst_slop_expansion; // (seconds) how much slop in timing
+			    // between tag bursts increases with each
+  // skipped pulse; this is meant to allow for clock drift between
+  // the tag and the receiver.
+
+  // how many consecutive bursts can be missing without terminating a
+  // run?
+
+  unsigned int max_skipped_bursts;
 
   History *hist;
   Ticker cron;
@@ -137,8 +149,9 @@ protected:
   double prevHourBin; // previous hourly bin, for counting pulses
 
   static Gap default_pulse_slop;
-  static float default_clock_fuzz;
-  static Gap default_max_skipped_time;
+  static Gap default_burst_slop;
+  static Gap default_burst_slop_expansion;
+  static unsigned int default_max_skipped_bursts;
 
   // keep track of how many candidates share the same run; this is
   // to manage clones at the confirmed level, so that death of a single
@@ -171,8 +184,9 @@ public:
     ar & BOOST_SERIALIZATION_NVP( tag_finders );
     ar & BOOST_SERIALIZATION_NVP( graphs );
     ar & BOOST_SERIALIZATION_NVP( pulse_slop );
-    ar & BOOST_SERIALIZATION_NVP( clock_fuzz );
-    ar & BOOST_SERIALIZATION_NVP( max_skipped_time );
+    ar & BOOST_SERIALIZATION_NVP( burst_slop );
+    ar & BOOST_SERIALIZATION_NVP( burst_slop_expansion );
+    ar & BOOST_SERIALIZATION_NVP( max_skipped_bursts );
     ar & BOOST_SERIALIZATION_NVP( hist );
     ar & BOOST_SERIALIZATION_NVP( cron );
   };  
