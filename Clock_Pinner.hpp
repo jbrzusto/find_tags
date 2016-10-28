@@ -10,14 +10,14 @@ class Clock_Pinner {
   //
   //   A Clock_Pinner accepts a sequence of timestamps from two clocks,
   //   one valid and one not.  The invalid clock is assumed to differ
-  //   from the valid clock by an unknown but constant offset, and to
+  //   from the valid clock by an unknown but constant offset, and so to
   //   differ only negligably in rate.  This class tries to pin the
   //   invalid clock to the valid one, by maintaining a best estimate of
   //   the offset between them.
 
 public:
 
-  typedef enum {NONE, VALID, INVALID} Timestamp_Type;
+  typedef enum {NONE=-1, VALID=0, INVALID=1} Timestamp_Type;
 
   Clock_Pinner(); //!< ctor
 
@@ -36,9 +36,9 @@ public:
 
 protected:
 
-  Timestamp      lastValidTS;    //!< most recent valid timestamp
-  Timestamp      invalidTSlo;    //!< earliest invalid timestamp in run
-  Timestamp      invalidTShi;    //!< latest invalid timestamp in run; when zero, indicates no invalid timestamps in run yet
+  Timestamp      lo[2];      //!< earliest timestamp in run of type VALID or INVALID
+  Timestamp      hi[2];      //!< latest timestamp in run of type VALID or INVALID
+  Timestamp_Type runType;        //!< what type of timestamp run are we in?
   bool           haveOffset;     //!< have we estimated the offset?
   Timestamp      estOffset;      //!< estimated offset
   Timestamp      maxError;       //!< max error in estimated offset
@@ -50,9 +50,9 @@ public:
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
   {
-    ar & BOOST_SERIALIZATION_NVP( lastValidTS );
-    ar & BOOST_SERIALIZATION_NVP( invalidTSlo );
-    ar & BOOST_SERIALIZATION_NVP( invalidTShi );
+    ar & BOOST_SERIALIZATION_NVP( lo );
+    ar & BOOST_SERIALIZATION_NVP( hi );
+    ar & BOOST_SERIALIZATION_NVP( runType );
     ar & BOOST_SERIALIZATION_NVP( haveOffset );
     ar & BOOST_SERIALIZATION_NVP( estOffset );
     ar & BOOST_SERIALIZATION_NVP( maxError );

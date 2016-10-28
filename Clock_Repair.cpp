@@ -1,20 +1,18 @@
 #include "Clock_Repair.hpp"
 
-Clock_Repair::Clock_Repair(DB_Filer * filer, Timestamp monoTol) :
+Clock_Repair::Clock_Repair(DB_Filer * filer, Timestamp tol) :
   filer(filer),
-  monoTol(monoTol),
+  tol(tol),
   cp(),
   gpsv(),
   recBuf(),
-  correcting(false),
-  havePreGPSoffset(false),
-  haveMonotonicOffset(false),
-  pulseClock(CS_UNKNOWN),
   GPSstuck(false),
-  preGPSTS (0)
+  correcting(false),
+  offset(0.0),
+  offsetError(0.0)
 {
 
-}; 
+};
 
 //!< accept a record from an SG file
 void
@@ -24,70 +22,29 @@ Clock_Repair::put( SG_Record & r) {
 
   if (r.type == SG_Record::PULSE || r.type == SG_Record::GPS) {
     GPSstuck = gpsv.accept(r.ts, r.type == SG_Record::PULSE);
-    
+
     // skip stuck GPS records
     if (GPSstuck && r.type == SG_Record::GPS)
       return;
   }
 
   recBuf.push(r);
+
   if (correcting)
     return; // we already know how to correct all timestamps
 
-  // do clock correction estimation logic, which depends on record type
+  // correct all monotonic timestamps to pre-GPS timestamps
+  if (isMonotonic(r.ts))
+    r.ts += TS_BEAGLEBONE_BOOT;
 
-  switch (r.type) {
-  case SG_Record::PULSE:
-    if (isMonotonic(r.ts)) {
-      pulseClock = CS_MONOTONIC;
-      cp.accept(r.ts, Clock_Pinner::INVALID);
-    } else if (isValid(r.ts)) {
-      pulseClock = CS_REALTIME;
-      if (preGPSTS > 0) {
-        // calculate the offset for correcting preGPS timestamps
-        preGPSOffset = r.ts - preGPSTS;
-        havePreGPSoffset = true;
-      }
-      correcting = true;  // we're ready to correct all timestamps
-    } else {
-      pulseClock = CS_REALTIME_PRE_GPS;
-      preGPSTS = r.ts;
-    }
-    break;
+  // do clock correction estimation logic
 
-    // timestamps for PARAM and GPS records are never MONOTONIC; for GPS, they
-    // are VALID (or stuck), for PARAM they are pre-GPS or VALID.
-
-  case SG_Record::PARAM:
-  case SG_Record::GPS:
-    if (isPreGPS(r.ts)) {
-      preGPSTS = r.ts;
-      break; // should only happen for PARAM records
-    }
-    // timestamp must be valid
-
-    if (preGPSTS > 0) {
-        // calculate the offset for correcting preGPS timestamps
-        preGPSOffset = r.ts - preGPSTS;
-        havePreGPSoffset = true;
-        if (pulseClock == CS_REALTIME_PRE_GPS) {
-          // pulse clock is known to not be using MONOTONIC clock, 
-          // so we now know enough to correct all timestamps
-          correcting = true;
-          break;
-        }
-    }
-    if(cp.accept(r.ts, Clock_Pinner::VALID)) {
+  if (cp.accept(r.ts, isValid(r.ts) ? Clock_Pinner::VALID : Clock_Pinner::INVALID)
+      && cp.max_error() <= tol) {
           // we have a good enough estimate for correcting the monotonic clock
-          haveMonotonicOffset = true;
-          monotonicOffset = cp.offset();
-          monotonicError = cp.max_error();
+          offset = cp.offset();
+          offsetError = cp.max_error();
           correcting = true;
-    }
-    break;
-
-  default:
-    break;
   }
 };
 
@@ -96,11 +53,8 @@ void
 Clock_Repair::done() {
   // record time jumps, if any
 
-  if (haveMonotonicOffset)
-    filer->add_time_fix(0, TS_BEAGLEBONE_BOOT, monotonicOffset, monotonicError, 'M'); // indicate fix due to pinning MONOTONIC clock
-
-  if (havePreGPSoffset)
-    filer->add_time_fix(TS_BEAGLEBONE_BOOT, TS_SG_EPOCH, preGPSOffset, preGPSError, 'S'); // indicate fix due to setting clock from GPS
+  if (correcting)
+    filer->add_time_fix(TS_BEAGLEBONE_BOOT, TS_SG_EPOCH, offset, offsetError, 'S'); // fix pre-GPS timestamps.
 };
 
 //!< get the next record available for processing, and return true.
@@ -109,17 +63,20 @@ bool
 Clock_Repair::get(SG_Record &r) {
   if (recBuf.size() == 0 || ! correcting)
     return false;
+
   // copy from buffer
   r = recBuf.front();
+
   // correct the timestamp
-  if (isMonotonic(r.ts)) {
-    // correct the monotonic timestamp
-    r.ts += monotonicOffset;
-  } else if (isPreGPS(r.ts)) {
-    // correct the pre-GPS timestamp
-    r.ts += preGPSOffset;
-  }
+
+  if (isMonotonic(r.ts))
+    // always correct monotonic timestamps to pre-GPS
+    r.ts += TS_BEAGLEBONE_BOOT;
+
+  if (isPreGPS(r.ts))
+    // correct the pre-GPS timestamps
+    r.ts += offset;
+
   recBuf.pop();
   return true;
 };
-

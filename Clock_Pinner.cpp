@@ -1,85 +1,66 @@
 #include "Clock_Pinner.hpp"
 
 Clock_Pinner::Clock_Pinner() :
-  lastValidTS(0),
-  invalidTShi(0),
+  runType(NONE),
   haveOffset(false),
   estOffset(0),
   maxError(0)
 {
+  hi[VALID] = hi[INVALID] = 0;
+  lo[VALID] = lo[INVALID] = 0;
 };
 
 bool
 Clock_Pinner::accept(Timestamp ts, Timestamp_Type type) {
-  // assume we won't have a new offset estimate
-  bool rv = false;
 
-  if (type == INVALID) {
-    // if we've seen a valid timestamp, we are accumulating subsequent
-    // invalid ones
-    if (lastValidTS) {
-      if (! invalidTShi) {
-        invalidTShi = invalidTSlo = ts;
-      } else {
-        invalidTSlo = std::min(ts, invalidTSlo);
-        invalidTShi = std::max(ts, invalidTShi);
-      }
-    }
-  } else if (type == VALID) {
-    if (invalidTShi > 0) {
-
-      // We've accumulated invalid timestamps since the last valid timestamp,
-      // so estimate offset as the difference between the midpoints (MP) of the
-      // valid and invalid timestamp ranges.  The maximum magnitude of the
-      // pinning error is at most (elapsedValid - elapsedInvalid) / 2.
-      //
-      //                                         validMP
-      //                                         |
-      //    |<------------------- elapsedValid --+------------------------------>|
-      //
-      //                      |<---- elapsedInvalid ------------->|
-      //                      |                     invalidMP     |
-      // ---+-----------------+-------------+-------+-------...---+--------------+----->
-      //    |                 |             |                     |              |
-      //    |                 |             |                     |              |
-      //    lastValidTS       invalidTS[1]  invalidTS[2]    ...   invalidTS[n]   ts (valid)
-      //                      invalidTSlo                         invalidTShi
-
-      Timestamp estOffset = (ts + lastValidTS) / 2 - (invalidTSlo + invalidTShi) / 2;
-      Timestamp elapsedValid = ts - lastValidTS;
-      Timestamp elapsedInvalid = invalidTShi - invalidTSlo;
-
-      // sanity check: make sure the elapsed time on the invalid clock is no
-      // more than 10% larger than the elapsed time on the valid clock.
-      // Timestamps are supposed to have been provided in real time order, so
-      // the elapsed invalid time should be smaller than the elapsed valid
-      // time, but there might be some slop.  The slop is also the reason we
-      // explicitly look for the earliest and latest invalid timestamps, rather
-      // than just assuming these are the first and the last, respectively
-      // (which the diagram above does).  Pulse timestamps in particular can
-      // have time inversions, e.g. when pulses are detected on multiple
-      // antennas, since each antenna's data is processed in chunks.
-
-      bool okay = elapsedValid > 0 && elapsedInvalid / elapsedValid < 1.1;
-
-      // maximum error is the 1/2 difference between time elapsed on
-      // the valid clock and on the invalid clock, since we're pinning
-      // at the midpoints of the two intervals.
-
-      Timestamp maxError = fabs(elapsedValid - elapsedInvalid) / 2.0;
-
-      // if there is no existing estimate, or if the new maxError is smaller
-      // than the previous one, record this estimate
-      if (okay && (! haveOffset || maxError < this->maxError)) {
-        this->estOffset = estOffset;
-        this->maxError = maxError;
-        haveOffset = true;
-        rv = true;
-      }
-      // initialize a new run of invalid timestamps
-      invalidTShi = 0;
-    }
-    lastValidTS = ts;
+  // if just extending the previous run, we don't estimate
+  if (type == runType) {
+    hi[type] = std::max(ts, hi[type]);
+    lo[type] = std::min(ts, lo[type]);
+    return false;
   }
-  return rv;
+
+  // mark the type of the new run
+  runType = type;
+
+  // if there isn't already a run of each type, we can't estimate,
+  // so just record timestamp as both lo and hi of new run
+
+  if (lo[type] == 0 || lo[1 - type] == 0) {
+    lo[type] = hi[type] = ts;
+    return false;
+  }
+
+  // there are previous runs of both types, so we can estimate
+  // the clock offset by bracketing the latest run of the other
+  // type between the current time and the previous run of this type.
+
+  // We estimate by pinning the midpoints of the intervals:
+  // [hi[type], ts] and [lo[1-type], hi[1-type]]
+
+  Timestamp estOffset = (hi[type] + ts) / 2.0 - (lo[1 - type] + hi[1 - type]) / 2.0;
+
+  // ensure the offset always represents VALID - INVALID
+  if (type == INVALID)
+    estOffset = - estOffset;
+
+  // Max error is 1/2 the absolute difference of the sizes of the timespans
+  // of the inner run and the outer one.
+
+  // Note use of fabs since we're not guaranteed hi[type] < t, due to
+  // the possibility of time reversals.
+
+  Timestamp maxError = fabs(fabs(ts - hi[type]) - (hi[1-type] - lo[1 - type])) / 2.0;
+
+  if (! haveOffset || maxError < this->maxError) {
+    this->estOffset = estOffset;
+    this->maxError = maxError;
+    haveOffset = true;
+  }
+
+  // set lo, hi of new run to ts
+
+  lo[type] = hi[type] = ts;
+
+  return true;
 };
