@@ -33,15 +33,25 @@ public:
   //!< upper bound on the magnitude of error in the offset
   Timestamp max_error() { return maxError;};
 
+  //!< force an estimate of offset and error; e.g. if the caller knows the
+  // remaining timestamps are all from the same clock.
+  // Returns true unless no estimate is possible.
+  // After a return of true, have_offset() returns true, and offset() and max_error()
+  // return their best estimates.
+
+  void force_estimate();
 
 protected:
 
-  Timestamp      lo[2];      //!< earliest timestamp in run of type VALID or INVALID
-  Timestamp      hi[2];      //!< latest timestamp in run of type VALID or INVALID
-  Timestamp_Type runType;        //!< what type of timestamp run are we in?
-  bool           haveOffset;     //!< have we estimated the offset?
-  Timestamp      estOffset;      //!< estimated offset
-  Timestamp      maxError;       //!< max error in estimated offset
+  Timestamp      lo[2];         //!< earliest timestamp in run of type VALID or INVALID
+  Timestamp      hi[2];         //!< latest timestamp in run of type VALID or INVALID
+  int            runLen[2];     //!< length of most recent (possibly current) run of type VALID or INVALID
+                                //!< kept in case we need to estimate an offset and error from only
+                                //!< a run of one type followed by a singleton of the other.
+  Timestamp_Type runType;       //!< what type of timestamp run are we in?
+  bool           haveOffset;    //!< have we estimated the offset?
+  Timestamp      estOffset;     //!< estimated offset
+  Timestamp      maxError;      //!< max error in estimated offset
 
 public:
 
@@ -52,6 +62,7 @@ public:
   {
     ar & BOOST_SERIALIZATION_NVP( lo );
     ar & BOOST_SERIALIZATION_NVP( hi );
+    ar & BOOST_SERIALIZATION_NVP( runLen );
     ar & BOOST_SERIALIZATION_NVP( runType );
     ar & BOOST_SERIALIZATION_NVP( haveOffset );
     ar & BOOST_SERIALIZATION_NVP( estOffset );

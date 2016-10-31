@@ -46,6 +46,16 @@ Clock_Repair::put( SG_Record & r) {
           offsetError = cp.max_error();
           correcting = true;
   }
+
+  // as soon as a pulse timestamp is valid, there will be no further
+  // monotonic or pre-GPS timestamps, so we have to use whatever
+  // correction is available to this point
+
+  if (r.type == SG_Record::PULSE && isValid(r.ts)) {
+    offset = cp.offset();
+    offsetError = cp.max_error();
+    correcting = true;
+  }
 };
 
 //!< indicate there are no more input records in the current batch
@@ -54,7 +64,7 @@ Clock_Repair::done() {
   // record time jumps, if any
 
   if (correcting)
-    filer->add_time_fix(TS_BEAGLEBONE_BOOT, TS_SG_EPOCH, offset, offsetError, 'S'); // fix pre-GPS timestamps.
+    filer->add_time_fix(TS_BEAGLEBONE_BOOT, TS_SG_EPOCH, offset, offsetError, 'S');
 };
 
 //!< get the next record available for processing, and return true.
