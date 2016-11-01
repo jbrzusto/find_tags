@@ -52,6 +52,7 @@ Clock_Repair::put( SG_Record & r) {
   // correction is available to this point
 
   if (r.type == SG_Record::PULSE && isValid(r.ts)) {
+    cp.force_estimate();
     offset = cp.offset();
     offsetError = cp.max_error();
     correcting = true;
