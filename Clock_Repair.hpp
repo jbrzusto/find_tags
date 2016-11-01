@@ -6,7 +6,7 @@
 #include "DB_Filer.hpp"
 #include "Clock_Pinner.hpp"
 #include "GPS_Validator.hpp"
-#include <queue>
+#include "Data_Source.hpp"
 
 class Clock_Repair {
 
@@ -148,19 +148,22 @@ public:
 
   Clock_Repair() {};
 
-  Clock_Repair(DB_Filer * filer, Timestamp tol = 1); //!< ctor, with tolerance for bracketing correction to CLOCK_MONOTONIC
-
-  //!< accept a record from an SG file
-  void put( SG_Record & r);
-
-  //!< indicate there are no more input records
-  void done();
+  Clock_Repair(Data_Source *data, unsigned long long *line_no, DB_Filer * filer, Timestamp tol = 1); //!< ctor, with tolerance for bracketing correction to CLOCK_MONOTONIC
 
   //!< get the next record available for processing, and return true.
   // if no (corrected) records are available, return false.
   bool get(SG_Record &r);
 
 protected:
+
+  //!< indicate there are no more input records
+  void got_estimate();
+
+  //!< handle a record from an SG file
+  bool handle( SG_Record & r);
+
+  //!< try read a record from the data source
+  bool read_record( SG_Record & r);
 
   typedef enum {  // sources of timestamps (i.e. what kind of record in the raw file)
     TSS_PULSE = 0,  // pulse record
@@ -183,12 +186,12 @@ protected:
   bool isMonotonic(Timestamp ts) { return ts < TS_BEAGLEBONE_BOOT; }; //!< is timestamp in MONOTONIC era?
   bool isPreGPS(Timestamp ts) { return ts >= TS_BEAGLEBONE_BOOT && ts < TS_SG_EPOCH; } //!< is timestamp in PRE_GPS era?
 
+  Data_Source *data; //!< data source we get records from
+  unsigned long long *line_no; //!< pointer to line number so we can update it
   DB_Filer * filer;   //!< for filing time corrections
   Timestamp tol;  //!< maximum allowed error (seconds) in correcting timestamps
   Clock_Pinner cp;    //!< for pinning CLOCK_PRE_GPS to CLOCK_REALTIME
   GPS_Validator gpsv; //!< for detecting a stuck GPS
-
-  std::queue < SG_Record > recBuf; //!< buffer records needing timestamp corrections, until we can do so
 
   bool GPSstuck; // true iff we see the GPS is stuck, as determined by the GPS_Validator class
   bool correcting; //!< true if we're able to correct records
@@ -209,7 +212,6 @@ public:
     ar & BOOST_SERIALIZATION_NVP( tol );
     ar & BOOST_SERIALIZATION_NVP( cp );
     ar & BOOST_SERIALIZATION_NVP( gpsv );
-    ar & BOOST_SERIALIZATION_NVP( recBuf );
     ar & BOOST_SERIALIZATION_NVP( correcting );
     ar & BOOST_SERIALIZATION_NVP( offset );
     ar & BOOST_SERIALIZATION_NVP( offsetError );

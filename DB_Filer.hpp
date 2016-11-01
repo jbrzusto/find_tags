@@ -53,6 +53,8 @@ public:
 
   bool get_blob (const char **bufout, int * lenout, Timestamp *ts); //!< get the next available blob; return true on success, false if none; set caller's pointer and length
 
+  void rewind_blob_reader(); //!< reset blob reader to start at beginning of boot session
+
   void end_blob_reader(); //!< finalize blob reader
 
 

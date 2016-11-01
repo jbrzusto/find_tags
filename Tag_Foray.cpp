@@ -74,131 +74,110 @@ void
 Tag_Foray::start() {
   Tag_Candidate::ending_batch = false;
 
-  bool done = false;
-
-  char buf[MAX_LINE_SIZE + 1] = {}; // input buffer
-
-  cr = new Clock_Repair(Tag_Candidate::filer);
+  cr = new Clock_Repair(data, &line_no, Tag_Candidate::filer);
   SG_Record r;
 
-  while (!done) {
-    // read and parse a line from a SensorGnome file
+  while(cr->get(r)) {
+    if (! tsBegin || r.ts < tsBegin)
+      tsBegin = r.ts;
+    ts = r.ts;
+    switch (r.type) {
+    case SG_Record::GPS:
+      // GPS is not stuck, or Clock_Repair would have dropped the record
+      Tag_Candidate::filer-> add_GPS_fix( r.ts, r.v.lat, r.v.lon, r.v.alt );
+      break;
 
-    if (data->getline(buf, MAX_LINE_SIZE)) {
-      ++line_no;
-      r = SG_Record::from_buf(buf);
-      if (r.type == SG_Record::BAD) {
-        std::cerr << "Warning: malformed line in input\n  at line " << line_no << ":\n" << (string("") + buf) << std::endl;
+    case SG_Record::PARAM:
+
+      if (strcmp("-m", r.v.param_flag) || r.v.return_code) {
+        // ignore non-frequency parameter setting, or failed frequency setting
         continue;
       }
-      cr->put(r);
-    } else {
-      done = true;
-      cr->done();
-    }
 
-    while(cr->get(r)) {
-      if (! tsBegin || r.ts < tsBegin)
-        tsBegin = r.ts;
-      ts = r.ts;
-      switch (r.type) {
-      case SG_Record::GPS:
-        // GPS is not stuck, or Clock_Repair would have dropped the record
-        Tag_Candidate::filer-> add_GPS_fix( r.ts, r.v.lat, r.v.lon, r.v.alt );
-        break;
+      if (! force_default_freq)
+        port_freq[r.port] = Freq_Setting(r.v.param_value);
+      continue;
+      break;
 
-      case SG_Record::PARAM:
+    case SG_Record::PULSE:
+      {
+        // bump up the pulse count for the current hour bin
 
-        if (strcmp("-m", r.v.param_flag) || r.v.return_code) {
-          // ignore non-frequency parameter setting, or failed frequency setting
-          continue;
-        }
-
-        if (! force_default_freq)
-          port_freq[r.port] = Freq_Setting(r.v.param_value);
-        continue;
-        break;
-
-      case SG_Record::PULSE:
-        {
-          // bump up the pulse count for the current hour bin
-
-          double hourBin = round(r.ts / 3600);
-          if (hourBin != prevHourBin && prevHourBin > 0) {
-            for (int i = 0; i <= MAX_PORT_NUM; ++i) {
-              if (pulse_count[i] > 0) {
-                Tag_Candidate::filer->add_pulse_count(prevHourBin, i, pulse_count[i]);
-                pulse_count[i] = 0;
-              }
+        double hourBin = round(r.ts / 3600);
+        if (hourBin != prevHourBin && prevHourBin > 0) {
+          for (int i = 0; i <= MAX_PORT_NUM; ++i) {
+            if (pulse_count[i] > 0) {
+              Tag_Candidate::filer->add_pulse_count(prevHourBin, i, pulse_count[i]);
+              pulse_count[i] = 0;
             }
-            prevHourBin = hourBin;
           }
+          prevHourBin = hourBin;
+        }
 
-          if (r.port >= 0 && r.port < MAX_PORT_NUM)
-            ++pulse_count[r.port];
+        if (r.port >= 0 && r.port < MAX_PORT_NUM)
+          ++pulse_count[r.port];
 
-          // skip this record if its offset frequency is out of bounds
-          if (r.v.dfreq > max_dfreq || r.v.dfreq < min_dfreq)
-            continue;
+        // skip this record if its offset frequency is out of bounds
+        if (r.v.dfreq > max_dfreq || r.v.dfreq < min_dfreq)
+          continue;
 
-          // if this pulse is from a port whose frequency hasn't been set,
-          // use the default
+        // if this pulse is from a port whose frequency hasn't been set,
+        // use the default
 
-          if (! port_freq.count(r.port))
-            port_freq[r.port] = Freq_Setting(default_freq);
+        if (! port_freq.count(r.port))
+          port_freq[r.port] = Freq_Setting(default_freq);
 
-          // NB: cast r.port to work around optimization of passing reference
-          // to packed struct
+        // NB: cast r.port to work around optimization of passing reference
+        // to packed struct
 
-          // which tag finder should this pulse be passed to?  There is at
-          // last a tag finder on each port, and possibly more than one if
-          // the listening frequency is changing.
+        // which tag finder should this pulse be passed to?  There is at
+        // last a tag finder on each port, and possibly more than one if
+        // the listening frequency is changing.
 
-          Tag_Finder_Key key((short int) r.port, port_freq[r.port].f_kHz);
+        Tag_Finder_Key key((short int) r.port, port_freq[r.port].f_kHz);
 
-          // if there isn't already an appropriate Tag_Finder, create it
-          if (! tag_finders.count(key)) {
-            Tag_Finder *newtf;
-            std::ostringstream prefix;
-            prefix << r.port << ",";
-            if (max_pulse_rate > 0)
-              newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix.str());
-            else
-              newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], prefix.str());
-            tag_finders[key] = newtf;
+        // if there isn't already an appropriate Tag_Finder, create it
+        if (! tag_finders.count(key)) {
+          Tag_Finder *newtf;
+          std::ostringstream prefix;
+          prefix << r.port << ",";
+          if (max_pulse_rate > 0)
+            newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix.str());
+          else
+            newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], prefix.str());
+          tag_finders[key] = newtf;
 #if 0
-            //#ifdef FIND_TAGS_DEBUG
-            std::cerr << "Interval Tree for " << prefix.str() << std::endl;
-            newtf->graph.get_root()->dump(std::cerr);
-            std::cerr << "Burst slop expansion is " << Tag_Finder::default_burst_slop_expansion << std::endl;
+          //#ifdef FIND_TAGS_DEBUG
+          std::cerr << "Interval Tree for " << prefix.str() << std::endl;
+          newtf->graph.get_root()->dump(std::cerr);
+          std::cerr << "Burst slop expansion is " << Tag_Finder::default_burst_slop_expansion << std::endl;
 #endif
-          };
+        };
 
-          if (r.v.dfreq < 0 && unsigned_dfreq)
-            r.v.dfreq = - r.v.dfreq;
+        if (r.v.dfreq < 0 && unsigned_dfreq)
+          r.v.dfreq = - r.v.dfreq;
 
-          // create a pulse object from this record
-          Pulse p = Pulse::make(r.ts, r.v.dfreq, r.v.sig, r.v.noise, port_freq[r.port].f_MHz);
+        // create a pulse object from this record
+        Pulse p = Pulse::make(r.ts, r.v.dfreq, r.v.sig, r.v.noise, port_freq[r.port].f_MHz);
 
-          // process any tag events up to this point in time
+        // process any tag events up to this point in time
 
-          while (cron.ts() <= p.ts)
-            process_event(cron.get());
+        while (cron.ts() <= p.ts)
+          process_event(cron.get());
 
-          tag_finders[key]->process(p);
+        tag_finders[key]->process(p);
 #ifdef DEBUG
-          tag_finders[key]->dump(r.ts);
+        tag_finders[key]->dump(r.ts);
 #endif
-        }
-        break;
-      case SG_Record::EXTENSION:
-        {
-          // for future extension: in-band commands
-        }
-        break;
-      default:
-        break;
       }
+      break;
+    case SG_Record::EXTENSION:
+      {
+        // for future extension: in-band commands
+      }
+      break;
+    default:
+      break;
     }
   }
 };
