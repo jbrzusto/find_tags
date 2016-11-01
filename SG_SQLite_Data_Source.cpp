@@ -39,6 +39,12 @@ SG_SQLite_Data_Source::getline(char * buf, int maxLen) {
   return true;
 };
 
+void
+SG_SQLite_Data_Source::rewind() {
+  db->rewind_blob_reader();
+  bytesLeft = 0;
+};
+
 SG_SQLite_Data_Source::~SG_SQLite_Data_Source() {
   db->end_blob_reader();
 };

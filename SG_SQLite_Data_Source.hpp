@@ -14,6 +14,7 @@ public:
   SG_SQLite_Data_Source(DB_Filer * db, unsigned int monoBN);
   ~SG_SQLite_Data_Source();
   bool getline(char * buf, int maxLen);
+  void rewind();
 
 protected:
   DB_Filer * db;
