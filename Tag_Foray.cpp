@@ -192,7 +192,7 @@ Tag_Foray::process_event(Event e) {
     {
       if (t->active)
         return;
-      auto rv = g->addTag(t, pulse_slop, burst_slop / t->gaps[3], (1 + max_skipped_bursts) * t->period);
+      auto rv = g->addTag(t, pulse_slop, burst_slop / 4.0, (1 + max_skipped_bursts) * 4.0);
       for (auto i = tag_finders.begin(); i != tag_finders.end(); ++i)
         if (i->first.second == fs)
           i->second->rename_tag(rv);
@@ -203,7 +203,7 @@ Tag_Foray::process_event(Event e) {
     {
       if (! t->active)
         return;
-      auto rv = g->delTag(t, pulse_slop, burst_slop / t->gaps[3], (1 + max_skipped_bursts) * t->period);
+      auto rv = g->delTag(t, pulse_slop, burst_slop / 4.0, (1 + max_skipped_bursts) * 4.0);
       for (auto i = tag_finders.begin(); i != tag_finders.end(); ++i)
         if (i->first.second == fs)
           i->second->rename_tag(rv);
