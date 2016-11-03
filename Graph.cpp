@@ -5,9 +5,9 @@
 #include "Graph.hpp"
 #include <cmath>
 
-Graph::Graph(std::string vizPrefix) : 
-  vizPrefix(vizPrefix), 
-  numViz(0), 
+Graph::Graph(std::string vizPrefix) :
+  vizPrefix(vizPrefix),
+  numViz(0),
   setToNode(100),
   stamp(1)
 {
@@ -17,7 +17,7 @@ Graph::Graph(std::string vizPrefix) :
   mapSet(0, _root);
 };
 
-void 
+void
 Graph::newStamp() {
   if (! ++stamp) {
     resetAllStamps();
@@ -25,13 +25,13 @@ Graph::newStamp() {
   }
 };
 
-void 
+void
 Graph::resetAllStamps() {
   for (auto i = setToNode.begin(); i != setToNode.end(); ++i)
     i->second->stamp = 0;
-};  
+};
 
-Node * 
+Node *
 Graph::root() {
   return _root;
 };
@@ -77,8 +77,8 @@ Graph::delTag(Tag * tag, double tol, double timeFuzz, double maxTime) {
   renTag(p, newp);
   return std::make_pair(p, newp);
 };
-    
-void 
+
+void
 Graph::_addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   // add the repeated sequence of gaps from a tag, with fractional
   // tolerance tol, starting at phase 0, until adding the next gap
@@ -98,10 +98,25 @@ Graph::_addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   // led to a unique tag, subsequent gaps are only accepted if they
   // are compatible with that tag.
 
+  // TODO:
+  // new timing model (ms / s), based on pulse+slop = 1.5, burst_slop = 4, burst_slop_expansion = 1
+  // and bi=10:
+
+  // (%i71) plot2d(s(x, 0.5, 100) * (4 - 1.5) + 1.5 + s(x, 10, 0.1) * 0.1 * (x-5), [x, 0, 50],[y,0,10]);
+  // (%o71) /home/john/maxout.gnuplot_pipes
+  // (%i73) s(x,r,a);
+  //                                        1
+  // (%o73)                         -----------------
+  //                                  - a (x - r)
+  //                                %e            + 1
+  //
+  // Should be similar to existing model, but with a second plateau for intermediate-valued intervals.
+  // (i.e. 1 to 10 seconds).
+
   int n = tag->gaps.size();
   insert(TagPhase(tag, 0));
   // Add a single cycle of gaps for the tag.  After this, the node reached
-  // should only 
+  // should only
   Gap g;
   int i;
   for(i = 0; i < 2 * n - 1; ++i ) {
@@ -117,7 +132,7 @@ Graph::_addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
     // and because timeFuzz << 1, the RHS is ~ 1 - timeFuzz.
     // So the condition is t2 * (1 - timeFuzz) <= t1 <= t2 * (1 + timeFuzz)
     // except that we force the allowed interval to have width at least 2 * tol
-    
+
     Gap_Range gr(g, tol, timeFuzz);
     Gap_Ranges grs;
     grs.push_back(gr);
@@ -134,8 +149,8 @@ Graph::_addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   // plus multiples of the period.
   // - "skip" edges from the node at phase n - 1 to the node at phase n corresponding
   // to missed bursts (only if n > 1); a beeper tag has n = 1.
-  
-  // back edges 
+
+  // back edges
   Gap_Ranges grs;
   for(g = tag->gaps[n - 1]; g < maxTime; g += tag->period)
     grs.push_back(Gap_Range(g, tol, timeFuzz));
@@ -154,10 +169,10 @@ Graph::_addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
       grs.push_back(Gap_Range(g, tol, timeFuzz));
     insertRec(grs, TagPhase(tag, n - 1), TagPhase(tag, n));
   }
-  
-};    
 
-void 
+};
+
+void
 Graph::_delTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   // remove the tag which was added with given gaps, tol, and maxTime
 
@@ -170,7 +185,7 @@ Graph::_delTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
     grs.push_back(Gap_Range(g, tol, timeFuzz));
   eraseRec(grs, TagPhase(tag, n - 1), TagPhase(tag, n));
 
-  // remove back edges 
+  // remove back edges
   grs.clear();
   for(g = tag->gaps[n - 1]; g < maxTime; g += tag->period)
     grs.push_back(Gap_Range(g, tol, timeFuzz));
@@ -185,7 +200,7 @@ Graph::_delTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
     validateSetToNode();
 #endif
   };
-  
+
   erase(TagPhase(tag, 0));
 #ifdef DEBUG
   validateSetToNode();
@@ -242,7 +257,7 @@ Graph::viz() {
   }
   out << "}\n";
 };
-  
+
 void
 Graph::dumpSetToNode() {
   for (auto i = setToNode.begin(); i != setToNode.end(); ++i) {
@@ -257,7 +272,7 @@ Graph::dumpSetToNode() {
   }
 };
 
-void 
+void
 Graph::validateSetToNode() {
   // verify that each set maps to a node that has it as a set!
   bool okay = true;
@@ -281,7 +296,7 @@ Graph::validateSetToNode() {
   if (!okay)
     throw std::runtime_error("validateSetToNode() failed");
 };
-  
+
 void
 Graph::mapSet( Set * s, Node * n) {
   auto p = std::make_pair(s, n);
@@ -301,23 +316,23 @@ Graph::insert (const TagPhase &t) {
     // never try to lookup the root node from its set.
 };
 
-void 
+void
 Graph::erase (const TagPhase &t) {
     _root->s = _root->s->reduce(t);
     // note: we don't remap root in setToNode
 };
 
-void 
+void
 Graph::insert (Gap_Ranges & grs, TagPhase p) {
   insert (_root, grs, p);
 };
 
-void 
+void
 Graph::erase (Gap_Ranges & grs, TagPhase p) {
   erase(_root, grs, p);
 };
 
-bool 
+bool
 Graph::hasEdge ( Node *n, Gap b, TagPhase p) {
   // check whether there is already an edge from
   // node n at point b to a set with tagPhase p
@@ -329,12 +344,12 @@ Graph::hasEdge ( Node *n, Gap b, TagPhase p) {
   return false;
 };
 
-Node::Edges::iterator 
+Node::Edges::iterator
 Graph::ensureEdge ( Node *n, Gap b) {
   // ensure there is an edge from node n at point b,
   // and returns an iterator to it
-  
-  // if it does not already exist, create an 
+
+  // if it does not already exist, create an
   // edge pointing to the same node already
   // implicitly pointed to for that point
   // (i.e. the node pointed to by the first endpoint
@@ -358,7 +373,7 @@ Graph::linkNode (Node *n) {
   n->link();
 };
 
-void 
+void
 Graph::unlinkNode (Node *n) {
   if (n->unlink() && n != Node::empty()) {
 #ifdef DEBUG
@@ -451,9 +466,9 @@ Graph::reduceEdge(Node::Edges::iterator i, TagPhase p) {
 
 
 void
-Graph::dropEdgeIfExtra(Node * n, Node::Edges::iterator i) 
+Graph::dropEdgeIfExtra(Node * n, Node::Edges::iterator i)
 {
-  // compare edge to its predecessor; if they map 
+  // compare edge to its predecessor; if they map
   // to the same nodes, remove this one and
   // adjust useCount
   // caller must guarantee i does not point to
@@ -495,13 +510,13 @@ Graph::insert (Node *n, Gap_Ranges & grs, TagPhase p)
   }
 };
 
-void 
+void
 Graph::insertRec (Gap_Ranges & grs, TagPhase tFrom, TagPhase tTo) {
   newStamp();
   insertRec (_root, grs, tFrom, tTo);
 };
-    
-void 
+
+void
 Graph::insertRec (Node *n, Gap_Ranges & grs, TagPhase tFrom, TagPhase tTo) {
   // recursively insert a transition from tFrom to tTo because this
   // is a DAG, rather than a tree, a given node might already have
@@ -544,7 +559,7 @@ Graph::renTagRec(Node * n, Tag *t1, Tag *t2) {
 
   TagPhaseSet & s = n->s->s;
   auto r = s.equal_range(t1);
-  
+
   for (auto i = r.first; i != r.second; /**/) {
     auto j = i;
     ++j;
@@ -554,12 +569,12 @@ Graph::renTagRec(Node * n, Tag *t1, Tag *t2) {
     i = j;
   }
 };
-  
-void 
+
+void
 Graph::erase (Node *n, Gap_Ranges & grs, TagPhase tp) {
   // for any edges from n at points in the range [lo, hi]
   // remove p from the tail node.
-  // If edges at lo and/or hi become redundant after 
+  // If edges at lo and/or hi become redundant after
   // this, remove them.
 
   for (auto gr = grs.begin(); gr != grs.end(); ++gr) {
@@ -581,13 +596,13 @@ Graph::erase (Node *n, Gap_Ranges & grs, TagPhase tp) {
   }
 };
 
-void 
+void
 Graph::eraseRec (Gap_Ranges & grs, TagPhase tpFrom, TagPhase tpTo) {
   newStamp();
   eraseRec (_root, grs, tpFrom, tpTo);
 };
 
-void 
+void
 Graph::eraseRec (Node *n, Gap_Ranges & grs, TagPhase tpFrom, TagPhase tpTo) {
   // recursively erase all transitions between tpFrom and tpTo for
   // the range lo, hi
