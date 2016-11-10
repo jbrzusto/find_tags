@@ -14,8 +14,23 @@
 class DB_Filer {
 
 public:
+  static const int MAX_ANT_NAME_CHARS = 11; //!< maximum number of chars in an antenna name; currently 11, for "A1+A2+A3+A4"
+
   typedef int Run_ID;
   typedef int Batch_ID;
+
+  typedef struct _DTA_record {
+    Timestamp ts;
+    short id;
+    char antName[MAX_ANT_NAME_CHARS + 1];
+    short ant;
+    short sig;
+    Frequency_MHz freq;
+    short gain;
+    short codeSet;
+    double lat;
+    double lon;
+  } DTA_Record;
 
   static const int MAX_TAGS_PER_AMBIGUITY_GROUP = 6;
 
@@ -57,6 +72,13 @@ public:
 
   void end_blob_reader(); //!< finalize blob reader
 
+  void start_DTAtags_reader(Timestamp ts = 0); //!< initialize reading of DTAtags lines, starting at the specified timestamp
+
+  bool get_DTAtags_record(DTA_Record &dta ); //!< get the next DTAtags record; return true on success, false if none left; set items in &dat.
+
+  void end_DTAtags_reader(); //!< finalize DTAtags reader
+
+  void rewind_DTAtags_reader(); //!< rewind DTAtags reader
 
 protected:
   // settings
@@ -81,6 +103,7 @@ protected:
   sqlite3_stmt * st_save_findtags_state; //!< save state of running findtags, for pause
   sqlite3_stmt * st_load_findtags_state; //!< load state of paused findtags, for resume
   sqlite3_stmt * st_get_blob; //!< grab and decompress file contents
+  sqlite3_stmt * st_get_DTAtags; //!< grab DTA tag records
 
   string prog_name; //!< name of program, for recording in DB
 
@@ -134,6 +157,7 @@ protected:
   static const char * q_load_findtags_state;
   static const char * q_save_findtags_state;
   static const char * q_get_blob;
+  static const char * q_get_DTAtags;
 
 };
 

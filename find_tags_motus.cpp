@@ -356,7 +356,7 @@ usage() {
 
         "-Q, --src_sqlite\n"
         "    read compressed data files directly from the 'content' column in the 'fileContents'\n"
-        "    table of OUTFILE.sqlite; this is preferred, as it is much faster."
+        "    table of OUTFILE.sqlite, or from the 'DTAtags' table in case of a Lotek receiver; this is preferred, as it is much faster."
 
         "-r, --resume\n"
         "    If a table called 'findtagsState' exists in the output database, with columns\n"
@@ -644,7 +644,11 @@ main (int argc, char **argv) {
       // set up the data source
       Data_Source * pulses;
       if (lotek_data) {
-        pulses = Data_Source::make_Lotek_source(optind < argc ? argv[optind++] : "", & tag_db, default_freq);
+        if (src_sqlite) {
+          pulses = Data_Source::make_Lotek_source(& dbf, & tag_db, default_freq);
+        } else {
+          std::cerr << "Must specify --sqlite with a Lotek data source" << std::endl;
+        }
       } else if (src_sqlite) {
         pulses = Data_Source::make_SQLite_source(& dbf, bootNum);
       } else {

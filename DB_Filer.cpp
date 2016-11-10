@@ -558,3 +558,50 @@ void
 DB_Filer::end_blob_reader () {
   sqlite3_finalize (st_get_blob);
 };
+
+const char *
+DB_Filer::q_get_DTAtags = "select ts, id, ant, sig, antFreq, gain, 0+substr(codeSet, 6, 1), lat, lon from DTAtags where id != 999 order by ts";
+//                                0   1   2    3      4        5        6                    7    8
+void
+DB_Filer::start_DTAtags_reader(Timestamp ts) {
+  Check(sqlite3_prepare_v2(outdb, q_get_DTAtags, -1, &st_get_DTAtags, 0),
+        "output DB does not have valid 'DTAtags' table.");
+};
+
+bool
+DB_Filer::get_DTAtags_record(DTA_Record &dta) {
+  if (! st_get_DTAtags)
+    throw std::runtime_error("Attempt to use uninitialized st_get_DTAtags in get_DTAtags_record");
+
+  int rv = sqlite3_step(st_get_DTAtags);
+  if (rv == SQLITE_DONE)
+    return false; // indicate we're done
+
+  if (rv != SQLITE_ROW)
+    throw std::runtime_error("Problem getting next DTAtags record.");
+
+  dta.ts      = sqlite3_column_double (st_get_DTAtags, 0);
+  dta.id      = sqlite3_column_int    (st_get_DTAtags, 1);
+  strncpy(dta.antName, reinterpret_cast<const char *> (sqlite3_column_text(st_get_DTAtags, 2)), MAX_ANT_NAME_CHARS);
+  dta.antName[sqlite3_column_bytes(st_get_DTAtags, 2)] = 0;
+  dta.sig     = sqlite3_column_int    (st_get_DTAtags, 3);
+  dta.freq    = sqlite3_column_double (st_get_DTAtags, 4);
+  dta.gain    = sqlite3_column_int    (st_get_DTAtags, 5);
+  dta.codeSet = sqlite3_column_int    (st_get_DTAtags, 6);
+  dta.lat     = sqlite3_column_double (st_get_DTAtags, 7);
+  dta.lon     = sqlite3_column_double (st_get_DTAtags, 8);
+  return true;
+};
+
+void
+DB_Filer::end_DTAtags_reader() {
+  if (st_get_DTAtags)
+    sqlite3_finalize(st_get_DTAtags);
+  st_get_DTAtags = 0;
+};
+
+void
+DB_Filer::rewind_DTAtags_reader() {
+  end_DTAtags_reader();
+  start_DTAtags_reader();
+};

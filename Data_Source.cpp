@@ -22,9 +22,7 @@ Data_Source::make_SQLite_source(DB_Filer * db, unsigned int monoBN) {
 };
 
 Data_Source *
-Data_Source::make_Lotek_source(std::string infile, Tag_Database *tdb, Frequency_MHz defFreq) {
-  if (infile.length() == 0)
-    return new Lotek_Data_Source(& std::cin, tdb, defFreq);
-  return new Lotek_Data_Source(new std::ifstream(infile), tdb, defFreq);
+Data_Source::make_Lotek_source(DB_Filer * db, Tag_Database *tdb, Frequency_MHz defFreq) {
+  return new Lotek_Data_Source(db, tdb, defFreq);
 
 };
