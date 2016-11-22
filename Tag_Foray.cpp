@@ -111,8 +111,8 @@ Tag_Foray::start() {
               pulse_count[i] = 0;
             }
           }
-          prevHourBin = hourBin;
         }
+        prevHourBin = hourBin;
 
         if (r.port >= 0 && r.port < MAX_PORT_NUM)
           ++pulse_count[r.port];
