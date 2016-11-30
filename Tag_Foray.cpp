@@ -182,6 +182,11 @@ Tag_Foray::start() {
       break;
     }
   }
+  // record pulse counts from the last hour bin
+
+  for (int i = 0; i <= MAX_PORT_NUM; ++i)
+    if (pulse_count[i] > 0)
+      Tag_Candidate::filer->add_pulse_count(prevHourBin, i, pulse_count[i]);
 };
 
 void
