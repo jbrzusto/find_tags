@@ -104,15 +104,17 @@ Tag_Foray::start() {
         // bump up the pulse count for the current hour bin
 
         double hourBin = round(r.ts / 3600);
-        if (hourBin != prevHourBin && prevHourBin > 0) {
-          for (int i = 0; i <= MAX_PORT_NUM; ++i) {
-            if (pulse_count[i] > 0) {
-              Tag_Candidate::filer->add_pulse_count(prevHourBin, i, pulse_count[i]);
-              pulse_count[i] = 0;
+        if (hourBin != prevHourBin) {
+          if (prevHourBin > 0) {
+            for (int i = 0; i <= MAX_PORT_NUM; ++i) {
+              if (pulse_count[i] > 0) {
+                Tag_Candidate::filer->add_pulse_count(prevHourBin, i, pulse_count[i]);
+                pulse_count[i] = 0;
+              }
             }
           }
+          prevHourBin = hourBin;
         }
-        prevHourBin = hourBin;
 
         if (r.port >= 0 && r.port < MAX_PORT_NUM)
           ++pulse_count[r.port];
