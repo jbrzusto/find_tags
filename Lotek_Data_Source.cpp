@@ -70,8 +70,8 @@ Lotek_Data_Source::getline(char * buf, int maxLen) {
   }
 };
 
-bool
-  Lotek_Data_Source::translateLine()
+void
+Lotek_Data_Source::translateLine()
 {
   // add appropriate SG lines to the buffer for a given Lotek line
   // The lotek line is in components of class field dtar
@@ -79,8 +79,6 @@ bool
   // Algorithm: if the current tag detection frequency does not match the
   // value for the current antenna, then issue a frequency-change command.
   // Then, issue a set of 4 pulse records, representing the coded ID.
-
-  // return true on success, false otherwise
 
   // clean up weird lotek antenna naming: either a digit or AHdigit or "A1+A2+A3+A4" (the master antenna on SRX 800)
   dtar.ant = (strlen(dtar.antName) >= 3 && dtar.antName[2] == '+') ? -1 : dtar.antName[dtar.antName[0] == 'A' ? 2 : 0] - '0';
@@ -99,15 +97,32 @@ bool
     sgbuf.insert(std::make_pair(dtar.ts, freqRec.str()));
   }
 
-  auto csid = std::make_pair(dtar.codeSet, dtar.id);
-  auto tt = tcode.find(csid);
-  if (tt == tcode.end()) {
-    if (! warned.count(csid)) {
-      std::cerr << "Ignoring record: no known tag with ID " << dtar.id << " in codeset " << dtar.codeSet << std::endl;
-      warned.insert(csid);
+  bool validTag = dtar.id != 999;
+  tcode_t::iterator tt; // will hold time gaps for a valid tag
+
+  if (validTag) {
+    auto csid = std::make_pair(dtar.codeSet, dtar.id);
+    tt = tcode.find(csid);
+    if (tt == tcode.end()) {
+      if (! warned.count(csid)) {
+        std::cerr << "Ignoring record: no known tag with ID " << dtar.id << " in codeset " << dtar.codeSet << std::endl;
+        warned.insert(csid);
+      }
+      validTag = false;
     }
-    return false;
   }
+
+  if (! validTag) {
+    // generate a single pulse record, so that the downstream code
+    // records activity on this antenna at this time.  We use values of -999
+    // (effectively sentinels) for dfreq, sig, and noise, to make sure
+    // this pulse doesn't end up as part of any real detection.
+    std::ostringstream pRec;
+    pRec << "p" << dtar.ant << "," << std::setprecision(14) << dtar.ts << std::setprecision(3) << ",-999,-999,-999";
+    sgbuf.insert(std::make_pair(dtar.ts, pRec.str()));
+    return;
+  }
+
   auto gg = tt->second;
   // generate a record for each tag pulse
 
@@ -120,7 +135,6 @@ bool
     sgbuf.insert(std::make_pair(dtar.ts, pRec.str()));
     dtar.ts += *i; // NB: the last gap takes us to the next burst, so is not actually used
   }
-  return true;
 }
 
 void

@@ -560,7 +560,7 @@ DB_Filer::end_blob_reader () {
 };
 
 const char *
-DB_Filer::q_get_DTAtags = "select ts, id, ant, sig, antFreq, gain, 0+substr(codeSet, 6, 1), lat, lon from DTAtags where id != 999 order by ts";
+DB_Filer::q_get_DTAtags = "select ts, id, ant, sig, antFreq, gain, 0+substr(codeSet, 6, 1), lat, lon from DTAtags order by ts";
 //                                0   1   2    3      4        5        6                    7    8
 void
 DB_Filer::start_DTAtags_reader(Timestamp ts) {

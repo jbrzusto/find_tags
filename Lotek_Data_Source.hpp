@@ -73,7 +73,8 @@ public:
 
 protected:
   DB_Filer * db;                                                          //!< pointer to DB Filer, which holds manages database
-  std::map < std::pair < short , short > , std::vector < Gap > * > tcode; //!< map (codeset, ID) to pulse gaps from the tag DB
+  typedef std::map < std::pair < short , short > , std::vector < Gap > * > tcode_t; //!< type of a map from (codeset, ID) to pulse gaps
+  tcode_t tcode;                                                          //!< populated from the Lotek tag databse.
   bool done;                                                              //!< true if input stream is finished
   std::map < double, std::string > sgbuf;                                 //!< buffer of SG-format lines
   Timestamp latestInputTS;                                                //!< timestamp of most recent input line
@@ -87,7 +88,7 @@ protected:
 
   void rewind(); //!< start over, presumably after determining a time correction
 
-  bool translateLine(); //!< parse
+  void translateLine(); //!< translate the line into zero or more SG-style records; return true if any records generated
 
   void serialize(boost::archive::binary_iarchive & ar, const unsigned int version);
   void serialize(boost::archive::binary_oarchive & ar, const unsigned int version);
