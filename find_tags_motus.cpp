@@ -642,7 +642,7 @@ main (int argc, char **argv) {
       Freq_Setting::set_nominal_freqs(tag_db.get_nominal_freqs());
 
       // set up the data source
-      Data_Source * pulses;
+      Data_Source * pulses = 0;
       if (lotek_data) {
         if (src_sqlite) {
           pulses = Data_Source::make_Lotek_source(& dbf, & tag_db, default_freq);
