@@ -573,16 +573,23 @@ DB_Filer::get_DTAtags_record(DTA_Record &dta) {
   if (! st_get_DTAtags)
     throw std::runtime_error("Attempt to use uninitialized st_get_DTAtags in get_DTAtags_record");
 
-  int rv = sqlite3_step(st_get_DTAtags);
-  if (rv == SQLITE_DONE)
-    return false; // indicate we're done
+  // loop until we have a record with a valid antenna
 
-  if (rv != SQLITE_ROW)
-    throw std::runtime_error("Problem getting next DTAtags record.");
+  const char * aname=0;
+  while (! aname) {
+    int rv = sqlite3_step(st_get_DTAtags);
+    if (rv == SQLITE_DONE)
+      return false; // indicate we're done
 
+    if (rv != SQLITE_ROW)
+      throw std::runtime_error("Problem getting next DTAtags record.");
+
+    aname = reinterpret_cast<const char *> (sqlite3_column_text(st_get_DTAtags, 2));
+  };
+
+  strncpy(dta.antName, aname, MAX_ANT_NAME_CHARS);
   dta.ts      = sqlite3_column_double (st_get_DTAtags, 0);
   dta.id      = sqlite3_column_int    (st_get_DTAtags, 1);
-  strncpy(dta.antName, reinterpret_cast<const char *> (sqlite3_column_text(st_get_DTAtags, 2)), MAX_ANT_NAME_CHARS);
   dta.antName[sqlite3_column_bytes(st_get_DTAtags, 2)] = 0;
   dta.sig     = sqlite3_column_int    (st_get_DTAtags, 3);
   dta.freq    = sqlite3_column_double (st_get_DTAtags, 4);
@@ -590,6 +597,7 @@ DB_Filer::get_DTAtags_record(DTA_Record &dta) {
   dta.codeSet = sqlite3_column_int    (st_get_DTAtags, 6);
   dta.lat     = sqlite3_column_double (st_get_DTAtags, 7);
   dta.lon     = sqlite3_column_double (st_get_DTAtags, 8);
+
   return true;
 };
 
