@@ -434,7 +434,7 @@ DB_Filer::load_ambiguity(Tag_Database & tdb) {
 
 const char *
 DB_Filer::q_save_ambig =
-  "insert into tagAmbig (ambigID, motusTagID1, motusTagID2, motusTagID3, motusTagID4, motusTagID5, motusTagID6) values (?, ?, ?, ?, ?, ?, ?);";
+  "insert or ignore into tagAmbig (ambigID, motusTagID1, motusTagID2, motusTagID3, motusTagID4, motusTagID5, motusTagID6) values (?, ?, ?, ?, ?, ?, ?);";
   //                       1           2            3            4            5            6            7
 
 void
