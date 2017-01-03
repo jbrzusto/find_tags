@@ -17,6 +17,7 @@ const static unsigned int MAX_LINE_SIZE = 512;	// characters in a .CSV file line
 
 typedef double Timestamp;
 const static Timestamp BOGUS_TIMESTAMP = -1; // timestamp representing not-a-timestamp
+const static Timestamp FORCE_EXPIRY_TIMESTAMP = -1e20; // timestamp that forces any tag to expire if used as last_ts
 
 // type representing a VHF frequency, in MHz
 
@@ -47,7 +48,7 @@ class Tag;
 typedef Tag * TagID;
 static const TagID BOGUS_TAG = 0;
 
-typedef std::unordered_set < TagID > TagSet; 
+typedef std::unordered_set < TagID > TagSet;
 
 typedef short Phase;
 static const Phase BOGUS_PHASE = -1;

@@ -14,7 +14,8 @@ Tag_Candidate::Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse)
   hit_count(0),
   num_pulses(0),
   freq_range(freq_slop_kHz, pulse.dfreq),
-  sig_range(sig_slop_dB, pulse.sig)
+  sig_range(sig_slop_dB, pulse.sig),
+  burst_step_gcd(0)
 {
   pulses.push_back(pulse);
   state->tcLink();
@@ -45,7 +46,7 @@ Tag_Candidate::clone() {
     Tag_Foray::num_cands_with_run_id(run_id, 1);
   return tc;
 };
-  
+
 bool Tag_Candidate::has_same_id_as(Tag_Candidate *tc) {
   return tag != BOGUS_TAG && tag == tc->tag;
 };
@@ -73,7 +74,7 @@ bool Tag_Candidate::shares_any_pulses(Tag_Candidate *tc) {
   }
   return false;
 };
-  
+
 bool
 Tag_Candidate::expired(Timestamp ts) {
   if (! state) {
@@ -96,15 +97,15 @@ Tag_Candidate::min_next_pulse_ts() {
 };
 
 
-Node * 
+Node *
 Tag_Candidate::advance_by_pulse(const Pulse &p) {
 
   if (! ( freq_range.is_compatible(p.dfreq)
 	  && sig_range.is_compatible(p.sig)))
     return 0;
-  
+
   Gap gap = p.ts - last_ts;
-	  
+
   // try walk the DFA with this gap
   return state->advance(gap);
 }
@@ -147,18 +148,37 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     break;
 
   case SINGLE:
-    if (pulses.size() >= pulses_to_confirm_id)
+    if (pulses.size() >= pulses_to_confirm_id && burst_step_gcd == 1)
       tag_id_level = CONFIRMED;
 
     // fall through
 
   case CONFIRMED:
     pulse_completes_burst = new_state->get_phase() % num_pulses == num_pulses - 1;
+    if (pulse_completes_burst && tag_id_level == SINGLE) {
+
+      // We've fallen through from case SINGLE and are still at that
+      // tag_id_level, and this is the last pulse in a burst.  Get the
+      // number of burst intervals between this burst and the previous
+      // one detected, which is still in the pulses buffer because we
+      // only dump bursts at the CONFIRMED level.  Note that this
+      // pulse has already been pushed into the pulses buffer, so we
+      // need to look back num_pulses+1 from the end.
+      int nbi = round((p.ts - pulses[pulses.size() - (num_pulses + 1)].ts) / state->get_tag()->period);
+      burst_step_gcd = gcd(burst_step_gcd, nbi);
+      if (burst_step_gcd != 1 && pulses.size() / num_pulses > max_unconfirmed_bursts) {
+        // we've gone too many bursts without getting to burst_step_gcd==1, so pretend
+        // the last timestamp for this candidate was way too long ago.
+        // This forces the candidate to expire next time it is checked.
+        last_ts = FORCE_EXPIRY_TIMESTAMP;
+      }
+    }
     break;
 
   default:
     break;
   };
+
 
   // Extend the range of signal strengths seen in this burst, but
   // only if this is not the last pulse in a burst.  The range and
@@ -167,7 +187,7 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
   // uniformity across bursts, hence we reset the bounds after
   // each burst.  For frequency offset, the change from burst to burst
   // will be smaller, as it is due to slowly-varying temperature changes
-  // and a bit to dopller effects, so for frequency, we recentre the bounded
+  // and a bit to doppler effects, so for frequency, we recentre the bounded
   // range after each burst.
 
   if (pulse_completes_burst) {
@@ -220,7 +240,7 @@ void
 Tag_Candidate::calculate_burst_params(Pulse_Iter & p) {
   // calculate these burst parameters:
   // - mean signal and noise strengths
-  // - relative standard deviation (among pulses) of signal strength 
+  // - relative standard deviation (among pulses) of signal strength
   // - mean and sd (among pulses) of offset frequency, in kHz
   // - total slop in gap sizes between observed pulses and registered tag values
 
@@ -267,7 +287,7 @@ Tag_Candidate::calculate_burst_params(Pulse_Iter & p) {
   burst_par.slop     = slop;
   burst_par.num_pred = hit_count;
 };
- 
+
 void Tag_Candidate::dump_bursts(string prefix) {
   // dump as many bursts as we have data for
 
@@ -353,6 +373,22 @@ Tag_Candidate::get_max_cand_time() {
   return max_cand_time;
 };
 
+void
+Tag_Candidate::set_max_unconfirmed_bursts(int m) {
+  max_unconfirmed_bursts = m;
+};
+
+int
+Tag_Candidate::gcd(int x, int y) {
+  while(x != 0) {
+    int m = y % x;
+    y = x;
+    x = m;
+  }
+  return(y);
+};
+
+
 Frequency_Offset_kHz Tag_Candidate::freq_slop_kHz = 2.0;       // (kHz) maximum allowed frequency bandwidth of a burst
 
 float Tag_Candidate::sig_slop_dB = 10;         // (dB) maximum allowed range of signal strengths within a burst
@@ -370,4 +406,4 @@ Burst_Params Tag_Candidate::burst_par;
 long long Tag_Candidate::num_cands = 0; // count of allocated but not freed candidates.
 long long Tag_Candidate::max_num_cands = 0; // count of allocated but not freed candidates.
 Timestamp Tag_Candidate::max_cand_time = 0; // timestamp at maximum candidate count
-
+int Tag_Candidate::max_unconfirmed_bursts = 10;// maximum bursts before burst_step_gcd reaches 1; if exceeded, we discard candidate

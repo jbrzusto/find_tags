@@ -418,39 +418,53 @@ usage() {
 	"    PULSERATEWIN seconds, all pulses in that period are discarded.\n"
 	"    default: 60 seconds (but this only takes effect if -R is specified)\n\n"
 
+        "-x, --max_unconfirmed_bursts=M\n"
+        "    the maximum bursts allowed in a tag candidate without 'confirming' its\n"
+        "    identity.  A tag run is only output if we can rule out aliasing of a tag\n"
+        "    whose burst interval is a nearly integer multiple. e.g. we don't want to\n"
+        "    interpret bursts from a tag with BI=10.1 seconds as if they were the odd-numbered\n"
+        "    bursts from a tag with BI=5.05 seconds.  To prevent this, we only output\n"
+        "    runs where we can rule this out, by seeing skipped burst periods incompatible\n"
+        "    with any given multiple of the BI; i.e. if the gcd of all consecutive burst steps\n"
+        "    is 1.  However, to prevent uncontrolled memory usage, we need to limit how\n"
+        "    long an unconfirmed run can grow before we decide to discard it as an alias.\n"
+        "    This is because pulses in unconfirmed runs are buffered, and not output until\n"
+        "    the run is confirmed.  This parameter defaults to 10.\n\n"
+
 	);
 }
 
 int
 main (int argc, char **argv) {
       enum {
-	OPT_BURST_SLOP	         = 'b',
-	OPT_BURST_SLOP_EXPANSION = 'B',
-	OPT_PULSES_TO_CONFIRM    = 'c',
-        OPT_USE_EVENTS           = 'e',
-	OPT_DEFAULT_FREQ         = 'f',
-	OPT_FORCE_DEFAULT_FREQ   = 'F',
-        OPT_GRAPH                = 'g',
-        OPT_GPS_MIN_DT           = 'G',
-        COMMAND_HELP	         = 'h',
-	OPT_SIG_SLOP	         = 'l',
-        OPT_LOTEK                = 'L',
-	OPT_MIN_DFREQ            = 'm',
-	OPT_MAX_DFREQ            = 'M',
-        OPT_BOOT_NUM             = 'n',
-        OPT_PULSE_SLOP	         = 'p',
-        OPT_SRC_SQLITE           = 'Q',
-        OPT_RESUME               = 'r',
-	OPT_MAX_PULSE_RATE       = 'R',
-	OPT_FREQ_SLOP	         = 's',
-	OPT_MAX_SKIPPED_BURSTS   = 'S',
-        OPT_TEST                 = 't',
-        OPT_UNSIGNED_DFREQ       = 'u',
-	OPT_PULSE_RATE_WINDOW    = 'w'
+	OPT_BURST_SLOP             = 'b',
+	OPT_BURST_SLOP_EXPANSION   = 'B',
+	OPT_PULSES_TO_CONFIRM      = 'c',
+        OPT_USE_EVENTS             = 'e',
+	OPT_DEFAULT_FREQ           = 'f',
+	OPT_FORCE_DEFAULT_FREQ     = 'F',
+        OPT_GRAPH                  = 'g',
+        OPT_GPS_MIN_DT             = 'G',
+        COMMAND_HELP               = 'h',
+	OPT_SIG_SLOP               = 'l',
+        OPT_LOTEK                  = 'L',
+	OPT_MIN_DFREQ              = 'm',
+	OPT_MAX_DFREQ              = 'M',
+        OPT_BOOT_NUM               = 'n',
+        OPT_PULSE_SLOP             = 'p',
+        OPT_SRC_SQLITE             = 'Q',
+        OPT_RESUME                 = 'r',
+	OPT_MAX_PULSE_RATE         = 'R',
+	OPT_FREQ_SLOP              = 's',
+	OPT_MAX_SKIPPED_BURSTS     = 'S',
+        OPT_TEST                   = 't',
+        OPT_UNSIGNED_DFREQ         = 'u',
+	OPT_PULSE_RATE_WINDOW      = 'w',
+        OPT_MAX_UNCONFIRMED_BURSTS = 'x'
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:ef:FgG:hi:l:Lm:M:p:rR:s:S:tuw:";
+    static const char short_options[] = "b:B:c:ef:FgG:hi:l:Lm:M:p:rR:s:S:tuw:x:";
     static const struct option long_options[] = {
         {"burst_slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst_slop_expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
@@ -475,6 +489,7 @@ main (int argc, char **argv) {
 	{"pulse_rate_window"       , 1, 0, OPT_PULSE_RATE_WINDOW},
         {"test"                    , 0, 0, OPT_TEST},
         {"unsigned_dfreq"          , 0, 0, OPT_UNSIGNED_DFREQ},
+        {"max_unconfirmed_bursts"  , 1, 0, OPT_MAX_UNCONFIRMED_BURSTS},
         {0, 0, 0, 0}
     };
 
@@ -509,6 +524,7 @@ main (int argc, char **argv) {
     float sig_slop_dB = 10;
     Frequency_Offset_kHz freq_slop_kHz = 0.5;       // (kHz) maximum allowed frequency bandwidth of a burst
     long long bootNum = 1; // default boot number
+    int max_unconfirmed_bursts = 10;
 
     while ((c = getopt_long(argc, argv, short_options, long_options, &option_index)) != -1) {
         switch (c) {
@@ -581,6 +597,9 @@ main (int argc, char **argv) {
         case OPT_TEST:
           test_only = true;
           break;
+	case OPT_MAX_UNCONFIRMED_BURSTS:
+	  max_unconfirmed_bursts = atoi(optarg);
+	  break;
         default:
             usage();
             exit(1);
@@ -597,6 +616,7 @@ main (int argc, char **argv) {
     Tag_Candidate::set_pulses_to_confirm_id(pulses_to_confirm);
     Tag_Candidate::set_sig_slop_dB(sig_slop_dB);
     Tag_Candidate::set_freq_slop_kHz(freq_slop_kHz);
+    Tag_Candidate::set_max_unconfirmed_bursts(max_unconfirmed_bursts);
 
     string tag_filename = string(argv[optind++]);
 
@@ -633,6 +653,7 @@ main (int argc, char **argv) {
       dbf.add_param("unsigned_dfreq", unsigned_dfreq);
       dbf.add_param("resume", resume);
       dbf.add_param("lotek_data", lotek_data);
+      dbf.add_param("max_unconfirmed_bursts", max_unconfirmed_bursts);
 
       dbf.load_ambiguity(tag_db);
 

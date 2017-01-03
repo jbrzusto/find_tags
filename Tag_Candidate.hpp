@@ -32,7 +32,7 @@ public:
 
   typedef enum {CONFIRMED=0, SINGLE=1, MULTIPLE=2} Tag_ID_Level;	// how well-resolved is the tag ID?  Note the order.
 
-protected: 
+protected:
   // fundamental structure
 
   Tag_Finder    *owner;
@@ -50,6 +50,9 @@ protected:
 
   Bounded_Range < Frequency_MHz > freq_range; // range of pulse frequency offsets
   Bounded_Range < float > sig_range;  // range of pulse signal strengths, in dB
+
+  int burst_step_gcd; //!< GCD of burst steps; when this reaches 1, we confirm tag identity. (prevents aliasing on a tag whose BI is nearly an integer
+                      // multiple of another tag's BI)
 
   static const float BOGUS_BURST_SLOP; // burst slop reported for first burst of run (where we don't have a previous burst)  Doesn't really matter, since we can distinguish this situation in the data by "pos.in.run==1"
 
@@ -70,13 +73,15 @@ protected:
   static long long num_cands;
 
   static long long max_num_cands;
-  
+
   static Timestamp max_cand_time;
+
+  static int max_unconfirmed_bursts; //!< maximum number of bursts allowed without having reached burst_step_gcd = 1
 
 public:
 
   Tag_Candidate() {}; // default ctor for deserialization
-  
+
   Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse);
 
   Tag_Candidate * clone();
@@ -110,7 +115,7 @@ public:
   void clear_pulses();
 
   void calculate_burst_params(Pulse_Iter &p);
- 
+
   void dump_bursts(string prefix="");
 
   static void set_freq_slop_kHz(float slop);
@@ -128,6 +133,10 @@ public:
   static long long get_num_cands();
 
   static Timestamp get_max_cand_time();
+
+  static void set_max_unconfirmed_bursts(int m);
+
+  static int gcd(int x, int y); //!< gcd of x, y
 
   void renTag(Tag * t1, Tag * t2); //!< if this candidate is for tag t1, make it finish any run and start a new one pointing at t2.
 
