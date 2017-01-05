@@ -429,7 +429,8 @@ usage() {
         "    is 1.  However, to prevent uncontrolled memory usage, we need to limit how\n"
         "    long an unconfirmed run can grow before we decide to discard it as an alias.\n"
         "    This is because pulses in unconfirmed runs are buffered, and not output until\n"
-        "    the run is confirmed.  This parameter defaults to 10.\n\n"
+        "    the run is confirmed.  This parameter defaults to 10.  Setting it to 0 disables\n"
+        "    this check.\n\n"
 
 	);
 }

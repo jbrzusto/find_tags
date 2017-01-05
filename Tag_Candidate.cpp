@@ -148,14 +148,14 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     break;
 
   case SINGLE:
-    if (pulses.size() >= pulses_to_confirm_id && burst_step_gcd == 1)
+    if (pulses.size() >= pulses_to_confirm_id && (burst_step_gcd == 1 || max_unconfirmed_bursts == 0))
       tag_id_level = CONFIRMED;
 
     // fall through
 
   case CONFIRMED:
     pulse_completes_burst = new_state->get_phase() % num_pulses == num_pulses - 1;
-    if (pulse_completes_burst && tag_id_level == SINGLE) {
+    if (pulse_completes_burst && tag_id_level == SINGLE && max_unconfirmed_bursts > 0) {
 
       // We've fallen through from case SINGLE and are still at that
       // tag_id_level, and this is the last pulse in a burst.  Get the
