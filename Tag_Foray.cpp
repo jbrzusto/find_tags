@@ -321,7 +321,7 @@ Tag_Foray::pause() {
     oa << make_nvp("_numSets", Set::_numSets);
     oa << make_nvp("maxLabel", Set::maxLabel);
     oa << make_nvp("_empty", Set::_empty);
-#ifdef DEBUG
+#if 0
     oa << make_nvp("allSets", Set::allSets);
 #endif
 
@@ -396,7 +396,7 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, long long bootnum) {
   ia >> make_nvp("_numSets", Set::_numSets);
   ia >> make_nvp("maxLabel", Set::maxLabel);
   ia >> make_nvp("_empty", Set::_empty);
-#ifdef DEBUG
+#if 0
   ia >> make_nvp("allSets", Set::allSets);
 #endif
 
