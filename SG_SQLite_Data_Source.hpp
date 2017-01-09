@@ -22,6 +22,9 @@ protected:
   const char * blob; //!< pointer to next char to use in blob buffer
   int offset; //!< offset from blob of next byte to use
   Timestamp blobTS; //!< timestamp of start of current blob; used in resume().
+  Timestamp originTS; //!< timestamp of start of blob to which we rewind, after resume()
+  int originOffset; //!< offset from first blob to which we rewind, after resume()
+  int originBytesLeft; //!< bytes left in blob after rewind, after resume()
 
   void serialize(boost::archive::binary_iarchive & ar, const unsigned int version);
   void serialize(boost::archive::binary_oarchive & ar, const unsigned int version);

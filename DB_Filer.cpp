@@ -549,9 +549,9 @@ DB_Filer::get_blob (const char **bufout, int * lenout, Timestamp *ts) {
 };
 
 void
-DB_Filer::rewind_blob_reader() {
+DB_Filer::rewind_blob_reader(Timestamp origin) {
   sqlite3_reset (st_get_blob);
-  seek_blob(0);
+  seek_blob(origin);
 };
 
 void

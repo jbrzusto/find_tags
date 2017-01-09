@@ -3,7 +3,10 @@
 SG_SQLite_Data_Source::SG_SQLite_Data_Source(DB_Filer * db, unsigned int monoBN) :
   db(db),
   bytesLeft(0),
-  offset(0)
+  offset(0),
+  originTS(0),
+  originOffset(0),
+  originBytesLeft(0)
 {
   db->start_blob_reader(monoBN);
 };
@@ -41,8 +44,12 @@ SG_SQLite_Data_Source::getline(char * buf, int maxLen) {
 
 void
 SG_SQLite_Data_Source::rewind() {
-  db->rewind_blob_reader();
-  bytesLeft = 0;
+  db->rewind_blob_reader(originTS);
+  db->get_blob(& blob, & bytesLeft, & blobTS);
+  if (originTS > 0) {
+    offset    = originOffset;
+    bytesLeft = originBytesLeft;
+  }
 };
 
 SG_SQLite_Data_Source::~SG_SQLite_Data_Source() {
@@ -64,6 +71,11 @@ SG_SQLite_Data_Source::serialize(boost::archive::binary_iarchive & ar, const uns
   db->seek_blob(blobTS);
   db->get_blob(& blob, & bytesLeft, & blobTS);
   bytesLeft -= offset;
+
+  // set up rewind location:
+  originTS        = blobTS;
+  originBytesLeft = bytesLeft;
+  originOffset    = offset;
 };
 
 void
