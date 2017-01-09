@@ -679,7 +679,14 @@ main (int argc, char **argv) {
 
       Tag_Foray foray;
 
-      if (! resume || ! Tag_Foray::resume(foray, pulses, bootNum)) {
+      if (resume) {
+        resume = Tag_Foray::resume(foray, pulses, bootNum);
+        if (! resume)
+          std::cerr << "find_tags_motus: --resume failed" << std::endl;
+        else
+          std::cerr << "resumed successfully" << std::endl;
+      }
+      if (! resume) {
         // either not asked to resume, or resume failed (e.g. no resume state saved)
         foray = Tag_Foray(& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing, unsigned_dfreq);
       }
