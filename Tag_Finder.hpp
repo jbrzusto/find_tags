@@ -64,6 +64,8 @@ public:
 
   string prefix;   // prefix before each tag record (e.g. port number then comma)
 
+  short ant;       // antenna value, interpreted from prefix
+
   Tag_Finder() {}; //!< default ctor for deserialization
 
   Tag_Finder(Tag_Foray * owner) {};
@@ -90,9 +92,9 @@ public:
   void delete_competitors(Cand_List::iterator ci, Cand_List::iterator &nextci); //!< delete any candidates for the same tag or sharing any pulses with * ci
 
 public:
-  
+
   // public serialize function.
-  
+
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
   {
@@ -101,7 +103,8 @@ public:
     ar & BOOST_SERIALIZATION_NVP( graph );
     ar & BOOST_SERIALIZATION_NVP( cands );
     ar & BOOST_SERIALIZATION_NVP( prefix );
-    
+
+    sscanf(prefix.c_str(), "%hd", &ant);
   };
 };
 

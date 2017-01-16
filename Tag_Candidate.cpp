@@ -288,7 +288,7 @@ Tag_Candidate::calculate_burst_params(Pulse_Iter & p) {
   burst_par.num_pred = hit_count;
 };
 
-void Tag_Candidate::dump_bursts(string prefix) {
+void Tag_Candidate::dump_bursts(short ant) {
   // dump as many bursts as we have data for
 
   if (pulses.size() < num_pulses)
@@ -298,7 +298,7 @@ void Tag_Candidate::dump_bursts(string prefix) {
   while (p != pulses.end()) {
     if (++hit_count == 1) {
       // first hit, so start a run
-      run_id = filer->begin_run(tag->motusID, prefix.c_str()[0]-'0');
+      run_id = filer->begin_run(tag->motusID, ant);
       Tag_Foray::num_cands_with_run_id(run_id, 1);
     }
     Timestamp ts = p->ts;
@@ -322,7 +322,7 @@ void Tag_Candidate::dump_bursts(string prefix) {
 };
 
 void
-Tag_Candidate::dump_bogus_burst(Timestamp ts, std::string &prefix, Frequency_MHz antfreq) {
+Tag_Candidate::dump_bogus_burst(Timestamp ts, short ant, Frequency_MHz antfreq) {
   // FIXME: what, if anything, should we do here?
 }
 

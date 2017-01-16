@@ -116,7 +116,7 @@ public:
 
   void calculate_burst_params(Pulse_Iter &p);
 
-  void dump_bursts(string prefix="");
+  void dump_bursts(short prefix);
 
   static void set_freq_slop_kHz(float slop);
 
@@ -124,7 +124,7 @@ public:
 
   static void set_pulses_to_confirm_id(unsigned int n);
 
-  static void dump_bogus_burst(Timestamp ts, std::string & prefix, Frequency_MHz antfreq);
+  static void dump_bogus_burst(Timestamp ts, short prefix, Frequency_MHz antfreq);
 
   static void set_filer(DB_Filer *dbf);
 

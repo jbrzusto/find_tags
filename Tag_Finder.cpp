@@ -9,6 +9,7 @@ Tag_Finder::Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, TagSe
   cands(NUM_CAND_LISTS),
   prefix(prefix)
 {
+  sscanf(prefix.c_str(), "%hd", &ant);
 };
 
 void
@@ -49,7 +50,7 @@ Tag_Finder::process(Pulse &p) {
   for (int i = 0; i < NUM_CAND_LISTS; ++i) {
 
     Cand_List & cs = cands[i];
-    
+
     Cand_List::iterator nextci; // "next" iterator in case we need to delete current one while traversing list
 
     for (Cand_List::iterator ci = cs.begin(); ci != cs.end() && p.ts >= ci->first; ci = nextci ) {
@@ -92,16 +93,16 @@ Tag_Finder::process(Pulse &p) {
       // add the pulse
       if ((ci->second)->add_pulse(p, next_state)) {
         // this candidate tag just completed a burst at the CONFIRMED level
-        // So delete any other candidate for this tag, and delete any 
+        // So delete any other candidate for this tag, and delete any
         // other candidate that shares any of the same points.
         delete_competitors(ci, nextci);
 
         // dump all complete bursts from this confirmed tag
-        (ci->second)->dump_bursts(prefix);
+        (ci->second)->dump_bursts(ant);
 
         // mark that this pulse has been accepted by a candidate at the CONFIRMED level
         confirmed_acceptance = true;
-      } 
+      }
 
       // this candidate has accepted a pulse, and needs to be re-indexed
       // within its Cand_list, which might also have changed.
@@ -134,7 +135,7 @@ Tag_Finder::~Tag_Finder() {
 
     if ((ci->second)->get_tag_id_level() == Tag_Candidate::CONFIRMED && (ci->second)->has_burst()) {
       // dump remaining bursts
-      (ci->second)->dump_bursts(prefix);
+      (ci->second)->dump_bursts(ant);
     }
     delete (ci->second);
   }
@@ -150,7 +151,7 @@ Tag_Finder::delete_competitors(Cand_List::iterator ci, Cand_List::iterator &next
 
   for (int j = 0; j < NUM_CAND_LISTS; ++j) {
     for (Cand_List::iterator cci = cands[j].begin(); cci != cands[j].end(); /**/ ) {
-      if ((cci->second) != (ci->second) 
+      if ((cci->second) != (ci->second)
           && ((cci->second)->has_same_id_as(ci->second)
               || (cci->second)->shares_any_pulses(ci->second))) {
         Cand_List::iterator di = cci;
@@ -177,7 +178,7 @@ Tag_Finder::get_true_gaps(TagID tid) {
 
 void
 Tag_Finder::dump_bogus_burst(Pulse &p) {
-  Tag_Candidate::dump_bogus_burst(p.ts, prefix, p.ant_freq);
+  Tag_Candidate::dump_bogus_burst(p.ts, ant, p.ant_freq);
 };
 
 void
@@ -223,4 +224,3 @@ Tag_Finder::dump(Timestamp latest) {
     }
   }
 }
-  
