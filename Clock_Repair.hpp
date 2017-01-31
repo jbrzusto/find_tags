@@ -148,7 +148,7 @@ public:
 
   Clock_Repair() {};
 
-  Clock_Repair(Data_Source *data, unsigned long long *line_no, DB_Filer * filer, Timestamp tol = 1); //!< ctor, with tolerance for bracketing correction to CLOCK_MONOTONIC
+  Clock_Repair(Data_Source *data, Seq_No *line_no, DB_Filer * filer, Timestamp tol = 1); //!< ctor, with tolerance for bracketing correction to CLOCK_MONOTONIC
 
   //!< get the next record available for processing, and return true.
   // if no (corrected) records are available, return false.
@@ -187,7 +187,8 @@ protected:
   bool isPreGPS(Timestamp ts) { return ts >= TS_BEAGLEBONE_BOOT && ts < TS_SG_EPOCH; } //!< is timestamp in PRE_GPS era?
 
   Data_Source *data; //!< data source we get records from
-  unsigned long long *line_no; //!< pointer to line number so we can update it
+  Seq_No *line_no_ptr; //!< pointer to line number in caller's frame
+  Seq_No prefetch_line_no; //!< line number of prefetched line
   DB_Filer * filer;   //!< for filing time corrections
   Timestamp tol;  //!< maximum allowed error (seconds) in correcting timestamps
   Clock_Pinner cp;    //!< for pinning CLOCK_PRE_GPS to CLOCK_REALTIME

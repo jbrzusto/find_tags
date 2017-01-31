@@ -53,7 +53,7 @@ public:
 
   void pause(); //!< serialize foray to output database
 
-  static bool resume(Tag_Foray &tf, Data_Source *data, long long bootnum); //!< resume foray from state saved in output database
+  static bool resume(Tag_Foray &tf, Data_Source *data, Seq_No bootnum); //!< resume foray from state saved in output database
   // returns true if successful
 
   static void set_default_pulse_slop_ms(float pulse_slop_ms);
@@ -98,8 +98,8 @@ protected:
 
   // runtime storage
 
-  unsigned long long line_no;                    // count lines of input seen
-  
+  Seq_No line_no;                    // count lines of input seen
+
   std::map < Port_Num, Freq_Setting > port_freq; // keep track of frequency settings on each port
 
   std::vector < int > pulse_count;     // keep track of hourly counts of pulses on each port
@@ -189,7 +189,7 @@ public:
     ar & BOOST_SERIALIZATION_NVP( max_skipped_bursts );
     ar & BOOST_SERIALIZATION_NVP( hist );
     ar & BOOST_SERIALIZATION_NVP( cron );
-  };  
+  };
 };
 
 #endif // TAG_FORAY

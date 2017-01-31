@@ -18,6 +18,7 @@ struct SG_Record {
       Frequency_Offset_kHz dfreq;
       SignaldB             sig;
       SignaldB             noise;
+      Seq_No               line_no; //!< line this record came from
     };
 
     struct {
@@ -41,8 +42,8 @@ struct SG_Record {
       double   clock_remaining;
     };
 
-  } v; 
-   
+  } v;
+
   static SG_Record from_buf(char * buf);        //!< construct from buffer
 
 
@@ -58,7 +59,7 @@ struct SG_Record {
       ar & BOOST_SERIALIZATION_NVP( v.sig );
       ar & BOOST_SERIALIZATION_NVP( v.noise );
       break;
-      
+
     case GPS:
       ar & BOOST_SERIALIZATION_NVP( v.lat );
       ar & BOOST_SERIALIZATION_NVP( v.lon );
@@ -73,8 +74,8 @@ struct SG_Record {
 
     default:
       break;
-    } 
-  };  
+    }
+  };
 };
 
 #endif // SG_RECORD

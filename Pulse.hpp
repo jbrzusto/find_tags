@@ -12,8 +12,6 @@ struct Pulse {
   // make it cheaper to refer to particular pulses (as when we kill
   // all DFAs using any pulses from a just-recognized burst).
 
-  typedef long long Seq_No;
-
 public:
 
   // data from the pulse detector
@@ -26,19 +24,20 @@ public:
 
   // additional parameters for algorithmic use
 
-  Seq_No	        seq_no;     
+  Seq_No	        seq_no;         // pulse sequence number
+  Seq_No                line_no;        // data source line sequence number; ignored if zero
 
   static Seq_No         count;
 
 private:
-  Pulse(double ts, Frequency_Offset_kHz dfreq, float sig, float noise, Frequency_MHz ant_freq);
+  Pulse(double ts, Frequency_Offset_kHz dfreq, float sig, float noise, Frequency_MHz ant_freq, Seq_No line_no=0);
 
 public:
   Pulse();
 
-  static Pulse make(double ts, Frequency_Offset_kHz dfreq, float sig, float noise, Frequency_MHz ant_freq);
+  static Pulse make(double ts, Frequency_Offset_kHz dfreq, float sig, float noise, Frequency_MHz ant_freq, Seq_No line_no=0);
 
-  void dump();
+  void dump(bool with_line_no = false);
 
   template < class Archive >
   void serialize(Archive & ar, const unsigned int version) {

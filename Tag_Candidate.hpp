@@ -78,6 +78,8 @@ protected:
 
   static int max_unconfirmed_bursts; //!< maximum number of bursts allowed without having reached burst_step_gcd = 1
 
+  static bool dump_line_numbers; //!< should line numbers be output to hitLines table?
+
 public:
 
   Tag_Candidate() {}; // default ctor for deserialization
@@ -114,7 +116,7 @@ public:
 
   void clear_pulses();
 
-  void calculate_burst_params(Pulse_Iter &p);
+  void calculate_burst_params(Pulse_Iter p);
 
   void dump_bursts(short prefix);
 
@@ -123,6 +125,8 @@ public:
   static void set_sig_slop_dB(float slop);
 
   static void set_pulses_to_confirm_id(unsigned int n);
+
+  static void set_dump_line_numbers(bool f);
 
   static void dump_bogus_burst(Timestamp ts, short prefix, Frequency_MHz antfreq);
 

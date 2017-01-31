@@ -34,13 +34,15 @@ public:
 
   static const int MAX_TAGS_PER_AMBIGUITY_GROUP = 6;
 
-  DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int bootnum=1, double minGPSdt = 300); // initialize a filer on an existing sqlite database file
+  DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int bootnum=1, double minGPSdt = 300, bool dump_line_numbers = false); // initialize a filer on an existing sqlite database file
   ~DB_Filer (); // write summary data
 
   Run_ID begin_run(Motus_Tag_ID mid, int ant ); // begin run of tag
   void end_run(Run_ID rid, int n, bool countOnly = false); // end run, noting number of hits; if countOnly is true, don't end run
 
-  void add_hit(Run_ID rid, double ts, float sig, float sigSD, float noise, float freq, float freqSD, float slop, float burstSlop);
+  Seq_No add_hit(Run_ID rid, double ts, float sig, float sigSD, float noise, float freq, float freqSD, float slop, float burstSlop); // if dump_line_numbers is true, return the rowID of the added hit
+
+  void add_hit_line(Seq_No hid, Seq_No line_no); // record a file line for a detection pulse
 
   void add_param(const string &name, double val); // record a program parameter value
 
@@ -92,6 +94,7 @@ protected:
   sqlite3_stmt * st_begin_run; //!< start a run
   sqlite3_stmt * st_end_run; //!< end a run
   sqlite3_stmt * st_add_hit; //!< add a hit to a run
+  sqlite3_stmt * st_add_hit_line; //!< add a line to the hitLines table
   sqlite3_stmt * st_add_prog; //!< add batch program entry
   sqlite3_stmt * st_add_GPS_fix; //!< add a GPS fix
   sqlite3_stmt * st_add_time_fix; //!< add a time jump
@@ -125,6 +128,8 @@ protected:
 
   double lastGPSts; //!< most recent GPS timestamp
 
+  bool dump_line_numbers; //!< should line numbers of detection pulses be dumped?
+
   void step_commit(sqlite3_stmt *st); //!< step statement, and if number of steps has reached steps_per_tx, commit and start new tx
 
   int Check(int code, int wants, int wants2, int wants3, const std::string & err); //!< check that sqlite3 result is one of specified values, otherwise throuw runtime error with given text; -1 is not a valid SQLITE return code
@@ -149,6 +154,7 @@ protected:
   static const char * q_begin_run;
   static const char * q_end_run;
   static const char * q_add_hit;
+  static const char * q_add_hit_line;
   static const char * q_add_GPS_fix;
   static const char * q_add_time_fix;
   static const char * q_add_pulse_count;

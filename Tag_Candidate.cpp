@@ -237,7 +237,7 @@ void Tag_Candidate::clear_pulses() {
 };
 
 void
-Tag_Candidate::calculate_burst_params(Pulse_Iter & p) {
+Tag_Candidate::calculate_burst_params(Pulse_Iter p) {
   // calculate these burst parameters:
   // - mean signal and noise strengths
   // - relative standard deviation (among pulses) of signal strength
@@ -291,6 +291,8 @@ Tag_Candidate::calculate_burst_params(Pulse_Iter & p) {
 void Tag_Candidate::dump_bursts(short ant) {
   // dump as many bursts as we have data for
 
+  Seq_No hit_id;
+
   if (pulses.size() < num_pulses)
     return;
 
@@ -303,7 +305,7 @@ void Tag_Candidate::dump_bursts(short ant) {
     }
     Timestamp ts = p->ts;
     calculate_burst_params(p);
-    filer->add_hit(
+    hit_id = filer->add_hit(
                    run_id,
                    ts,
                    burst_par.sig,
@@ -314,6 +316,13 @@ void Tag_Candidate::dump_bursts(short ant) {
                    burst_par.slop,
                    burst_par.burst_slop
                    );
+    if (dump_line_numbers) {
+      for (int i=0; i < num_pulses; ++i, ++p)
+        filer->add_hit_line(hit_id, p->line_no);
+    } else {
+      for (int i=0; i < num_pulses; ++i, ++p)
+        ; // just advance pulse iterator
+    }
     ++ tag->count;
     if (tag->count == 1 && tag->motusID < 0)
       Ambiguity::detected(tag);
@@ -336,6 +345,10 @@ void Tag_Candidate::set_sig_slop_dB(float slop) {
 
 void Tag_Candidate::set_pulses_to_confirm_id(unsigned int n) {
   pulses_to_confirm_id = n;
+};
+
+void Tag_Candidate::set_dump_line_numbers(bool f) {
+  dump_line_numbers = f;
 };
 
 void
@@ -407,3 +420,4 @@ long long Tag_Candidate::num_cands = 0; // count of allocated but not freed cand
 long long Tag_Candidate::max_num_cands = 0; // count of allocated but not freed candidates.
 Timestamp Tag_Candidate::max_cand_time = 0; // timestamp at maximum candidate count
 int Tag_Candidate::max_unconfirmed_bursts = 10;// maximum bursts before burst_step_gcd reaches 1; if exceeded, we discard candidate
+bool Tag_Candidate::dump_line_numbers = false; // by default, don't dump line numbers to the hitLines table

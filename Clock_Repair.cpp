@@ -1,8 +1,9 @@
 #include "Clock_Repair.hpp"
 
-Clock_Repair::Clock_Repair(Data_Source *data, unsigned long long *line_no, DB_Filer * filer, Timestamp tol) :
+Clock_Repair::Clock_Repair(Data_Source *data, Seq_No *line_no_ptr, DB_Filer * filer, Timestamp tol) :
   data(data),
-  line_no(line_no),
+  line_no_ptr(line_no_ptr),
+  prefetch_line_no(* line_no_ptr),
   filer(filer),
   tol(tol),
   cp(),
@@ -71,10 +72,10 @@ Clock_Repair::read_record(SG_Record & r) {
   char buf[MAX_LINE_SIZE + 1] = {}; // input buffer
 
   while (data->getline(buf, MAX_LINE_SIZE)) {
-    ++ *line_no;
+    ++ prefetch_line_no;
     r = SG_Record::from_buf(buf);
     if (r.type == SG_Record::BAD) {
-      std::cerr << "Warning: malformed line in input\n  at line " << line_no << ":\n" << (string("") + buf) << std::endl;
+      std::cerr << "Warning: malformed line in input\n  at line " << prefetch_line_no << ":\n" << (string("") + buf) << std::endl;
       continue;
     }
     return true;
@@ -109,5 +110,6 @@ Clock_Repair::get(SG_Record &r) {
   if (isPreGPS(r.ts))
     // correct the pre-GPS timestamps
     r.ts += offset;
+  ++ * line_no_ptr;
   return true;
 };

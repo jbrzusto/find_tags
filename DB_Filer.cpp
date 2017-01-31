@@ -2,13 +2,14 @@
 #include <stdio.h>
 #include <time.h>
 
-DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int  bootnum, double minGPSdt):
+DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int  bootnum, double minGPSdt, bool dump_line_numbers):
   prog_name(prog_name),
   num_hits(0),
   num_steps(0),
   bootnum(bootnum),
   minGPSdt(minGPSdt),
-  lastGPSts(0)
+  lastGPSts(0),
+  dump_line_numbers(dump_line_numbers)
 {
   Check(sqlite3_open_v2(out.c_str(),
                         & outdb,
@@ -54,6 +55,11 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
 
   Check(sqlite3_prepare_v2(outdb, q_add_hit, -1, &st_add_hit, 0),
         "output DB does not have valid 'hits' table.");
+
+  if (dump_line_numbers) {
+    Check(sqlite3_prepare_v2(outdb, q_add_hit_line, -1, &st_add_hit_line, 0),
+          "output DB does not have valid 'hitLines' table but dump_line_numbers specified");
+  }
 
   if (minGPSdt >= 0) {
     Check(sqlite3_prepare_v2(outdb, q_add_GPS_fix,-1, &st_add_GPS_fix, 0),
@@ -194,6 +200,7 @@ DB_Filer::~DB_Filer() {
   if (minGPSdt >= 0)
     sqlite3_finalize(st_add_GPS_fix);
   sqlite3_finalize(st_add_hit);
+  sqlite3_finalize(st_add_hit_line);
   sqlite3_close(outdb);
   outdb = 0;
 };
@@ -233,7 +240,7 @@ DB_Filer::q_add_hit =
          values   (?,       ?,     ?,  ?,   ?,     ?,     ?,    ?,      ?,    ?)";
 //               1       2     3  4    5     6     7    8      9     10
 
-void
+Seq_No
 DB_Filer::add_hit(Run_ID rid, double ts, float sig, float sigSD, float noise, float freq, float freqSD, float slop, float burstSlop) {
   sqlite3_bind_int   (st_add_hit, 1, bid);
   sqlite3_bind_int   (st_add_hit, 2, rid);
@@ -247,7 +254,22 @@ DB_Filer::add_hit(Run_ID rid, double ts, float sig, float sigSD, float noise, fl
   sqlite3_bind_double(st_add_hit, 10, burstSlop);
   step_commit(st_add_hit);
   ++ num_hits;
+  return dump_line_numbers ? sqlite3_last_insert_rowid(outdb) : 0;
 };
+
+const char *
+DB_Filer::q_add_hit_line =
+"insert into hitLines (hitID, lineNo) \
+              values   (?,      ?)";
+//                      1       2
+
+void
+DB_Filer::add_hit_line(Seq_No hid, Seq_No line_no) {
+  sqlite3_bind_int (st_add_hit_line, 1, hid);
+  sqlite3_bind_int (st_add_hit_line, 2, line_no);
+  step_commit(st_add_hit_line);
+};
+
 
 const char *
 DB_Filer::q_add_GPS_fix =

@@ -13,6 +13,8 @@
 const static unsigned int PULSES_PER_BURST = 4;	// pulses in a burst (Lotek VHF tags)
 const static unsigned int MAX_LINE_SIZE = 512;	// characters in a .CSV file line
 
+typedef long long Seq_No; // for counting line number and pulse records
+
 // type representing a timestamp, in seconds since the Epoch (1 Jan 1970 GMT)
 
 typedef double Timestamp;

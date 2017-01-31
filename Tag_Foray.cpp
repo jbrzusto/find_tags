@@ -160,7 +160,7 @@ Tag_Foray::start() {
           r.v.dfreq = - r.v.dfreq;
 
         // create a pulse object from this record
-        Pulse p = Pulse::make(r.ts, r.v.dfreq, r.v.sig, r.v.noise, port_freq[r.port].f_MHz);
+        Pulse p = Pulse::make(r.ts, r.v.dfreq, r.v.sig, r.v.noise, port_freq[r.port].f_MHz, line_no);
 
         // process any tag events up to this point in time
 
@@ -356,7 +356,7 @@ Tag_Foray::now() {
 };
 
 bool
-Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, long long bootnum) {
+Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, Seq_No bootnum) {
   Timestamp paused;
   Timestamp lastLineTS;
   std::string blob;
