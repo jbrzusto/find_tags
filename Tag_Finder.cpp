@@ -182,9 +182,53 @@ Tag_Finder::dump_bogus_burst(Pulse &p) {
 };
 
 void
+Tag_Finder::tag_added(std::pair < Tag *, Tag * > tp) {
+  // possibly rename a tag, due to it now being ambiguous
+  if (tp.first)
+    rename_tag(tp);
+  // check for candidates at level SINGLE which might now
+  // be at level MULTIPLE
+  Cand_List & cs = cands[Tag_Candidate::SINGLE];
+  Cand_List::iterator nextci; // "next" iterator in case we need to delete current one while traversing list
+  for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); ci = nextci ) {
+    nextci = ci;
+    ++nextci;
+    Tag_Candidate *tc = ci->second;
+    if (! tc->state->is_unique()) {
+      tc->tag_id_level = Tag_Candidate::MULTIPLE;
+      tc->tag = BOGUS_TAG;
+      cands[tc->tag_id_level].insert(std::make_pair((ci->second)->min_next_pulse_ts(), ci->second));
+      cs.erase(ci);
+    }
+  }
+}
+
+void
+Tag_Finder::tag_removed(std::pair < Tag *, Tag * > tp) {
+  // possibly rename a tag, due to it now being ambiguous
+  if (tp.first)
+    rename_tag(tp);
+  // check for candidates at level MULTIPLE which might now
+  // be at level SINGLE
+  Cand_List & cs = cands[Tag_Candidate::MULTIPLE];
+  Cand_List::iterator nextci; // "next" iterator in case we need to delete current one while traversing list
+  for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); ci = nextci ) {
+    nextci = ci;
+    ++nextci;
+    Tag_Candidate *tc = ci->second;
+    if (tc->state->is_unique()) {
+      tc->tag_id_level = Tag_Candidate::SINGLE;
+      tc->tag = tc->state->get_tag();
+      tc->num_pulses = tc->tag->gaps.size();
+      cands[tc->tag_id_level].insert(std::make_pair((ci->second)->min_next_pulse_ts(), ci->second));
+      cs.erase(ci);
+    }
+  }
+}
+
+
+void
 Tag_Finder::rename_tag(std::pair < Tag *, Tag * > tp) {
-  if (! tp.first)
-    return;
   for (int i = 0; i < 2; ++i) {
     Cand_List & cs = cands[i];
     for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); ++ci )

@@ -82,7 +82,11 @@ public:
 
   void dump_bogus_burst(Pulse &p);
 
-  void rename_tag(std::pair < Tag *, Tag * > tp);
+  void tag_added(std::pair < Tag *, Tag * > tp); //!< perform any fixups due to a tag having been added to the graph
+
+  void tag_removed(std::pair < Tag *, Tag * > tp); //!< perform any fixups due to a tag having been removed from the graph
+
+  void rename_tag(std::pair < Tag *, Tag * > tp); //!< rename a tag, due to addition or removal of ambiguity
 
   void reap(Timestamp now); //!< reap all tag candidates which have expired by time now; used in case pulse stream from a given
   // slot ends, so we can free up memory and correctly end runs.
