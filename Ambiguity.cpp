@@ -5,14 +5,17 @@
 
 Ambiguity::AmbigBimap Ambiguity::abm;//  = AmbigMap();
 int Ambiguity::nextID = 0;
-  
+
 Tag *
 Ambiguity::add(Tag *t1, Tag * t2, Motus_Tag_ID proxyID) {
   // return a proxy tag representing the ambiguous tags t1 and t2; t1
   // might already be a proxy
   AmbigTags s; // set of ambiguous tags
 
-  if (t1->motusID < 0) { 
+  if (! t1 || ! t2)
+    return 0;
+
+  if (t1->motusID < 0) {
     // this is a proxy
     auto i = abm.right.find(t1);
     s = i->second; // get the set of tags so far
@@ -48,7 +51,7 @@ Ambiguity::add(Tag *t1, Tag * t2, Motus_Tag_ID proxyID) {
   return t;
 };
 
-Tag * 
+Tag *
 Ambiguity::remove(Tag * t1, Tag *t2) {
   // return a tag representing those in t1 but excluding the one in t2.
   // t1 must be a proxy tag.
@@ -67,7 +70,7 @@ Ambiguity::remove(Tag * t1, Tag *t2) {
 
   if (! s.count(t2))
      throw std::runtime_error("Trying to remove tag from a proxy that does not represent it");
-  
+
   s.erase(t2);
   if (s.size() == 1) {
     // only a single tag left in the set, so return the original
@@ -103,7 +106,7 @@ Ambiguity::detected(Tag * t) {
   Tag_Candidate::filer->save_ambiguity(t->motusID, i->second);
 };
 
-Tag * 
+Tag *
 Ambiguity::newProxy(Tag * t, Motus_Tag_ID proxyID) {
   Tag * nt = new Tag();
   *nt = *t;
@@ -126,4 +129,3 @@ void
 Ambiguity::setNextProxyID(Motus_Tag_ID proxyID) {
   nextID = proxyID;
 };
-

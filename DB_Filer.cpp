@@ -427,7 +427,8 @@ DB_Filer::load_ambiguity(Tag_Database & tdb) {
     // set the count to non-zero to indicate this amiguity group
     // is immutable:  adding or removing a tag will generate a new
     // ambiguity group
-    proxy->count = 1;
+    if (proxy)
+      proxy->count = 1;
 
   }
 };
