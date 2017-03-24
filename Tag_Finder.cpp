@@ -49,6 +49,8 @@ Tag_Finder::process(Pulse &p) {
 
   for (int i = 0; i < NUM_CAND_LISTS; ++i) {
 
+    std::cerr << "=== cand list " << i << " ===\n";
+
     Cand_List & cs = cands[i];
 
     Cand_List::iterator nextci; // "next" iterator in case we need to delete current one while traversing list
@@ -57,11 +59,13 @@ Tag_Finder::process(Pulse &p) {
       nextci = ci;
       ++nextci;
 
+      std::cerr << "Examining " << (void * ) (ci->second) << std::endl;
       // check whether candidate has expired
       if (ci->second->expired(p.ts)) {
         auto p = ci->second;
         cs.erase(ci);
         delete p;
+        std::cerr << "Deleted " << (void *) p << std::endl;
         continue;
       }
 
@@ -74,6 +78,8 @@ Tag_Finder::process(Pulse &p) {
       // clone the candidate to fork over the "add pulse or don't add pulse" choice
 
       Tag_Candidate * clone = (ci->second)->clone();
+
+      std::cerr << "Cloned " << (void *) (ci->second) << " as " << (void *) clone << std::endl;
 
       // NB: DANGEROUS ASSUMPTION!!  Because we've already computed
       // the next value for ci as nextci, inserting the clone (which
