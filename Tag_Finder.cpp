@@ -47,9 +47,19 @@ Tag_Finder::process(Pulse &p) {
 
   bool confirmed_acceptance = false; // has pulse been accepted by a confirmed candidate?
 
+#ifdef DEBUG
+  std::cerr << std::setprecision(14);
+  std::cerr << "Pulse " << p.ts << std::endl;
+#endif
+
   for (int i = 0; i < NUM_CAND_LISTS; ++i) {
 
     Cand_List & cs = cands[i];
+
+#ifdef DEBUG
+    bool dbg = true;
+    dbg && std::cerr << "=== cand list " << i << " ===\n";
+#endif
 
     Cand_List::iterator nextci; // "next" iterator in case we need to delete current one while traversing list
 
@@ -57,10 +67,16 @@ Tag_Finder::process(Pulse &p) {
       nextci = ci;
       ++nextci;
 
+#ifdef DEBUG
+      dbg && std::cerr << "Examining " << (void * ) (ci->second) << " last_ts " << (ci->second->last_ts) << std::endl;
+#endif
       // check whether candidate has expired
       if (ci->second->expired(p.ts)) {
         auto p = ci->second;
         cs.erase(ci);
+#ifdef DEBUG
+        dbg && std::cerr << "Deleting " << (void *) p << " last_ts " << (p->last_ts)<< std::endl;
+#endif
         delete p;
         continue;
       }
@@ -75,6 +91,9 @@ Tag_Finder::process(Pulse &p) {
 
       Tag_Candidate * clone = (ci->second)->clone();
 
+#ifdef DEBUG
+      dbg && std::cerr << "Cloned " << (void *) (ci->second) << " last_ts " << (ci->second->last_ts) << " as " << (void *) clone << std::endl;
+#endif
       // NB: DANGEROUS ASSUMPTION!!  Because we've already computed
       // the next value for ci as nextci, inserting the clone (which
       // has the same key as ci does before it accepts the pulse) into
@@ -91,17 +110,26 @@ Tag_Finder::process(Pulse &p) {
       cs.insert(ci, std::make_pair(clone->min_next_pulse_ts(), clone));
 
       // add the pulse
-      if ((ci->second)->add_pulse(p, next_state)) {
-        // this candidate tag just completed a burst at the CONFIRMED level
-        // So delete any other candidate for this tag, and delete any
-        // other candidate that shares any of the same points.
-        delete_competitors(ci, nextci);
+      Tag_Candidate * tc = ci->second;
+      if (tc->add_pulse(p, next_state)) {
+        switch (tc->tag_id_level) {
+        case Tag_Candidate::MULTIPLE:
+          // do nothing
+          break;
+        case Tag_Candidate::SINGLE:
+          delete_lesser_competitors(ci, nextci);
+          break;
+        case Tag_Candidate::CONFIRMED:
 
-        // dump all complete bursts from this confirmed tag
-        (ci->second)->dump_bursts(ant);
+          // delete any other candidate sharing a pulse with this one
+          delete_competitors(ci, nextci);
 
-        // mark that this pulse has been accepted by a candidate at the CONFIRMED level
-        confirmed_acceptance = true;
+          // dump all complete bursts from this confirmed tag
+          (ci->second)->dump_bursts(ant);
+
+          // mark that this pulse has been accepted by a candidate at the CONFIRMED level
+          confirmed_acceptance = true;
+        }
       }
 
       // this candidate has accepted a pulse, and needs to be re-indexed
@@ -154,6 +182,35 @@ Tag_Finder::delete_competitors(Cand_List::iterator ci, Cand_List::iterator &next
       if ((cci->second) != (ci->second)
           && ((cci->second)->has_same_id_as(ci->second)
               || (cci->second)->shares_any_pulses(ci->second))) {
+        Cand_List::iterator di = cci;
+        ++cci;
+        auto p = di->second;
+        if (nextci == di) {
+          ++nextci;
+        }
+        cands[j].erase(di);
+        delete p;
+      } else {
+        ++cci;
+      }
+    }
+  }
+};
+
+void
+Tag_Finder::delete_lesser_competitors(Cand_List::iterator ci, Cand_List::iterator &nextci) {
+  // drop any candidates sharing any pulses with this candidate, if that candidate also
+  // has fewer pulses.
+
+  // nextci is bumped up in case we delete the candidate it points to
+
+  int s = ci->second->pulses.size();
+
+  for (int j = 0; j < NUM_CAND_LISTS; ++j) {
+    for (Cand_List::iterator cci = cands[j].begin(); cci != cands[j].end(); /**/ ) {
+      if ((cci->second) != (ci->second)
+          && (cci->second)->pulses.size() < s
+          && (cci->second)->shares_any_pulses(ci->second)) {
         Cand_List::iterator di = cci;
         ++cci;
         auto p = di->second;

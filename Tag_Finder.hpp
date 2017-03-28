@@ -95,6 +95,9 @@ public:
 
   void delete_competitors(Cand_List::iterator ci, Cand_List::iterator &nextci); //!< delete any candidates for the same tag or sharing any pulses with * ci
 
+  void delete_lesser_competitors(Cand_List::iterator ci, Cand_List::iterator &nextci); //!< delete any candidates sharing any pulses with * ci but also having
+  //<! fewer pulses than * ci
+
 public:
 
   // public serialize function.
