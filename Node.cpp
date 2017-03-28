@@ -48,7 +48,7 @@ Node::drop() {
   delete this;
 };
 
-Node * 
+Node *
 Node::advance (Gap dt) {
   // return the Node obtained by following the edge labelled "gap",
   // or NULL if no such edge exists.  i.e. move to the state representing
@@ -64,7 +64,7 @@ Node::advance (Gap dt) {
   return 0;
 };
 
-      
+
 void
 Node::ctorCommon() {
   useCount = 0;
@@ -139,7 +139,7 @@ Node::get_min_age() {
   return 0;
 };
 
-Tag * 
+Tag *
 Node::get_tag() {
   if (s == Set::empty())
     return BOGUS_TAG;
@@ -150,9 +150,11 @@ Phase
 Node::get_phase() {
   if (s == Set::empty())
     return BOGUS_PHASE;
+  if (s->s.size() > 1)
+    throw std::runtime_error("Trying to get phase of node with multiple elements");
   return s->s.begin()->second;
 };
-  
+
 void
 Node::dump(bool skipEdges) {
   std::cout << "Node: " << label << " has " << e.size() << " entries in edge map:\n";

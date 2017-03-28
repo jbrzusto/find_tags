@@ -78,7 +78,9 @@ bool Tag_Candidate::shares_any_pulses(Tag_Candidate *tc) {
 bool
 Tag_Candidate::expired(Timestamp ts) {
   if (! state) {
+#ifdef DEBUG
     std::cerr << "whoops - checking for expiry of Tag Candidate with NULL state!" << std::endl;
+#endif
     return true;
   }
   bool rv = ts - last_ts > state->get_max_age();
@@ -117,8 +119,10 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     Add this pulse to the tag candidate, given the new state this
     will advance the DFA to.
 
-    Return true if adding the pulse completes a burst at the confirmed ID level.
+    Return true if adding the pulse completes a burst or the tag_id_level changes.
   */
+
+  int rv = false;
 
   pulses.push_back(p);
   last_ts = p.ts;
@@ -144,33 +148,48 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
       tag = state->get_tag();
       num_pulses = tag->gaps.size();
       tag_id_level = SINGLE;
+      rv = true;
     }
     break;
 
   case SINGLE:
-    if (pulses.size() >= pulses_to_confirm_id && (burst_step_gcd == 1 || max_unconfirmed_bursts == 0))
-      tag_id_level = CONFIRMED;
-
-    // fall through
-
   case CONFIRMED:
     pulse_completes_burst = new_state->get_phase() % num_pulses == num_pulses - 1;
-    if (pulse_completes_burst && tag_id_level == SINGLE && max_unconfirmed_bursts > 0) {
+    if (pulse_completes_burst && tag_id_level == SINGLE) {
+      bool confirm = pulses.size() >= pulses_to_confirm_id;
+      if (max_unconfirmed_bursts > 0) {
+        // do the gcd test for confirmation (result is pass, fail, or inconclusive)
 
-      // We've fallen through from case SINGLE and are still at that
-      // tag_id_level, and this is the last pulse in a burst.  Get the
-      // number of burst intervals between this burst and the previous
-      // one detected, which is still in the pulses buffer because we
-      // only dump bursts at the CONFIRMED level.  Note that this
-      // pulse has already been pushed into the pulses buffer, so we
-      // need to look back num_pulses+1 from the end.
-      int nbi = round((p.ts - pulses[pulses.size() - (num_pulses + 1)].ts) / state->get_tag()->period);
-      burst_step_gcd = gcd(burst_step_gcd, nbi);
-      if (burst_step_gcd != 1 && pulses.size() / num_pulses > max_unconfirmed_bursts) {
-        // we've gone too many bursts without getting to burst_step_gcd==1, so pretend
-        // the last timestamp for this candidate was way too long ago.
-        // This forces the candidate to expire next time it is checked.
-        last_ts = FORCE_EXPIRY_TIMESTAMP;
+        // This is the last pulse in a burst.  Get the number of burst
+        // intervals between this burst and the previous one detected,
+        // which is still in the pulses buffer because we only dump
+        // bursts at the CONFIRMED level.  Note that this pulse has
+        // already been pushed into the pulses buffer, so we need to
+        // look back num_pulses+1 from the end.
+        int nbi = round((p.ts - pulses[pulses.size() - (num_pulses + 1)].ts) / state->get_tag()->period);
+        burst_step_gcd = gcd(burst_step_gcd, nbi);
+
+        if (burst_step_gcd == 0)
+          throw std::runtime_error("Got gcd=0");
+
+        if (burst_step_gcd != 1) {
+          // not confirming this candidate because we haven't (yet) passed the gcd test
+          confirm = false;
+          if (pulses.size() / num_pulses > max_unconfirmed_bursts) {
+            // This candidate failed the gcd test:
+            // we've gone too many bursts without getting to burst_step_gcd==1, so pretend
+            // the last timestamp for this candidate was way too long ago.
+            // This forces the candidate to expire next time it is checked.
+#ifdef DEBUG
+            std::cerr << "Candidate " << (void * ) this << " forced expiry with gcd = " << burst_step_gcd << std::endl;
+#endif
+            last_ts = FORCE_EXPIRY_TIMESTAMP;
+          }
+        }
+      }
+      if (confirm) {
+        tag_id_level = CONFIRMED;
+        rv =true;
       }
     }
     break;
@@ -198,7 +217,7 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     freq_range.extend_by(p.dfreq);
   }
 
-  return pulse_completes_burst && tag_id_level == CONFIRMED;
+  return rv | pulse_completes_burst;
 };
 
 Tag *

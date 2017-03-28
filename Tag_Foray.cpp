@@ -167,6 +167,9 @@ Tag_Foray::start() {
         while (cron.ts() <= p.ts)
           process_event(cron.get());
 
+#ifdef DEBUG
+        std::cerr << p.ts << ": Key: " << r.port << ", " << port_freq[r.port].f_kHz << std::endl;
+#endif
         tag_finders[key]->process(p);
 #ifdef DEBUG
         tag_finders[key]->dump(r.ts);

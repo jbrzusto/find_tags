@@ -6,7 +6,8 @@ CXX=~john/bin/gfilt
 #PROFILING=-g3 -pg
 
 ## DEBUG FLAGS:
-##CPPFLAGS=-Wall -Wno-sign-compare -g3  -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS) -I/usr/local/include/boost_1.60 -DDEBUG
+##CPPFLAGS=-Wall -Wno-sign-compare -g3  -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS) -I/usr/local/include/boost_1.60
+## -DDEBUG
 
 ## PRODUCTION FLAGS:
 CPPFLAGS=-Wall -Wno-sign-compare -g -O3 -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS)  -I/usr/local/include/boost_1.60

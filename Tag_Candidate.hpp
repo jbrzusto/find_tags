@@ -98,7 +98,7 @@ public:
 
   Node * advance_by_pulse(const Pulse &p);
 
-  bool add_pulse(const Pulse &p, Node *new_state);
+  bool add_pulse(const Pulse &p, Node *new_state); //!< add a pulse, and return true iff either the tag_id_level changes or a burst is completed
 
   Tag * get_tag();
 
