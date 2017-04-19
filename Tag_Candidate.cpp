@@ -12,6 +12,7 @@ Tag_Candidate::Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse)
   tag_id_level(MULTIPLE),
   run_id(0),
   hit_count(0),
+  burst_count(0),
   num_pulses(0),
   freq_range(freq_slop_kHz, pulse.dfreq),
   sig_range(sig_slop_dB, pulse.sig),
@@ -175,7 +176,10 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
         if (burst_step_gcd != 1) {
           // not confirming this candidate because we haven't (yet) passed the gcd test
           confirm = false;
-          if (pulses.size() / num_pulses > max_unconfirmed_bursts) {
+          if (burst_count == 0)
+            burst_count = 1;    // first burst
+          burst_count += nbi;   // additional burst intervals
+          if (burst_count > max_unconfirmed_bursts) {
             // This candidate failed the gcd test:
             // we've gone too many bursts without getting to burst_step_gcd==1, so pretend
             // the last timestamp for this candidate was way too long ago.

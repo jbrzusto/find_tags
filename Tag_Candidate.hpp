@@ -45,6 +45,7 @@ protected:
 
   DB_Filer::Run_ID	run_id;	// ID for the run formed by bursts from this candidate (i.e. consecutive in-phase hits on a tag)
   unsigned int		hit_count;	// counter of bursts output by this tag candidate
+  unsigned int		burst_count;	// total number of bursts, detected and imputed (i.e. count missed bursts)
 
   unsigned short num_pulses; // number of pulses in burst (once tag has been identified)
 
