@@ -508,11 +508,11 @@ DB_Filer::start_blob_reader(int monoBN) {
   sqlite3_enable_load_extension(outdb, 1);
 
   Check(sqlite3_exec(outdb,
-                     "select load_extension('/SG/code/Sqlite_Compression_Extension.so')",
+                     "select load_extension('/sgm/bin/Sqlite_Compression_Extension.so')",
                      0,
                      0,
                      0),
-        "Unable to load required library Sqlite_Compression_Extension.so from /SG/code");
+        "Unable to load required library Sqlite_Compression_Extension.so from /sgm/bin");
 
   Check( sqlite3_prepare_v2(outdb,
                             q_get_blob,
