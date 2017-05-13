@@ -204,7 +204,6 @@ Graph::_delTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
   erase(TagPhase(tag, 0));
 #ifdef DEBUG
   validateSetToNode();
-  viz();
 #endif
 };
 
