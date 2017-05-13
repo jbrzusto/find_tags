@@ -241,7 +241,7 @@ Graph::viz() {
     out << "a" << i->second->label <<
       "[label=\"a" << i->second->label;
     for (auto t = i->second->s->s.begin(); t != i->second->s->s.end(); ++t)
-      out << "\\n" << t->first->motusID;
+      out << "\\n" << t->first->motusID << ':' << t->second;
     out << "\"];\n";
 
     // define each edge, labelled by its interval
