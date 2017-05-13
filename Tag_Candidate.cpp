@@ -159,6 +159,7 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     if (pulse_completes_burst && tag_id_level == SINGLE) {
       bool confirm = pulses.size() >= pulses_to_confirm_id;
       if (max_unconfirmed_bursts > 0) {
+        if (burst_count == 0) {
         // do the gcd test for confirmation (result is pass, fail, or inconclusive)
 
         // This is the last pulse in a burst.  Get the number of burst
@@ -178,6 +179,7 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
           confirm = false;
           if (burst_count == 0)
             burst_count = 1;    // first burst
+        } else {
           burst_count += nbi;   // additional burst intervals
           if (burst_count > max_unconfirmed_bursts) {
             // This candidate failed the gcd test:
@@ -188,6 +190,7 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
             std::cerr << "Candidate " << (void * ) this << " forced expiry with gcd = " << burst_step_gcd << std::endl;
 #endif
             last_ts = FORCE_EXPIRY_TIMESTAMP;
+            }
           }
         }
       }
