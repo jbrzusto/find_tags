@@ -12,7 +12,7 @@ Clock_Repair::Clock_Repair(Data_Source *data, unsigned long long *line_no, DB_Fi
   offset(0.0),
   offsetError(0.0)
 {
-
+  memset(&this->buf[0], 0, MAX_LINE_SIZE + 1);
 };
 
 //!< handle a record from an SG file; return TRUE if any
@@ -68,8 +68,6 @@ Clock_Repair::got_estimate() {
 // if no records are available, return false.
 bool
 Clock_Repair::read_record(SG_Record & r) {
-  char buf[MAX_LINE_SIZE + 1] = {}; // input buffer
-
   while (data->getline(buf, MAX_LINE_SIZE)) {
     ++ *line_no;
     r = SG_Record::from_buf(buf);

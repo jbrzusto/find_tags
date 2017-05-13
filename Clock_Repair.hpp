@@ -202,6 +202,8 @@ protected:
   //!< are pulses using CLOCK_MONOTONIC?
   bool clock_monotonic();
 
+  char buf[MAX_LINE_SIZE + 1]; // input buffer
+
 public:
 
   // public serialize function.
