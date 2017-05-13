@@ -47,7 +47,7 @@ Tag_Finder::process(Pulse &p) {
 
   bool confirmed_acceptance = false; // has pulse been accepted by a confirmed candidate?
 
-#ifdef DEBUG
+#ifdef DEBUG2
   std::cerr << std::setprecision(14);
   std::cerr << "Pulse " << p.ts << std::endl;
 #endif
@@ -56,7 +56,7 @@ Tag_Finder::process(Pulse &p) {
 
     Cand_List & cs = cands[i];
 
-#ifdef DEBUG
+#ifdef DEBUG2
     bool dbg = true;
     dbg && std::cerr << "=== cand list " << i << " ===\n";
 #endif
@@ -67,14 +67,14 @@ Tag_Finder::process(Pulse &p) {
       nextci = ci;
       ++nextci;
 
-#ifdef DEBUG
+#ifdef DEBUG2
       dbg && std::cerr << "Examining " << (void * ) (ci->second) << " last_ts " << (ci->second->last_ts) << std::endl;
 #endif
       // check whether candidate has expired
       if (ci->second->expired(p.ts)) {
         auto p = ci->second;
         cs.erase(ci);
-#ifdef DEBUG
+#ifdef DEBUG2
         dbg && std::cerr << "Deleting " << (void *) p << " last_ts " << (p->last_ts)<< std::endl;
 #endif
         delete p;
@@ -91,7 +91,7 @@ Tag_Finder::process(Pulse &p) {
 
       Tag_Candidate * clone = (ci->second)->clone();
 
-#ifdef DEBUG
+#ifdef DEBUG2
       dbg && std::cerr << "Cloned " << (void *) (ci->second) << " last_ts " << (ci->second->last_ts) << " as " << (void *) clone << std::endl;
 #endif
       // NB: DANGEROUS ASSUMPTION!!  Because we've already computed
