@@ -217,6 +217,10 @@ Graph::find(Tag * tag) {
   }
   if (n->s->s.size() > 1)
     throw std::runtime_error("Graph::find: tag not unique");
+  if (! (n->s->s.begin()->first-> active)) {
+    std::cerr << "motusID = " << n->s->s.begin()->first->motusID << "=" << (void *) n->s->s.begin()->first << std::endl;
+    throw std::runtime_error("Graph::find: tag not active");
+  }
   return n->s->s.begin()->first;
 };
 
