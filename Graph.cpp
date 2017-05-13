@@ -231,7 +231,7 @@ Graph::viz() {
   // These .gv files can be converted to nice svg plots like so:
   // for x in *.gv; do dot -Tsvg $x > ${x/gv/svg}; done
 
-  std::ofstream out(vizPrefix + std::to_string(++numViz) + ".gv");
+  std::ofstream out(vizPrefix + std::to_string(numViz++) + ".gv");
 
   out << "digraph TEST {\n";
 
