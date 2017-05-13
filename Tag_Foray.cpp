@@ -149,8 +149,7 @@ Tag_Foray::start() {
           else
             newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], prefix.str());
           tag_finders[key] = newtf;
-#if 0
-          //#ifdef FIND_TAGS_DEBUG
+#ifdef DEBUG3
           std::cerr << "Interval Tree for " << prefix.str() << std::endl;
           newtf->graph.get_root()->dump(std::cerr);
           std::cerr << "Burst slop expansion is " << Tag_Finder::default_burst_slop_expansion << std::endl;
@@ -168,11 +167,11 @@ Tag_Foray::start() {
         while (cron.ts() <= p.ts)
           process_event(cron.get());
 
-#ifdef DEBUG
+#ifdef DEBUG2
         std::cerr << p.ts << ": Key: " << r.port << ", " << port_freq[r.port].f_kHz << std::endl;
 #endif
         tag_finders[key]->process(p);
-#ifdef DEBUG
+#ifdef DEBUG3
         tag_finders[key]->dump(r.ts);
 #endif
       }
@@ -204,10 +203,16 @@ Tag_Foray::process_event(Event e) {
       if (t->active)
         return;
       auto rv = g->addTag(t, pulse_slop, burst_slop / 4.0, (1 + max_skipped_bursts) * 4.0);
+#ifdef DEBUG
+      g->viz();
+#endif
       for (auto i = tag_finders.begin(); i != tag_finders.end(); ++i)
         if (i->first.second == fs)
           i->second->tag_added(rv);
       t->active = true;
+#ifdef DEBUG
+      std::cerr << "Activating " << t->motusID << "=" << (void *) t << std::endl;
+#endif
     }
     break;
   case Event::E_DEACTIVATE:
@@ -215,10 +220,16 @@ Tag_Foray::process_event(Event e) {
       if (! t->active)
         return;
       auto rv = g->delTag(t, pulse_slop, burst_slop / 4.0, (1 + max_skipped_bursts) * 4.0);
+#ifdef DEBUG
+      g->viz();
+#endif
       for (auto i = tag_finders.begin(); i != tag_finders.end(); ++i)
         if (i->first.second == fs)
           i->second->tag_removed(rv);
       t->active = false;
+#ifdef DEBUG
+      std::cerr << "Deactivating " << t->motusID << "=" << (void *) t << std::endl;
+#endif
     }
     break;
   default:
