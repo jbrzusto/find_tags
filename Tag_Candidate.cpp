@@ -160,36 +160,35 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
       bool confirm = pulses.size() >= pulses_to_confirm_id;
       if (max_unconfirmed_bursts > 0) {
         if (burst_count == 0) {
-        // do the gcd test for confirmation (result is pass, fail, or inconclusive)
-
-        // This is the last pulse in a burst.  Get the number of burst
-        // intervals between this burst and the previous one detected,
-        // which is still in the pulses buffer because we only dump
-        // bursts at the CONFIRMED level.  Note that this pulse has
-        // already been pushed into the pulses buffer, so we need to
-        // look back num_pulses+1 from the end.
-        int nbi = round((p.ts - pulses[pulses.size() - (num_pulses + 1)].ts) / state->get_tag()->period);
-        burst_step_gcd = gcd(burst_step_gcd, nbi);
-
-        if (burst_step_gcd == 0)
-          throw std::runtime_error("Got gcd=0");
-
-        if (burst_step_gcd != 1) {
-          // not confirming this candidate because we haven't (yet) passed the gcd test
-          confirm = false;
-          if (burst_count == 0)
             burst_count = 1;    // first burst
         } else {
-          burst_count += nbi;   // additional burst intervals
-          if (burst_count > max_unconfirmed_bursts) {
-            // This candidate failed the gcd test:
-            // we've gone too many bursts without getting to burst_step_gcd==1, so pretend
-            // the last timestamp for this candidate was way too long ago.
-            // This forces the candidate to expire next time it is checked.
+          // do the gcd test for confirmation (result is pass, fail, or inconclusive)
+
+          // This is the last pulse in a burst.  Get the number of burst
+          // intervals between this burst and the previous one detected,
+          // which is still in the pulses buffer because we only dump
+          // bursts at the CONFIRMED level.  Note that this pulse has
+          // already been pushed into the pulses buffer, so we need to
+          // look back num_pulses+1 from the end.
+          int nbi = round((p.ts - pulses[pulses.size() - (num_pulses + 1)].ts) / state->get_tag()->period);
+          burst_step_gcd = gcd(burst_step_gcd, nbi);
+
+          if (burst_step_gcd == 0)
+            throw std::runtime_error("Got gcd=0");
+
+          if (burst_step_gcd != 1) {
+            // not confirming this candidate because we haven't (yet) passed the gcd test
+            confirm = false;
+            burst_count += nbi;   // additional burst intervals
+            if (burst_count > max_unconfirmed_bursts) {
+              // This candidate failed the gcd test:
+              // we've gone too many bursts without getting to burst_step_gcd==1, so pretend
+              // the last timestamp for this candidate was way too long ago.
+              // This forces the candidate to expire next time it is checked.
 #ifdef DEBUG
-            std::cerr << "Candidate " << (void * ) this << " forced expiry with gcd = " << burst_step_gcd << std::endl;
+              std::cerr << "Candidate " << (void * ) this << " forced expiry with gcd = " << burst_step_gcd << std::endl;
 #endif
-            last_ts = FORCE_EXPIRY_TIMESTAMP;
+              last_ts = FORCE_EXPIRY_TIMESTAMP;
             }
           }
         }
