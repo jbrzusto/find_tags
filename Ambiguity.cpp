@@ -85,7 +85,14 @@ Ambiguity::remove(Tag * t1, Tag *t2) {
   if (j != abm.left.end())
     // a proxy already exists for this set of ambiguous tags
     return j->second;
-  // create a new proxy tag for this set
+
+  if (t1->count == 0) {
+    // this proxy tag has not been detected yet, so we can just reduce
+    // its tag set in place.
+    abm.right.replace_data(i, s); // alter the bimap
+    return t1;
+  }
+  // create a new proxy tag for the reduced set
   Tag * t = newProxy(t1);
   abm.insert(AmbigSetProxy(s, t));
   return t;
