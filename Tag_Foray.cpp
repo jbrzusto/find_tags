@@ -78,7 +78,8 @@ Tag_Foray::start() {
   SG_Record r;
 
   while(cr->get(r)) {
-    if (! tsBegin || r.ts < tsBegin)
+    // get begin time, allowing for small time reversals (10 seconds)
+    if (! tsBegin || (r.ts < tsBegin && r.ts >= tsBegin - 10.0))
       tsBegin = r.ts;
     ts = r.ts;
     switch (r.type) {
