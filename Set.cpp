@@ -1,29 +1,31 @@
 #include "Set.hpp"
-
-Set * 
+#undef DEBUG
+Set *
 Set::empty() {
   return _empty;
 };
 
-int 
+int
 Set::label() const {
   return _label;
 };
 
 Set::~Set() {
 #ifdef DEBUG
+  std::cerr << "Set::~Set() " << (void* ) this << std::endl;
   allSets.erase(this);
 #endif
   --_numSets;
 };
 
-int 
+int
 Set::numSets() {
   return _numSets;
 };
-  
+
 Set::Set() : s(), _label(maxLabel++) , hash(0) {
 #ifdef DEBUG
+  std::cerr << "Set::Set() " << (void* ) this << std::endl;
   allSets.insert(this);
 #endif
   ++_numSets;
@@ -32,28 +34,33 @@ Set::Set() : s(), _label(maxLabel++) , hash(0) {
 Set::Set(TagPhase p) : s(), _label(maxLabel++), hash(hashTP(p)) {
     s.insert(p);
 #ifdef DEBUG
-    allSets.insert(this); 
+    std::cerr << "Set::Set(TagPhase) " << (void* ) this << std::endl;
+    allSets.insert(this);
 #endif
     ++_numSets;
 };
 
 Set *
-Set::augment(TagPhase p) { 
+Set::augment(TagPhase p) {
   // augment this set with p, unless this set is empty
   // in which case return a new set with just p;
-  if(this == _empty) 
+  if(this == _empty)
     return new Set(p);
+  for(auto e = s.equal_range(p.first); e.first != e.second; ++e.first) {
+    if (e.first->second == p.second)
+      throw std::runtime_error("Adding existing tagphase to tagphaseset");
+  }
   s.insert(p);
   hash ^= hashTP(p);
   return this;
 };
 
-Set * 
-Set::reduce(TagPhase p) { 
-  // remove p from set; return pointer to empty set if 
+Set *
+Set::reduce(TagPhase p) {
+  // remove p from set; return pointer to empty set if
   // reduction leads to that
-  if(this == _empty) 
-    throw std::runtime_error("Reducing empty set"); 
+  if(this == _empty)
+    throw std::runtime_error("Reducing empty set");
   erase(p);
   hash ^= hashTP(p);
   if (s.size() == 0) {
@@ -76,7 +83,7 @@ Set::erase(TagPhase p) {
   }
 };
 
-int 
+int
 Set::count(TagID id) const {
   return s.count(id);
 };
@@ -92,26 +99,30 @@ Set::count(TagPhase p) const {
   return 0;
 };
 
-Set * 
+Set *
 Set::cloneAugment(TagPhase p) {
   // return pointer to clone of this Set, augmented by p
   if (this == _empty)
     return new Set(p);
-  Set * ns = new Set(); 
-  ns->s = s; 
+  for(auto e = s.equal_range(p.first); e.first != e.second; ++e.first) {
+    if (e.first->second == p.second)
+      throw std::runtime_error("Adding existing tagphase to tagphaseset");
+  }
+  Set * ns = new Set();
+  ns->s = s;
   ns->s.insert(p);
   ns->hash = hash ^ hashTP(p);
   return ns;
 };
-      
+
 
 Set *
 Set::cloneReduce(TagPhase p) {
   // return pointer to clone of this Set, reduced by p
   if (count(p) == 0)
     throw std::runtime_error("Set::cloneReduce(p) called with p not in set");
-  Set * ns = new Set(); 
-  ns->s = s; 
+  Set * ns = new Set();
+  ns->s = s;
   ns->erase(p);
   if (ns->s.size() == 0) {
     delete ns;
@@ -147,7 +158,6 @@ Set::dump() const {
 void
 Set::init() {
   _empty = new Set();
-  ++_numSets;
 
 #ifdef DEBUG
   allSets = std::set < Set * > ();
@@ -167,7 +177,7 @@ Set::operator== (const Set & s) const {
   return hash == s.hash && this->s == s.s;
 };
 
-TagPhaseSetHash 
+TagPhaseSetHash
 Set::hashTP (TagPhase tp) {
   return reinterpret_cast < long long > (tp.first) * tp.second;
 };
