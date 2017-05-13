@@ -83,7 +83,6 @@ void
 Node::init() {
   Set::init();
   _empty = new Node();
-  ++ _numNodes;
   };
 
 Node *
