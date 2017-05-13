@@ -17,7 +17,7 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
         "Output database file does not exist.");
 
   sqlite3_exec(outdb,
-               "pragma cache_size=200000;",
+               "pragma cache_size=4000;",
                0,
                0,
                0);
