@@ -580,23 +580,34 @@ Graph::erase (Node *n, Gap_Ranges & grs, TagPhase tp) {
   // If edges at lo and/or hi become redundant after
   // this, remove them.
 
-  for (auto gr = grs.begin(); gr != grs.end(); ++gr) {
-    Gap lo = gr->first;
-    Gap hi = gr->second;
-    auto i = n->e.lower_bound(lo);
-    auto j = i; // save value for later
-    while (i->first <= hi) {
-      auto j = i;
-      ++j;
+  auto id = tp.first;
+  for(auto i = n->e.begin(); i != n->e.end(); ) {
+    auto j = i;
+    ++j;
+    if (i->second->s->count(id)) {
       reduceEdge(i, tp);
-      i = j;
     }
-    --i;
-    if (std::isfinite(i->first))
-      dropEdgeIfExtra(n, i); // rightmost edge
-    if (i != j && std::isfinite(j->first))
-      dropEdgeIfExtra(n, j);  // leftmost edge
+    i = j;
   }
+
+  // Algorithm that only looks at edges in range
+  // for (auto gr = grs.begin(); gr != grs.end(); ++gr) {
+  //   Gap lo = gr->first;
+  //   Gap hi = gr->second;
+  //   auto i = n->e.lower_bound(lo);
+  //   auto j = i; // save value for later
+  //   while (i->first <= hi) {
+  //     auto j = i;
+  //     ++j;
+  //     reduceEdge(i, tp);
+  //     i = j;
+  //   }
+  //   --i;
+  //   if (std::isfinite(i->first))
+  //     dropEdgeIfExtra(n, i); // rightmost edge
+  //   if (i != j && std::isfinite(j->first))
+  //     dropEdgeIfExtra(n, j);  // leftmost edge
+  // }
 };
 
 void
