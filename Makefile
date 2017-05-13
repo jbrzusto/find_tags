@@ -3,7 +3,7 @@
 CXX=~john/bin/gfilt
 
 ## PROFILING FLAGS (uncomment to enable profiling)
-#PROFILING=-g3 -pg
+##PROFILING=-g3 -pg -fno-omit-frame-pointer
 
 ## DEBUG FLAGS:
 ##CPPFLAGS=-Wall -Wno-sign-compare -g3  -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS) -I/usr/local/include/boost_1.60
