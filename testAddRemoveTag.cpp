@@ -10,6 +10,7 @@
 #include <string>
 #include <random>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "Tag_Database.hpp"
 #include "find_tags_common.hpp"
@@ -20,12 +21,18 @@ int main (int argc, char * argv[] ) {
   Graph g("testAddRemoveTag");
 
   int maxnt = -1;
-  if (argc > 1)
-    maxnt = atoi(argv[1]);
+  int i=1;
+  int maxEvts = 0;
+
+  if (argc > i && isdigit(argv[i][0]))
+    maxnt = atoi(argv[i++]);
+
+  if (argc > i && isdigit(argv[i][0]))
+    maxEvts = atoi(argv[i++]);
 
   string fn;
-  if (argc > 1)
-    fn = std::string(argv[1]);
+  if (argc > i)
+    fn = std::string(argv[i++]);
   else
     fn = std::string("/sgm/cache/motus_meta_db.sqlite");
 
@@ -37,11 +44,13 @@ int main (int argc, char * argv[] ) {
 
   std::cout << "Got " << nt << " tags\n";
 
-  if (maxnt > 0)
+  if (maxnt > 0) {
     nt = maxnt;
+    std::cout << "Only using " << nt << "\n";
+  }
 
   std::vector < Tag * > tags (nt);
-  int i = 0;
+  i = 0;
   for (auto j = ts->begin(); j != ts->end() && i < nt; ++j) {
 #ifdef DEBUG
     std::cout << (*j)->motusID << std::endl;
@@ -54,35 +63,43 @@ int main (int argc, char * argv[] ) {
   std::random_device rd;     // only used once to initialise (seed) engine
   std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
   std::uniform_int_distribution<int> uni(0, nt - 1); // guaranteed unbiased
-  
+
   double tol = 0.0015;
   double timeFuzz = 0;
 
-  int numTags = 1;
-  for(int numEvts = 0; /**/ ; ++ numEvts) {
+  int numTags = 0;
+#ifdef DEBUG
+    g.validateSetToNode();
+    g.viz();
+#endif
+    std::cout << "Before any events, # tags in tree is " << numTags << ", # Nodes = " << Node::numNodes() << ", # Sets = " << Set::numSets() << ", # Edges = " << Node::numLinks() << std::endl;
+
+    for(int numEvts = 0; (! maxEvts) || numEvts < maxEvts ; ++ numEvts) {
     auto r = uni(rng);
     if (inTree[r]) {
-#ifdef DEBUG      
+#ifdef DEBUG
       std::cout << "-" << tags[r]->motusID << std::endl;
 #endif
-      g.delTag(tags[r], tol, timeFuzz, 370);
+      g.delTag(tags[r], tol, timeFuzz, 30);
       g.findTag(tags[r], false);
       inTree[r] = false;
+      tags[r]->active = false;
       --numTags;
     } else {
 #ifdef DEBUG
       std::cout << "+" << tags[r]->motusID << std::endl;
 #endif
-      g.addTag(tags[r], tol, timeFuzz, 370);
+      g.addTag(tags[r], tol, timeFuzz, 30);
+      g.findTag(tags[r], true);
       inTree[r] = true;
+      tags[r]->active = true;
       ++numTags;
     };
 #ifdef DEBUG
     g.validateSetToNode();
     g.viz();
 #endif
-    if (numEvts % 100 == 0)
-      std::cout << "After "  << numEvts << " events, # tags in tree is " << numTags << ", # Nodes = " << Node::numNodes() << ", # Sets = " << Set::numSets() << ", # Edges = " << Node::numLinks() << std::endl;
+    if (numEvts % 1 == 0)
+      std::cout << "After "  << (1 + numEvts) << " events, # tags in tree is " << numTags << ", # Nodes = " << Node::numNodes() << ", # Sets = " << Set::numSets() << ", # Edges = " << Node::numLinks() << std::endl;
   }
-  g.viz();
 };
