@@ -12,7 +12,7 @@ Graph::Graph(std::string vizPrefix) :
   stamp(1)
 {
   _root = new Node();
-  _root->link();
+  //  _root->link();
   mapSet(Set::empty(), Node::empty());
   mapSet(0, _root);
 };
