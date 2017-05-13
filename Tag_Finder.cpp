@@ -117,7 +117,12 @@ Tag_Finder::process(Pulse &p) {
           // do nothing
           break;
         case Tag_Candidate::SINGLE:
-          delete_lesser_competitors(ci, nextci);
+          //          delete_lesser_competitors(ci, nextci);
+          delete_competitors(ci, nextci);
+
+          // mark that this pulse has been accepted by a candidate at the CONFIRMED level
+          confirmed_acceptance = true;
+
           break;
         case Tag_Candidate::CONFIRMED:
 
