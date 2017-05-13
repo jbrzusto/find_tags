@@ -112,7 +112,7 @@ Node::numLinks() {
 
 
 bool
-Node::Node::is_unique() {
+Node::is_unique() {
 
   // does this DFA state represent a single Tag ID?
 
