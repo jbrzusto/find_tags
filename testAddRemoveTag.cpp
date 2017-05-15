@@ -15,6 +15,7 @@
 #include "Tag_Database.hpp"
 #include "find_tags_common.hpp"
 #include "Graph.hpp"
+#include "Ticker.hpp"
 
 int main (int argc, char * argv[] ) {
   Node::init();
@@ -30,13 +31,20 @@ int main (int argc, char * argv[] ) {
   if (argc > i && isdigit(argv[i][0]))
     maxEvts = atoi(argv[i++]);
 
+  bool randomize = true;
+  if (argc > i && std::string(argv[i]) == "-R") {
+    randomize = true;
+    ++i;
+  }
+
   string fn;
   if (argc > i)
     fn = std::string(argv[i++]);
   else
     fn = std::string("/sgm/cache/motus_meta_db.sqlite");
 
-  Tag_Database T(fn);
+
+  Tag_Database T(fn, true);
 
   auto ts = T.get_tags_at_freq(Nominal_Frequency_kHz(166380));
 
@@ -58,7 +66,11 @@ int main (int argc, char * argv[] ) {
     tags[i++] = *j;
   }
 
-  std::vector < bool > inTree(nt);
+  std::vector < bool > inTree;
+  if (randomize)
+    inTree.reserve(nt);
+  else
+    inTree.reserve(T.get_max_motusID() + 1); // maximum
 
   std::random_device rd;     // only used once to initialise (seed) engine
   std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
@@ -69,30 +81,59 @@ int main (int argc, char * argv[] ) {
 
   int numTags = 0;
 #ifdef DEBUG
-    g.validateSetToNode();
-    g.viz();
+  g.validateSetToNode();
+  g.viz();
 #endif
-    std::cout << "Before any events, # tags in tree is " << numTags << ", # Nodes = " << Node::numNodes() << ", # Sets = " << Set::numSets() << ", # Edges = " << Node::numLinks() << std::endl;
+  std::cout << "Before any events, # tags in tree is " << numTags << ", # Nodes = " << Node::numNodes() << ", # Sets = " << Set::numSets() << ", # Edges = " << Node::numLinks() << std::endl;
 
-    for(int numEvts = 0; (! maxEvts) || numEvts < maxEvts ; ++ numEvts) {
-    auto r = uni(rng);
+  History *hist = 0;
+  Ticker cron;
+
+  if (randomize) {
+    hist = T.get_history();
+    cron = hist->getTicker();
+    maxEvts = hist->size();
+  }
+
+  unsigned r;
+
+  for(int numEvts = 0; (! maxEvts) || numEvts < maxEvts ; ++ numEvts) {
+    Tag * t;
+    if (randomize) {
+      r = uni(rng);
+      t = tags[r];
+    } else {
+      auto e = cron.get();
+      t = e.tag;
+      r = t->motusID;
+    }
+
     if (inTree[r]) {
 #ifdef DEBUG
-      std::cout << "-" << tags[r]->motusID << std::endl;
+      std::cout << "-" << t->motusID << std::endl;
 #endif
-      g.delTag(tags[r], tol, timeFuzz, 30);
-      g.findTag(tags[r], false);
+      g.delTag(t);
+      auto p = Ambiguity::proxyFor(t);
+      if (p) {
+        std::cerr << "Tag " << t->motusID << " found in ambiguity " << p->motusID << " after deletion.\n";
+      } else {
+        g.findTag(t, false);
+      }
       inTree[r] = false;
-      tags[r]->active = false;
+      t->active = false;
       --numTags;
     } else {
 #ifdef DEBUG
-      std::cout << "+" << tags[r]->motusID << std::endl;
+      std::cout << "+" << t->motusID << std::endl;
 #endif
-      g.addTag(tags[r], tol, timeFuzz, 30);
-      g.findTag(tags[r], true);
+      g.addTag(t, tol, timeFuzz, 30);
+      auto p = Ambiguity::proxyFor(t);
+      if (p)
+        g.findTag(p, true);
+      else
+        g.findTag(t, true);
       inTree[r] = true;
-      tags[r]->active = true;
+      t->active = true;
       ++numTags;
     };
 #ifdef DEBUG

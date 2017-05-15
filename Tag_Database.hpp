@@ -31,6 +31,8 @@ public:
 
   void populate_from_sqlite_file(string filename, bool get_history);
 
+  Motus_Tag_ID get_max_motusID();
+
   Freq_Set & get_nominal_freqs();
 
   TagSet * get_tags_at_freq(Nominal_Frequency_kHz freq);

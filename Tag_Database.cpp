@@ -109,3 +109,8 @@ Tag_Database::getTagForMotusID (Motus_Tag_ID mid) {
   else
     return 0;
 };
+
+Motus_Tag_ID
+Tag_Database::get_max_motusID() {
+  return motusIDToPtr.rbegin()->first;
+};
