@@ -114,16 +114,11 @@ Tag_Finder::process(Pulse &p) {
       if (tc->add_pulse(p, next_state)) {
         switch (tc->tag_id_level) {
         case Tag_Candidate::MULTIPLE:
+        case Tag_Candidate::SINGLE:
+
           // do nothing
           break;
-        case Tag_Candidate::SINGLE:
-          //          delete_lesser_competitors(ci, nextci);
-          delete_competitors(ci, nextci);
 
-          // mark that this pulse has been accepted by a candidate at the CONFIRMED level
-          confirmed_acceptance = true;
-
-          break;
         case Tag_Candidate::CONFIRMED:
 
           // delete any other candidate sharing a pulse with this one
@@ -187,35 +182,6 @@ Tag_Finder::delete_competitors(Cand_List::iterator ci, Cand_List::iterator &next
       if ((cci->second) != (ci->second)
           && ((cci->second)->has_same_id_as(ci->second)
               || (cci->second)->shares_any_pulses(ci->second))) {
-        Cand_List::iterator di = cci;
-        ++cci;
-        auto p = di->second;
-        if (nextci == di) {
-          ++nextci;
-        }
-        cands[j].erase(di);
-        delete p;
-      } else {
-        ++cci;
-      }
-    }
-  }
-};
-
-void
-Tag_Finder::delete_lesser_competitors(Cand_List::iterator ci, Cand_List::iterator &nextci) {
-  // drop any candidates sharing any pulses with this candidate, if that candidate also
-  // has fewer pulses.
-
-  // nextci is bumped up in case we delete the candidate it points to
-
-  int s = ci->second->pulses.size();
-
-  for (int j = 0; j < NUM_CAND_LISTS; ++j) {
-    for (Cand_List::iterator cci = cands[j].begin(); cci != cands[j].end(); /**/ ) {
-      if ((cci->second) != (ci->second)
-          && (cci->second)->pulses.size() < s
-          && (cci->second)->shares_any_pulses(ci->second)) {
         Cand_List::iterator di = cci;
         ++cci;
         auto p = di->second;
