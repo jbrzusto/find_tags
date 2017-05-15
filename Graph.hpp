@@ -9,15 +9,15 @@
 class Graph {
   // the graph representing a DFA for the NDFA full-burst recognition
   // problem on a set of known tags
-  
+
 protected:
-  
+
   Node * _root;
   std::string vizPrefix;
   int numViz;
 
   // map from sets to nodes
-  std::unordered_map < Set *, Node *, hashSet, SetEqual > setToNode; 
+  std::unordered_map < Set *, Node *, hashSet, SetEqual > setToNode;
 
   // stamp; each time a recursive algorithm is run, the stamp value is
   // first increased; as the graph is traversed, nodes are stamped with
@@ -32,7 +32,7 @@ public:
   Graph(std::string vizPrefix = "graph");
   Node * root();
   std::pair < Tag *, Tag * > addTag(Tag * tag, double tol, double timeFuzz, double maxTime);  //!< add a tag to the tree, handling ambiguity
-  std::pair < Tag *, Tag * >  delTag(Tag * tag, double tol, double timeFuzz, double maxTime); //!< remove a tag from the tree, handling ambiguity
+  std::pair < Tag *, Tag * >  delTag(Tag * tag); //!< remove a tag from the tree, handling ambiguity
   void renTag(Tag *t1, Tag *t2);//!< "rename" tag t1 to tag t2
   Tag * find(Tag * tag);
   void viz();
@@ -51,11 +51,11 @@ protected:
 
   void insert (const TagPhase &t);
 
-  void erase (const TagPhase &t);
+  void erase_at_root (Tag * t);
 
   void insert (Gap_Ranges & gr, TagPhase p);
 
-  void erase (Gap_Ranges & gr, TagPhase p);
+  void erase (Tag * t);
 
   bool hasEdge ( Node *n, Gap b, TagPhase p);
 
@@ -63,30 +63,30 @@ protected:
 
   void linkNode (Node *n);
 
-  void unlinkNode (Node *n); 
+  void unlinkNode (Node *n);
 
   void augmentEdge(Node::Edges::iterator i, TagPhase p);
-  
-  void reduceEdge(Node::Edges::iterator i, TagPhase p);
+
+  void reduceEdge(Node::Edges::iterator i, Tag * t);
 
   void dropEdgeIfExtra(Node * n, Node::Edges::iterator i);
 
   void insert (Node *n, Gap_Ranges & gr, TagPhase p);
-    
+
   void insertRec (Gap_Ranges & gr, TagPhase tFrom, TagPhase tTo);
 
   void insertRec (Node * n, Gap_Ranges & gr, TagPhase tFrom, TagPhase tTo);
 
-  void erase (Node * n, Gap_Ranges & gr, TagPhase tp);
+  void erase (Node * n, Tag * t);
 
-  void eraseRec (Gap_Ranges & gr, TagPhase tpFrom, TagPhase tpTo);
+  void eraseRec (Tag * t);
 
-  void eraseRec (Node * n, Gap_Ranges & gr, TagPhase tpFrom, TagPhase tpTo);
+  void eraseRec (Node * n, Tag * t);
 
-  void renTagRec(Node * n, Tag *t1, Tag *t2); //!< rename a tag from t1 to t2, starting at node n, and recursing
+  void renTagRec(Node * n, Tag * t1, Tag * t2); //!< rename a tag from t1 to t2, starting at node n, and recursing
 
   void _addTag(Tag * tag, double tol, double timeFuzz, double maxTime);  //!< add a tag to the tree, but no handling of ambiguity
-  void _delTag(Tag * tag, double tol, double timeFuzz, double maxTime); //!< remove a tag from the tree, but no handling of ambiguity
+  void _delTag(Tag * tag); //!< remove a tag from the tree, but no handling of ambiguity
 
 #ifdef DEBUG
 public:
@@ -95,8 +95,8 @@ protected:
   void findTagRec(Node * n, Tag *tag); //!< dump a list of nodes mentioning the given tag
 #endif
 
-public: 
-  
+public:
+
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version) {
     ar & BOOST_SERIALIZATION_NVP( _root );

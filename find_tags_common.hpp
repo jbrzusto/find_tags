@@ -54,7 +54,7 @@ typedef short Phase;
 static const Phase BOGUS_PHASE = -1;
 
 typedef std::pair < TagID, Phase > TagPhase;
-typedef std::unordered_multimap < TagID, Phase > TagPhaseSet;
+typedef std::unordered_map < TagID, Phase > TagPhaseSet;
 
 // The type for interpulse gaps this should be able to represent a
 // difference between two nearby timestamp values. We use double.

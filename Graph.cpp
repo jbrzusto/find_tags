@@ -62,11 +62,11 @@ Graph::addTag(Tag * tag, double tol, double timeFuzz, double maxTime) {
 };
 
 std::pair < Tag *, Tag * >
-Graph::delTag(Tag * tag, double tol, double timeFuzz, double maxTime) {
+Graph::delTag(Tag * tag) {
   auto p = Ambiguity::proxyFor(tag);
   if (!p) {
     // tag has not been proxied, so just delete
-    _delTag(tag, tol, timeFuzz, maxTime);
+    _delTag(tag);
     return std::make_pair((Tag *) 0, (Tag *) 0);
   }
   // this tag is part of an ambiguity set which has been proxied in the tree
@@ -173,35 +173,15 @@ Graph::_addTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
 };
 
 void
-Graph::_delTag(Tag *tag, double tol, double timeFuzz, double maxTime) {
-  // remove the tag which was added with given gaps, tol, and maxTime
+Graph::_delTag(Tag *tag) {
+  // remove the tag
 
-  int n = tag->gaps.size();
-  Gap g;
-
-  // remove skip edges
-  Gap_Ranges grs;
-  for(g = tag->gaps[n - 1] + tag->period; g < maxTime; g += tag->period)
-    grs.push_back(Gap_Range(g, tol, timeFuzz));
-  eraseRec(grs, TagPhase(tag, n - 1), TagPhase(tag, n));
-
-  // remove back edges
-  grs.clear();
-  for(g = tag->gaps[n - 1]; g < maxTime; g += tag->period)
-    grs.push_back(Gap_Range(g, tol, timeFuzz));
-  eraseRec(grs, TagPhase(tag, 2 * n - 1), TagPhase(tag, n));
-
-  for(int i = 2 * n - 2; i >= 0; --i) {
-    g = tag->gaps[i % n];
-    grs.clear();
-    grs.push_back(Gap_Range(g, tol, timeFuzz));
-    eraseRec(grs, TagPhase(tag, i), TagPhase(tag, i + 1));
+  eraseRec(tag);
 #ifdef DEBUG
-    validateSetToNode();
+  validateSetToNode();
 #endif
-  };
 
-  erase(TagPhase(tag, 0));
+  erase_at_root(tag);
 #ifdef DEBUG
   validateSetToNode();
 #endif
@@ -320,8 +300,8 @@ Graph::insert (const TagPhase &t) {
 };
 
 void
-Graph::erase (const TagPhase &t) {
-    _root->s = _root->s->reduce(t);
+Graph::erase_at_root (Tag * t) {
+  _root->s = _root->s->reduce(t);
     // note: we don't remap root in setToNode
 };
 
@@ -331,8 +311,8 @@ Graph::insert (Gap_Ranges & grs, TagPhase p) {
 };
 
 void
-Graph::erase (Gap_Ranges & grs, TagPhase p) {
-  erase(_root, grs, p);
+Graph::erase (Tag *t) {
+  erase(_root, t);
 };
 
 bool
@@ -430,13 +410,13 @@ Graph::augmentEdge(Node::Edges::iterator i, TagPhase p) {
 
 
 void
-Graph::reduceEdge(Node::Edges::iterator i, TagPhase p) {
-  // given an existing edge, reduce its tail node by p
+Graph::reduceEdge(Node::Edges::iterator i, Tag * t) {
+  // given an existing edge, reduce its tail node by t
 
   Node * n = i->second;
-  if (n->s->count(p) == 0)
+  if (n->s->count(t) == 0)
     return;
-  Set * s = n->s->cloneReduce(p);
+  Set * s = n->s->cloneReduce(t);
   auto j = setToNode.find(s);
   if (j != setToNode.end()) {
     // already have a node for this set
@@ -450,7 +430,7 @@ Graph::reduceEdge(Node::Edges::iterator i, TagPhase p) {
   if (n->useCount == 1) {
     // special case to save work: re-use this node
     unmapSet(n->s);
-    n->s = n->s->reduce(p);
+    n->s = n->s->reduce(t);
     mapSet(n->s, n);
     if (s != Set::empty())
       delete s;
@@ -574,18 +554,16 @@ Graph::renTagRec(Node * n, Tag *t1, Tag *t2) {
 };
 
 void
-Graph::erase (Node *n, Gap_Ranges & grs, TagPhase tp) {
-  // for any edges from n at points in the range [lo, hi]
-  // remove p from the tail node.
+Graph::erase (Node *n, Tag * t) {
+  // remove t from the tail node of any edges
   // If edges at lo and/or hi become redundant after
   // this, remove them.
 
-  auto id = tp.first;
   for(auto i = n->e.begin(); i != n->e.end(); ) {
     auto j = i;
     ++j;
-    if (i->second->s->count(id)) {
-      reduceEdge(i, tp);
+    if (i->second->s->count(t)) {
+      reduceEdge(i, t);
     }
     i = j;
   }
@@ -611,34 +589,28 @@ Graph::erase (Node *n, Gap_Ranges & grs, TagPhase tp) {
 };
 
 void
-Graph::eraseRec (Gap_Ranges & grs, TagPhase tpFrom, TagPhase tpTo) {
+Graph::eraseRec (Tag *t) {
   newStamp();
-  eraseRec (_root, grs, tpFrom, tpTo);
+  eraseRec (_root, t);
 };
 
 void
-Graph::eraseRec (Node *n, Gap_Ranges & grs, TagPhase tpFrom, TagPhase tpTo) {
-  // recursively erase all transitions between tpFrom and tpTo for
-  // the range lo, hi
+Graph::eraseRec (Node *n, Tag *t) {
+  // recursively erase tag t
   n->stamp = stamp;
-  auto id = tpFrom.first;
-  bool here = n->s->count(tpFrom) > 0;
-  bool usedHere = false;
+  bool here = n->s->count(t) > 0;
   for(auto i = n->e.begin(); i != n->e.end(); ) {
     auto j = i;
     ++j;
-    if (i->second->s->count(id)) {
+    if (i->second->stamp != stamp && i->second->s->count(t)) {
       // recurse to any child node that has this tag ID in
-      // its set, because we might eventually reach a node with tpFrom
-      if (here && i->second->s->count(tpTo))
-        usedHere = true;
-      if (i->second->stamp != stamp)
-        eraseRec(i->second, grs, tpFrom, tpTo);
+      // its set
+        eraseRec(i->second, t);
     }
     i = j;
   }
-  if (usedHere)
-    erase(n, grs, tpTo);
+  if (here)
+    erase(n, t);
 };
 
 #ifdef DEBUG

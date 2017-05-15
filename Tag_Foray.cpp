@@ -219,7 +219,7 @@ Tag_Foray::process_event(Event e) {
     {
       if (! t->active)
         return;
-      auto rv = g->delTag(t, pulse_slop, burst_slop / 4.0, (1 + max_skipped_bursts) * 4.0);
+      auto rv = g->delTag(t);
 #ifdef DEBUG
       g->viz();
 #endif

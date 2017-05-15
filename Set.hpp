@@ -35,29 +35,29 @@ public:
   ~Set();
 
   static int numSets();
-  
+
   Set();
 
   Set(TagPhase p);
 
   Set * augment(TagPhase p);
 
-  Set * reduce(TagPhase p);
-  void erase(TagPhase p);
+  Set * reduce(Tag *t);
+  void erase(Tag *t);
 
   int count(TagID id) const;
 
   int count(TagPhase p) const;
 
   Set * cloneAugment(TagPhase p);
-  Set * cloneReduce(TagPhase p);
+  Set * cloneReduce(Tag * t);
 
 #ifdef DEBUG
   static void dumpAll();
 #endif
 
   void dump() const;
-    
+
   static void init();
 
   bool operator==(const Set & s) const;
@@ -65,7 +65,7 @@ public:
   bool unique() const;
 
 private:
-  static TagPhaseSetHash hashTP (TagPhase tp);
+  static TagPhaseSetHash hashT (Tag * t);
 
 public:
   template<class Archive>
@@ -87,7 +87,7 @@ struct hashSet {
 struct SetEqual {
   // comparison function used in DFA::setToNode
   bool operator() ( const Set * x1, const Set * x2 ) const {
-    if (! x1 && ! x2) 
+    if (! x1 && ! x2)
       return true;
     if (!x1 || ! x2)
       return false;

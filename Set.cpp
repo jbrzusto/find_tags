@@ -31,7 +31,7 @@ Set::Set() : s(), _label(maxLabel++) , hash(0) {
   ++_numSets;
 };
 
-Set::Set(TagPhase p) : s(), _label(maxLabel++), hash(hashTP(p)) {
+Set::Set(TagPhase p) : s(), _label(maxLabel++), hash(hashT(p.first)) {
     s.insert(p);
 #ifdef DEBUG
     std::cerr << "Set::Set(TagPhase) " << (void* ) this << std::endl;
@@ -51,18 +51,18 @@ Set::augment(TagPhase p) {
       throw std::runtime_error("Adding existing tagphase to tagphaseset");
   }
   s.insert(p);
-  hash ^= hashTP(p);
+  hash ^= hashT(p.first);
   return this;
 };
 
 Set *
-Set::reduce(TagPhase p) {
-  // remove p from set; return pointer to empty set if
+Set::reduce(Tag * t) {
+  // remove t from set; return pointer to empty set if
   // reduction leads to that
   if(this == _empty)
     throw std::runtime_error("Reducing empty set");
-  erase(p);
-  hash ^= hashTP(p);
+  erase(t);
+  hash ^= hashT(t);
   if (s.size() == 0) {
     delete this;
     return _empty;
@@ -71,16 +71,10 @@ Set::reduce(TagPhase p) {
 };
 
 void
-Set::erase(TagPhase p) {
-    // erase specific element p from multimap; i.e. match
+Set::erase(Tag * t) {
+    // erase specific element t from multimap; i.e. match
     // by both key and value
-  auto r = s.equal_range(p.first);
-  for (auto i = r.first; i != r.second; ++i) {
-    if (i->second == p.second) {
-      s.erase(i);
-      return;
-    }
-  }
+  s.erase(t);
 };
 
 int
@@ -90,7 +84,7 @@ Set::count(TagID id) const {
 
 int
 Set::count(TagPhase p) const {
-  // count specific element p from multimap; i.e. match
+  // count specific element p from map; i.e. match
   // by both key and value; returns 0 or 1
   auto r = s.equal_range(p.first);
   for (auto i = r.first; i != r.second; ++i)
@@ -111,24 +105,24 @@ Set::cloneAugment(TagPhase p) {
   Set * ns = new Set();
   ns->s = s;
   ns->s.insert(p);
-  ns->hash = hash ^ hashTP(p);
+  ns->hash = hash ^ hashT(p.first);
   return ns;
 };
 
 
 Set *
-Set::cloneReduce(TagPhase p) {
+Set::cloneReduce(Tag * t) {
   // return pointer to clone of this Set, reduced by p
-  if (count(p) == 0)
-    throw std::runtime_error("Set::cloneReduce(p) called with p not in set");
+  if (count(t) == 0)
+    throw std::runtime_error("Set::cloneReduce(t) called with t not in set");
   Set * ns = new Set();
   ns->s = s;
-  ns->erase(p);
+  ns->erase(t);
   if (ns->s.size() == 0) {
     delete ns;
     return empty();
   }
-  ns->hash = hash ^ hashTP(p);
+  ns->hash = hash ^ hashT(t);
   return ns;
 };
 
@@ -178,8 +172,8 @@ Set::operator== (const Set & s) const {
 };
 
 TagPhaseSetHash
-Set::hashTP (TagPhase tp) {
-  return reinterpret_cast < long long > (tp.first) * tp.second;
+Set::hashT (Tag * t) {
+  return reinterpret_cast < long long > (t);
 };
 
 Set * Set::_empty = 0;
