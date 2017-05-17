@@ -206,6 +206,13 @@ Tag_Foray::process_event(Event e) {
 #ifdef DEBUG
       g->viz();
 #endif
+      // in case an ambiguity proxy tag was generated, mark that as active
+      // A proxy tag might have already existed because it was read from the database
+      // but in that case, it won't have been marked active.
+      // That would be a problem if another tag was to be added to the ambiguity
+      // later (the assert in Graph::find() fails)
+      rv.second && (rv.second->active = true);
+
       for (auto i = tag_finders.begin(); i != tag_finders.end(); ++i)
         if (i->first.second == fs)
           i->second->tag_added(rv);
@@ -223,6 +230,12 @@ Tag_Foray::process_event(Event e) {
 #ifdef DEBUG
       g->viz();
 #endif
+      // if we removed one ambiguity and replaced it with a reduced one
+      // (or with a real tag), make sure the removed ambiguity is marked
+      // as inactive, and the remaining tag or ambiguity is actve
+      rv.first && (rv.first->active = false);
+      rv.second && (rv.second->active = true);
+
       for (auto i = tag_finders.begin(); i != tag_finders.end(); ++i)
         if (i->first.second == fs)
           i->second->tag_removed(rv);
