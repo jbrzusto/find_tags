@@ -208,6 +208,14 @@ All output from a run of this program forms a new batch.
 
 //#define FIND_TAGS_DEBUG
 
+#ifdef DEBUG
+// force debugging methods to be emitted
+
+typedef void (Foo::*funptr_t) (void);
+extern "C" const funptr_t tabfun[] = { &Tag_Database::getTagForMotusID };
+
+#endif
+
 void
 usage() {
   puts (
