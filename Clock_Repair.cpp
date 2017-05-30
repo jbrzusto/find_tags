@@ -87,7 +87,7 @@ Clock_Repair::get(SG_Record &r) {
 // available, return false.
 
   if (! correcting) {
-  // accumulate records until we can correct
+  // process records until we can correct
     while (!correcting) {
       if (! read_record(r))
         break;

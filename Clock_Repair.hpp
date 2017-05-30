@@ -13,8 +13,9 @@ class Clock_Repair {
 // ## Clock_Repair - a filter that repairs timestamps in SG records
 //
 //   This class accepts a sequence of records from raw SG data files, and tries
-//   to correct faulty timestamps.  Some or possibly even all records will be
-//   buffered and then (eventually) returned with corrected timestamps.
+//   to correct faulty timestamps.  When a reasonably good correction is possible,
+//   the data source is rewound and timestamps are corrected before the
+//   records are returned to the instance's user.
 //
 //   This class would not be necessary if the SG on-board software and the GPS
 //   were working correctly.
@@ -115,34 +116,9 @@ class Clock_Repair {
 //        - splits up clock fixing logic between Clock_Repair and Tag_Foray
 //        - need to implement restarts on data sources
 //
-// We go with the Filter design.
-// This will require Tag_Foray to do something like:
-//
-//     done = false
-//     while (! done) {
-//       if (get_record_from_source()) {
-//         put_record_to_Clock_Repair()
-//       } else {
-//         done = true;
-//         tell_Clock_Repair_no_more_records()
-//       }
-//       while(Clock_Repair_get_record()) {
-//         process_record()
-//       }
-//     }
-//
-// ISSUES:
-//
-// - what if a boot session is split across multiple batches, and the first GPS fix isn't
-//   until a later batch? Solution: serialize the Clock_Repair object; there would be no
-//   output from such a batch until the subsequent fix.  Needs to be handled carefully.
-//   Also, we then need to be able to indicate when there are no more records from a given
-//   boot session, so that an error can be reported.  The R harness code will need to be involved.
-//   The R harness could be used to provide OFFSET_GPS and OFFSET_MONOTONIC if the boot session
-//   without a GPS clock fix was after a dated boot session.
-//
-// - the error message field in the param setting record can be large; this will make buffered
-//   records large.  Solution: leave out error message and pack struct.  Now 46 bytes.
+// To avoid arbitrarily large buffer sizes, we went with a slightly hybrid
+// version of the two choices above.  We use rewinds() but keep all
+// clock fixing logic in this class.
 
 public:
 
