@@ -7,7 +7,7 @@
 // handled as a tagged union
 
 struct SG_Record {
-  typedef enum {BAD, PULSE, GPS, PARAM, CLOCK, EXTENSION} Type;
+  typedef enum {BAD, PULSE, GPS, PARAM, CLOCK, EXTENSION, FILE} Type;
   Type type;  //!< type of record represented
 
   Timestamp ts;  //!< timestamp from file line; common to all record types
@@ -41,8 +41,8 @@ struct SG_Record {
       double   clock_remaining;
     };
 
-  } v; 
-   
+  } v;
+
   static SG_Record from_buf(char * buf);        //!< construct from buffer
 
 
@@ -58,7 +58,7 @@ struct SG_Record {
       ar & BOOST_SERIALIZATION_NVP( v.sig );
       ar & BOOST_SERIALIZATION_NVP( v.noise );
       break;
-      
+
     case GPS:
       ar & BOOST_SERIALIZATION_NVP( v.lat );
       ar & BOOST_SERIALIZATION_NVP( v.lon );
@@ -73,8 +73,8 @@ struct SG_Record {
 
     default:
       break;
-    } 
-  };  
+    }
+  };
 };
 
 #endif // SG_RECORD

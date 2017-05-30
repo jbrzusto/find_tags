@@ -49,6 +49,18 @@ SG_Record::from_buf(char * buf) {
       rv.type = CLOCK;
     }
     break;
+  case 'F':
+    /* a synthetic file timestamp line like:
+       F,1466715518.311
+       which is used to convey the timestamp encoded in an SG filename; this can
+       be used to repair CLOCK_MONOTONIC timestamps where there's no other source
+       of CLOCK_REALTIME timestamps (e.g. on an SG without a GPS and using NTP for
+       clock sync)
+    */
+    if (buf[1] != '\0' && 1 == sscanf(buf+2, "%lf", &rv.ts)) {
+      rv.type = SG_Record::FILE;
+    }
+    break;
 
   default:
     break;

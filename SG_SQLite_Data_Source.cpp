@@ -24,6 +24,12 @@ SG_SQLite_Data_Source::getline(char * buf, int maxLen) {
     if (! db->get_blob(& blob, & bytesLeft, & blobTS))
       return false;
     offset = 0;
+    // generate a synthetic "File Timestamp" line like this:
+    // F,1432456345.2345
+    std::ostringstream ft_rec;
+    ft_rec << "F," << std::setprecision(14) << blobTS;
+    strcpy(buf, ft_rec.str().c_str());
+    return true;
   }
   const char * start = blob + offset;
   const char * eol = reinterpret_cast < const char * > (memchr(start, '\n', bytesLeft));
