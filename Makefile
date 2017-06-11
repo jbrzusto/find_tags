@@ -1,6 +1,6 @@
 ## Makefile for linux
 
-CXX=~john/bin/gfilt
+CXX=gfilt
 
 ## PROFILING FLAGS (uncomment to enable profiling)
 ##PROFILING=-g3 -pg -fno-omit-frame-pointer
