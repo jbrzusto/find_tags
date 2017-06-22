@@ -99,7 +99,7 @@ protected:
   // runtime storage
 
   unsigned long long line_no;                    // count lines of input seen
-  
+
   std::map < Port_Num, Freq_Setting > port_freq; // keep track of frequency settings on each port
 
   std::vector < int > pulse_count;     // keep track of hourly counts of pulses on each port
@@ -145,7 +145,7 @@ protected:
   History *hist;
   Ticker cron;
 
-  double tsBegin; // first timestamp parsed from input file
+  double tsStart; // first timestamp parsed from input file
   double prevHourBin; // previous hourly bin, for counting pulses
 
   static Gap default_pulse_slop;
@@ -189,7 +189,7 @@ public:
     ar & BOOST_SERIALIZATION_NVP( max_skipped_bursts );
     ar & BOOST_SERIALIZATION_NVP( hist );
     ar & BOOST_SERIALIZATION_NVP( cron );
-  };  
+  };
 };
 
 #endif // TAG_FORAY

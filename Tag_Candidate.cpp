@@ -30,7 +30,7 @@ Tag_Candidate::~Tag_Candidate() {
   if (tag_id_level == CONFIRMED && run_id > 0) {
     int n = Tag_Foray::num_cands_with_run_id(run_id, -1);
     if (n == 0)
-      filer -> end_run(run_id, hit_count, ending_batch);
+      filer -> end_run(run_id, hit_count, last_dumped_ts, ending_batch);
   }
   --num_cands;
 };
@@ -321,13 +321,13 @@ void Tag_Candidate::dump_bursts(short ant) {
 
   auto p = pulses.begin();
   while (p != pulses.end()) {
+    Timestamp ts = p->ts;
     if (++hit_count == 1) {
       // first hit, so start a run
-      run_id = filer->begin_run(tag->motusID, ant);
+      run_id = filer->begin_run(tag->motusID, ant, ts);
       Tag_Foray::num_cands_with_run_id(run_id, 1);
     }
-    Timestamp ts = p->ts;
-    calculate_burst_params(p);
+    calculate_burst_params(p); // advances p
     filer->add_hit(
                    run_id,
                    ts,
@@ -375,7 +375,7 @@ Tag_Candidate::renTag(Tag * t1, Tag * t2) {
     return;
   // end the current run for t1
   if (hit_count > 0 && run_id > 0) {
-    filer -> end_run(run_id, hit_count);
+    filer -> end_run(run_id, hit_count, last_dumped_ts);
   }
   hit_count = 0;
   // maintain the current confirmation level and pulse buffer;

@@ -52,6 +52,9 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
   Check( sqlite3_prepare_v2(outdb, q_end_run, -1, &st_end_run, 0),
          msg);
 
+  Check( sqlite3_prepare_v2(outdb, q_end_run2, -1, &st_end_run2, 0),
+         msg);
+
   Check(sqlite3_prepare_v2(outdb, q_add_hit, -1, &st_add_hit, 0),
         "output DB does not have valid 'hits' table.");
 
@@ -191,6 +194,7 @@ DB_Filer::~DB_Filer() {
   sqlite3_finalize(st_end_batch);
   sqlite3_finalize(st_begin_run);
   sqlite3_finalize(st_end_run);
+  sqlite3_finalize(st_end_run2);
   if (minGPSdt >= 0)
     sqlite3_finalize(st_add_GPS_fix);
   sqlite3_finalize(st_add_hit);
@@ -200,31 +204,41 @@ DB_Filer::~DB_Filer() {
 
 const char *
 DB_Filer::q_begin_run =
- "insert into runs (runID, batchIDbegin, motusTagID, ant) \
-            values (?,     ?,            ?,          ?)";
+ "insert into runs (runID, motusTagID, ant, tsStart) values (?, ?, ?, ?)";
+//                  1      2           3    4
 
 DB_Filer::Run_ID
-DB_Filer::begin_run(Motus_Tag_ID mid, int ant) {
+DB_Filer::begin_run(Motus_Tag_ID mid, int ant, Timestamp ts) {
   sqlite3_bind_int(st_begin_run, 1, rid); // bind run ID
-  sqlite3_bind_int(st_begin_run, 3, mid); // bind tag ID
-  sqlite3_bind_int(st_begin_run, 4, ant);
+  sqlite3_bind_int(st_begin_run, 2, mid); // bind tag ID
+  sqlite3_bind_int(st_begin_run, 3, ant); // bind antenna
+  sqlite3_bind_double(st_begin_run, 4, ts); // bind tsStart
   step_commit(st_begin_run);
   return rid++;
 };
 
 const char *
-DB_Filer::q_end_run = "update runs set len=max(ifnull(len, 0), ?), batchIDend=? where runID=?";
-//DB_Filer::q_end_run = "update runs set len=?, batchIDend=? where runID=?";
-//                                            1             2           3
+DB_Filer::q_end_run  = "update runs set len=max(ifnull(len, 0), ?), batchIDend=?, tsEnd=? where runID=?";
+//                                      1                           2             3             4
+const char *
+DB_Filer::q_end_run2 = "insert into batchRuns (batchID, runID) values (?,    ?)";
+//                                             1        2
 void
-DB_Filer::end_run(Run_ID rid, int n, bool countOnly) {
+DB_Filer::end_run(Run_ID rid, int n, Timestamp ts, bool countOnly) {
   sqlite3_bind_int(st_end_run, 1, n); // bind number of hits in run
   if (countOnly)
     sqlite3_bind_null(st_end_run, 2); // null indicates this run has not ended
   else
     sqlite3_bind_int(st_end_run, 2, bid); // bind ID of batch this run ends in
-  sqlite3_bind_int(st_end_run, 3, rid);  // bind run number
+  sqlite3_bind_double(st_end_run, 3, ts); // bind tsEnd
+  sqlite3_bind_int(st_end_run, 4, rid);  // bind run number
   step_commit(st_end_run);
+
+  // add record indicating this run overlaps this batch
+  // (this doesn't necessarily mean the run had hits in this batch; it might
+  // simply have ended due to no more hits)
+  sqlite3_bind_int(st_end_run2, 2, rid); // bind run ID
+  step_commit(st_end_run2);
 };
 
 const char *
@@ -365,19 +379,22 @@ DB_Filer::begin_batch(int bootnum) {
   step_commit(st_begin_batch);
   bid = sqlite3_last_insert_rowid(outdb);
 
-  // set batch ID for "insert run" query
+  // set batch ID for "insert into runs" query
   sqlite3_bind_int(st_begin_run, 2, bid);
+
+  // set batch ID for "insert into batchRuns" query
+  sqlite3_bind_int(st_end_run2, 1, bid);
 
   // set bootnum (monotonic boot session) for this batch
   this->bootnum = bootnum;
 };
 
 const char *
-DB_Filer::q_end_batch = "update batches set tsBegin=?, tsEnd=?, numHits=? where batchID=?";
+DB_Filer::q_end_batch = "update batches set tsStart=?, tsEnd=?, numHits=? where batchID=?";
 //                                     1         2       3             4
 void
-DB_Filer::end_batch(Timestamp tsBegin, Timestamp tsEnd) {
-  sqlite3_bind_double(st_end_batch, 1, tsBegin);
+DB_Filer::end_batch(Timestamp tsStart, Timestamp tsEnd) {
+  sqlite3_bind_double(st_end_batch, 1, tsStart);
   sqlite3_bind_double(st_end_batch, 2, tsEnd);
   sqlite3_bind_int64(st_end_batch, 3, num_hits);
   sqlite3_bind_int(st_end_batch, 4, bid);

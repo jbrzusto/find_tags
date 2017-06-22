@@ -10,7 +10,7 @@ Tag_Foray::Tag_Foray () :  // default ctor for deserializing into
   line_no(0),   // line numbers reset even when resuming
   pulse_count(MAX_PORT_NUM + 1),
   hist(0),      // we recreate history on resume
-  tsBegin(0),
+  tsStart(0),
   prevHourBin(0)
 {};
 
@@ -33,7 +33,7 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   max_skipped_bursts(default_max_skipped_bursts),
   hist(tags->get_history()),
   cron(hist->getTicker()),
-  tsBegin(0),
+  tsStart(0),
   prevHourBin(0)
 {
   // create one empty graph for each nominal frequency
@@ -79,8 +79,8 @@ Tag_Foray::start() {
 
   while(cr->get(r)) {
     // get begin time, allowing for small time reversals (10 seconds)
-    if (! tsBegin || (r.ts < tsBegin && r.ts >= tsBegin - 10.0))
-      tsBegin = r.ts;
+    if (! tsStart || (r.ts < tsStart && r.ts >= tsStart - 10.0))
+      tsStart = r.ts;
     ts = r.ts;
     switch (r.type) {
     case SG_Record::GPS:
@@ -319,7 +319,7 @@ Tag_Foray::pause() {
   Tag_Candidate::ending_batch = true;
   std::ostringstream ofs;
 
-  Tag_Candidate::filer->end_batch(tsBegin, ts);
+  Tag_Candidate::filer->end_batch(tsStart, ts);
 
   {
     // block to ensure oa dtor is called
