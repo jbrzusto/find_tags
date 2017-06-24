@@ -37,8 +37,8 @@ public:
   DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int bootnum=1, double minGPSdt = 300); // initialize a filer on an existing sqlite database file
   ~DB_Filer (); // write summary data
 
-  Run_ID begin_run(Motus_Tag_ID mid, int ant ); // begin run of tag
-  void end_run(Run_ID rid, int n, bool countOnly = false); // end run, noting number of hits; if countOnly is true, don't end run
+  Run_ID begin_run(Motus_Tag_ID mid, int ant, Timestamp ts ); // begin run of tag
+  void end_run(Run_ID rid, int n, Timestamp ts, bool countOnly = false); // end run, noting number of hits; if countOnly is true, run is not really ending, just being saved at end of batch
 
   void add_hit(Run_ID rid, double ts, float sig, float sigSD, float noise, float freq, float freqSD, float slop, float burstSlop);
 
@@ -52,7 +52,7 @@ public:
 
   void begin_batch(int bootnum); // start new batch; uses 1 + ID of latest ended batch
 
-  void end_batch(Timestamp tsBegin, Timestamp tsEnd); //!< end current batch
+  void end_batch(Timestamp tsStart, Timestamp tsEnd); //!< end current batch
 
   void save_ambiguity(Motus_Tag_ID proxyID, const Ambiguity::AmbigTags & tags); // save one ambiguity group
 
@@ -91,6 +91,7 @@ protected:
   sqlite3_stmt * st_end_batch; //!< update a batch record, when finished
   sqlite3_stmt * st_begin_run; //!< start a run
   sqlite3_stmt * st_end_run; //!< end a run
+  sqlite3_stmt * st_end_run2; //!< end a run - part 2
   sqlite3_stmt * st_add_hit; //!< add a hit to a run
   sqlite3_stmt * st_add_prog; //!< add batch program entry
   sqlite3_stmt * st_add_GPS_fix; //!< add a GPS fix
@@ -148,6 +149,7 @@ protected:
   static const char * q_end_batch;
   static const char * q_begin_run;
   static const char * q_end_run;
+  static const char * q_end_run2;
   static const char * q_add_hit;
   static const char * q_add_GPS_fix;
   static const char * q_add_time_fix;
