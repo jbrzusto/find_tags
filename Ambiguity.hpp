@@ -38,26 +38,35 @@
 
 #include <boost/bimap.hpp>
 
-struct Ambiguity {              //!< manage groups of indistinguishable tags
+class Ambiguity {              //!< manage groups of indistinguishable tags
+public:
   typedef std::set < Tag * > AmbigTags;
-  typedef boost::bimap < AmbigTags, Tag * > AmbigBimap; 
+  typedef boost::bimap < AmbigTags, Tag * > AmbigBimap;
   typedef AmbigBimap::value_type AmbigSetProxy;
 
-  static AmbigBimap abm;           //!< bimap between sets of indistinguishable real Tags and their proxy Tag
+  typedef std::set < Motus_Tag_ID > AmbigIDs;
+  typedef boost::bimap < AmbigIDs, Motus_Tag_ID > AmbigIDBimap;
+  typedef AmbigIDBimap::value_type AmbigIDSetProxy;
+
+  static AmbigBimap abm;           //!< bimap between sets of indistinguishable real tags and their proxy tag; tracks adding/removing of tags over time
+  static AmbigIDBimap ids;         //!< bimap between sets of IDs of indistinguishable real tags and the (negative) ID of their proxy Tag; persistent:  a given set of indistinguishable tags always uses the same proxyID
   static int nextID;               //!< motus_Tag_ID for next proxy created; initialized from DB_Filer::get_next_ambigID(), decremented for each new proxy
 
   // methods
-  
-  static Tag * add(Tag *t1, Tag * t2, Motus_Tag_ID proxyID = 0);    //!< return the proxy tag representing both t1 and t2 (t1 might already be a proxy)
+
+  static void addIDs(Motus_Tag_ID proxyID, AmbigIDs newids);    //!< record proxyID as representing the IDs in ids
+  static Tag * add(Tag *t1, Tag * t2);    //!< return the proxy tag representing both t1 and t2 (t1 might already be a proxy)
   static Tag * remove(Tag * t1, Tag *t2); //!< return a real or proxy tag representing the proxy tag t1 with any t2 removed
   static Tag * proxyFor(Tag *t);          //!< return the proxy for a tag, if it is ambiguous; otherwise, returns 0;
-
-  static void detected(Tag * t);   //!< callback indicating a proxy tag has been detected; used to force recording of the clone information
-
-  static Tag * newProxy(Tag * t, Motus_Tag_ID proxyID = 0);       //!< return a new proxy tag representing tags like t; if id is specified, make that the proxyID
-
   static void setNextProxyID(Motus_Tag_ID proxyID); //!< set the next proxyID to be used
-  
+  static void record_if_new( AmbigTags tags, Motus_Tag_ID id); //!< save an ambiguity set to the DB if it is new
+  static void record_new(); //!< record any new ambiguity sets to the DB (used when a batch completes processing)
+
+
+protected:
+  static Tag * newProxy(AmbigTags & tags, Tag * t);       //!< return a new proxy tag representing tags like t and representing the tags in tags
+
+
 };
 
 #endif // AMBIGUITY_HPP
