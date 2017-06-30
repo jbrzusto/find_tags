@@ -321,6 +321,8 @@ Tag_Foray::pause() {
 
   Tag_Candidate::filer->end_batch(tsBegin, ts);
 
+  Ambiguity::record_new();
+
   {
     // block to ensure oa dtor is called
     boost::archive::binary_oarchive oa(ofs);
