@@ -97,6 +97,7 @@ Clock_Repair::get(SG_Record &r) {
     got_estimate();
     filer->add_time_fix(TS_BEAGLEBONE_BOOT, TS_SG_EPOCH, offset, offsetError, 'S');
     data->rewind();
+    GPSstuck = false;  // on next round, unstick GPS so we get initial run of non-stuck records
   }
   if (! read_record(r))
     return false;
