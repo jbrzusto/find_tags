@@ -340,8 +340,6 @@ void Tag_Candidate::dump_bursts(short ant) {
                    burst_par.burst_slop
                    );
     ++ tag->count;
-    if (tag->count == 1 && tag->motusID < 0)
-      Ambiguity::detected(tag);
   }
   clear_pulses();
 };
