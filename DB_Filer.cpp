@@ -204,15 +204,16 @@ DB_Filer::~DB_Filer() {
 
 const char *
 DB_Filer::q_begin_run =
- "insert into runs (runID, motusTagID, ant, tsBegin) values (?, ?, ?, ?)";
-//                  1      2           3    4
+ "insert into runs (runID, batchIDbegin, motusTagID, ant, tsBegin) values (?, ?, ?, ?, ?)";
+//                  1      2             3           4    5
 
 DB_Filer::Run_ID
 DB_Filer::begin_run(Motus_Tag_ID mid, int ant, Timestamp ts) {
   sqlite3_bind_int(st_begin_run, 1, rid); // bind run ID
-  sqlite3_bind_int(st_begin_run, 2, mid); // bind tag ID
-  sqlite3_bind_int(st_begin_run, 3, ant); // bind antenna
-  sqlite3_bind_double(st_begin_run, 4, ts); // bind tsBegin
+  // batchIDbegin bound at start of batch
+  sqlite3_bind_int(st_begin_run, 3, mid); // bind tag ID
+  sqlite3_bind_int(st_begin_run, 4, ant); // bind antenna
+  sqlite3_bind_double(st_begin_run, 5, ts); // bind tsBegin
   step_commit(st_begin_run);
   return rid++;
 };
@@ -376,6 +377,9 @@ DB_Filer::begin_batch(int bootnum) {
   sqlite3_bind_double(st_begin_batch, 2, tp.tv_sec + 1.0e-9 * tp.tv_nsec);
   step_commit(st_begin_batch);
   bid = sqlite3_last_insert_rowid(outdb);
+
+  // set batch ID for "insert into runs" query
+  sqlite3_bind_int(st_begin_run, 2, bid);
 
   // set batch ID for "insert into batchRuns" query
   sqlite3_bind_int(st_end_run2, 1, bid);
