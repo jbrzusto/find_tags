@@ -39,8 +39,9 @@ protected:
   Node	        *state;		 // where in the appropriate DFA I am
   Pulse_Buffer	 pulses;	 // pulses in the path so far
   Timestamp	 last_ts;        // timestamp of last pulse accepted by this candidate
+  Timestamp      last_ts_burst1; // timestamp of last pulse in first burst accepted by this candidate
   Timestamp	 last_dumped_ts; // timestamp of last pulse in last dumped burst (used to calculate burst slop when dumping)
-  Tag   	 *tag;            // current unique tag ID, if confirmed, or BOGUS_TAG when more than one is compatible
+  Tag   	 *tag;           // current unique tag ID, if confirmed, or BOGUS_TAG when more than one is compatible
   Tag_ID_Level   tag_id_level;   // how well-resolved is the current tag ID?
 
   DB_Filer::Run_ID	run_id;	// ID for the run formed by bursts from this candidate (i.e. consecutive in-phase hits on a tag)
@@ -79,6 +80,8 @@ protected:
 
   static int max_unconfirmed_bursts; //!< maximum number of bursts allowed without having reached burst_step_gcd = 1
 
+  static unsigned int timestamp_wonkiness; //!< maximum clock jump size in data from Lotek .DTA files
+
 public:
 
   Tag_Candidate() {}; // default ctor for deserialization
@@ -99,7 +102,7 @@ public:
 
   Node * advance_by_pulse(const Pulse &p);
 
-  bool add_pulse(const Pulse &p, Node *new_state); //!< add a pulse, and return true iff either the tag_id_level changes or a burst is completed
+  bool add_pulse(const Pulse &p, Node *new_state); //!< add a pulse, and return true if we can confirm the candidate owns this pulse.
 
   Tag * get_tag();
 
@@ -136,6 +139,8 @@ public:
   static Timestamp get_max_cand_time();
 
   static void set_max_unconfirmed_bursts(int m);
+
+  static void set_timestamp_wonkiness(unsigned int w);
 
   static int gcd(int x, int y); //!< gcd of x, y
 

@@ -416,9 +416,18 @@ usage() {
         "    prints 'Okay\\n' to stderr and the exist code is 0.  Otherwise, the exist\n"
         "    code is -1 and an error message is printed to stderr.\n\n"
 
-         "-u, --unsigned_dfreq\n"
-         "    ignore the sign of frequency offsets, as some versions of the pulse detection\n"
-         "    code do a poor job of estimating a negative frequency\n\n"
+        "-T, --timestamp_wonkiness=MAX_JUMP\n"
+        "    try to correct clock jumps in Lotek .DTA input data, where the clock sometimes\n"
+        "    jumps back and forth by an integer number of seconds.\n"
+        "    MAX_JUMP is a small integer, giving the maximum amount by which the clock can jump\n"
+        "    and the maximum rounded number of cumulative jumped seconds in a run (the two\n"
+        "    use the same parameter value because the jumps are assumed to be unbiased.\n"
+        "    default: 0, meaning no correction.\n"
+        "    This option is only permitted if --lotek is specified.\n\n"
+
+        "-u, --unsigned_dfreq\n"
+        "    ignore the sign of frequency offsets, as some versions of the pulse detection\n"
+        "    code do a poor job of estimating a negative frequency\n\n"
 
 	"-w, --pulse_rate_window=PULSERATEWIN\n"
 	"    the time window (seconds) over which pulse_rate is measured.  When pulse\n"
@@ -467,13 +476,14 @@ main (int argc, char **argv) {
 	OPT_FREQ_SLOP              = 's',
 	OPT_MAX_SKIPPED_BURSTS     = 'S',
         OPT_TEST                   = 't',
+        OPT_TIMESTAMP_WONKINESS    = 'T',
         OPT_UNSIGNED_DFREQ         = 'u',
 	OPT_PULSE_RATE_WINDOW      = 'w',
         OPT_MAX_UNCONFIRMED_BURSTS = 'x'
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:ef:FgG:hi:l:Lm:M:p:rR:s:S:tuw:x:";
+    static const char short_options[] = "b:B:c:ef:FgG:hi:l:Lm:M:p:rR:s:S:tT:uw:x:";
     static const struct option long_options[] = {
         {"burst_slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst_slop_expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
@@ -497,6 +507,7 @@ main (int argc, char **argv) {
 	{"max_skipped_bursts"      , 1, 0, OPT_MAX_SKIPPED_BURSTS},
 	{"pulse_rate_window"       , 1, 0, OPT_PULSE_RATE_WINDOW},
         {"test"                    , 0, 0, OPT_TEST},
+        {"timestamp_wonkiness"     , 1, 0, OPT_TIMESTAMP_WONKINESS},
         {"unsigned_dfreq"          , 0, 0, OPT_UNSIGNED_DFREQ},
         {"max_unconfirmed_bursts"  , 1, 0, OPT_MAX_UNCONFIRMED_BURSTS},
         {0, 0, 0, 0}
@@ -512,6 +523,7 @@ main (int argc, char **argv) {
     bool use_events = false;
     bool force_default_freq = false;
     bool test_only = false;
+    unsigned int timestamp_wonkiness = 0;
     bool unsigned_dfreq = false;
     bool graph_only = false;
     double GPS_min_dt = 3600;
@@ -606,6 +618,9 @@ main (int argc, char **argv) {
         case OPT_TEST:
           test_only = true;
           break;
+        case OPT_TIMESTAMP_WONKINESS:
+          timestamp_wonkiness = atoi(optarg);
+          break;
 	case OPT_MAX_UNCONFIRMED_BURSTS:
 	  max_unconfirmed_bursts = atoi(optarg);
 	  break;
@@ -626,6 +641,7 @@ main (int argc, char **argv) {
     Tag_Candidate::set_sig_slop_dB(sig_slop_dB);
     Tag_Candidate::set_freq_slop_kHz(freq_slop_kHz);
     Tag_Candidate::set_max_unconfirmed_bursts(max_unconfirmed_bursts);
+    Tag_Candidate::set_timestamp_wonkiness(timestamp_wonkiness);
 
     string tag_filename = string(argv[optind++]);
 
@@ -633,6 +649,7 @@ main (int argc, char **argv) {
       usage();
       exit(1);
     }
+
     string output_filename = string(argv[optind++]);
 
     // set options and parameters
@@ -641,6 +658,9 @@ main (int argc, char **argv) {
     string program_version(PROGRAM_VERSION); // defined in Makefile
     double program_build_ts = PROGRAM_BUILD_TS; // defined in Makefile
     try {
+      if (timestamp_wonkiness > 0 && ! lotek_data) {
+        throw std::runtime_error("must specify --lotek_data in order to use --timestamp_wonkiness=N with N > 0");
+      }
       Node::init();
       Tag_Database tag_db (tag_filename, use_events);
       DB_Filer dbf (output_filename, program_name, program_version, program_build_ts, bootNum, GPS_min_dt);
@@ -663,6 +683,7 @@ main (int argc, char **argv) {
       dbf.add_param("resume", resume);
       dbf.add_param("lotek_data", lotek_data);
       dbf.add_param("max_unconfirmed_bursts", max_unconfirmed_bursts);
+      dbf.add_param("timestamp_wonkiness", timestamp_wonkiness);
 
       dbf.load_ambiguity(tag_db);
 
@@ -677,7 +698,7 @@ main (int argc, char **argv) {
         if (src_sqlite) {
           pulses = Data_Source::make_Lotek_source(& dbf, & tag_db, default_freq);
         } else {
-          std::cerr << "Must specify --sqlite with a Lotek data source" << std::endl;
+          throw std::runtime_error("Must specify --sqlite with a Lotek data source");
         }
       } else if (src_sqlite) {
         pulses = Data_Source::make_SQLite_source(& dbf, bootNum);
