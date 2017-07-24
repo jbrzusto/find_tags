@@ -1,0 +1,45 @@
+digraph dfa_graph {
+        subgraph normal {
+                n0 [label="(Phase 0)"];
+                n1 [label="(Phase 1)"];
+                n2 [label="(Phase 2)"];
+                n3 [label="(Phase 3)"];
+                n4 [label="(Phase 4)"];
+                n5 [label="(Phase 5)"];
+                n6 [label="(Phase 6)"];
+                n7 [label="(Phase 7)"];
+                n0->n1 [label="g1"];
+                n1->n2 [label="g2"];
+                n2->n3 [label="g3"];
+                n3->n4 [label="g4,\lg4+BI,\lg4+2*BI,\l..."]
+                n4->n5 [label="g1"];
+                n5->n6 [label="g2"];
+                n6->n7 [label="g3"];
+                n7->n4 [label="g4,\lg4+BI,\lg4+2*BI,\l..."]
+        }
+        subgraph wonky {
+                n4p [label="(Phase 4+)", style="dashed"];
+                n5p [label="(Phase 5+)", style="dashed"];
+                n6p [label="(Phase 6+)", style="dashed"];
+                n7p [label="(Phase 7+)", style="dashed"];
+                n4m [label="(Phase 4-)", style="dashed"];
+                n5m [label="(Phase 5-)", style="dashed"];
+                n6m [label="(Phase 6-)", style="dashed"];
+                n7m [label="(Phase 7-)", style="dashed"];
+                n3->n4p [label="g4+1,\lg4+1+BI,\lg4+1+2*BI,\l...", style="dashed", center=1]
+                n3->n4m [label="g4-1,\lg4-1+BI,\lg4-1+2*BI,\l...", style="dashed", center=1]
+                n7->n4p [label="g4+1,\lg4+1+BI,\lg4+1+2*BI,\l...", style="dashed", center=1]
+                n7->n4m [label="g4-1,\lg4-1+BI,\lg4-1+2*BI,\l...", style="dashed", center=1]
+                n4p->n5p [label="g1", style="dashed"];
+                n5p->n6p [label="g2", style="dashed"];
+                n6p->n7p [label="g3", style="dashed"];
+                n4m->n5m [label="g1", style="dashed"];
+                n5m->n6m [label="g2", style="dashed"];
+                n6m->n7m [label="g3", style="dashed"];
+                n7p ->n4p [label="g4,\lg4+BI\lg4+2*BI,\l...", style="dashed", center=1]
+                n7p->n4 [label="g4-1,\lg4-1+BI\lg4-1+2*BI,\l...", style="dashed", center=1]
+                n7m ->n4m [label="g4,\lg4+BI\lg4+2*BI,\l...", style="dashed", center=1]
+                n7m ->n4 [label="g4+1,\lg4+1+BI\lg4+1+2*BI,\l...", style="dashed", center=1]
+        }
+        title [label="DFA graph for detection of a single tag, here one with 4 pulses per burst.\lEdges correspond to accepting the time gap between consecutive pulses\lSolid lines: timestamp_wonkiness=0 (i.e. the usual case).\lDashed lines: extra nodes and edges for timestamp_wonkiness=1\lNote: BI = g1 + g2 + g3 + g4", shape=none, fontsize=18];
+}
