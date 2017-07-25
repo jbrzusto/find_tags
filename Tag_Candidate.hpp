@@ -80,8 +80,6 @@ protected:
 
   static int max_unconfirmed_bursts; //!< maximum number of bursts allowed without having reached burst_step_gcd = 1
 
-  static unsigned int timestamp_wonkiness; //!< maximum clock jump size in data from Lotek .DTA files
-
 public:
 
   Tag_Candidate() {}; // default ctor for deserialization
@@ -139,8 +137,6 @@ public:
   static Timestamp get_max_cand_time();
 
   static void set_max_unconfirmed_bursts(int m);
-
-  static void set_timestamp_wonkiness(unsigned int w);
 
   static int gcd(int x, int y); //!< gcd of x, y
 

@@ -255,31 +255,6 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
         if (tag_id_level == CONFIRMED) {
           own = true; // we're accepting this pulse at the confirmed level, so we own it unless
           // we fail the 2nd sanity check
-
-          if (timestamp_wonkiness > 0) {
-            // 2. do the timestamp wonkiness drift test; we accept a sequence of bursts
-            // separated by a jump clock, provided the cumulative jump is not biased.
-            // A biased cumulative clock jump really means we're picking up detections
-            // from a tag with a *different* burst interval.
-            // We do this at both SINGLE and CONFIRMED levels, because even once a candidate
-            // has been confirmed, additional bursts might be at intervals that include
-            // a clock jump, and we don't want to drift.
-
-            if (round(abs((p.ts - last_ts_burst1) - burst_count * tag->period)) > timestamp_wonkiness) {
-              // too much wonkiness, so don't accept this pulse
-              own = false;
-              // mark tag candidate for deletion
-              last_ts = FORCE_EXPIRY_TIMESTAMP;
-#ifdef DEBUG
-              std::cerr << std::setprecision(14) << "too wonky: rejecting pulse at " << p.ts
-                        << " with first burst ending at " << last_ts_burst1
-                        << " burst_count=" << burst_count
-                        << " bi = " << tag->period
-                        << " tagID = " << tag->motusID
-                        << std::endl;
-#endif
-            }
-          }
         }
       }
     }
@@ -493,11 +468,6 @@ Tag_Candidate::set_max_unconfirmed_bursts(int m) {
   max_unconfirmed_bursts = m;
 };
 
-void
-Tag_Candidate::set_timestamp_wonkiness(unsigned int w) {
-  timestamp_wonkiness = w;
-};
-
 int
 Tag_Candidate::gcd(int x, int y) {
   while(x != 0) {
@@ -527,4 +497,3 @@ long long Tag_Candidate::num_cands = 0; // count of allocated but not freed cand
 long long Tag_Candidate::max_num_cands = 0; // count of allocated but not freed candidates.
 Timestamp Tag_Candidate::max_cand_time = 0; // timestamp at maximum candidate count
 int Tag_Candidate::max_unconfirmed_bursts = 10;// maximum bursts before burst_step_gcd reaches 1; if exceeded, we discard candidate
-unsigned int Tag_Candidate::timestamp_wonkiness = 0;// maximum seconds of clock jump size in Lotek .DTA data files

@@ -26,8 +26,16 @@ digraph dfa_graph {
                 n5m [label="(Phase 5-)", style="dashed"];
                 n6m [label="(Phase 6-)", style="dashed"];
                 n7m [label="(Phase 7-)", style="dashed"];
-                n3->n4p [label="g4+1,\lg4+1+BI,\lg4+1+2*BI,\l...", style="dashed", center=1]
-                n3->n4m [label="g4-1,\lg4-1+BI,\lg4-1+2*BI,\l...", style="dashed", center=1]
+
+                ##
+                ## Omit skip edges from the node at n3, since otherwise n4m and n4p might not
+                ## be nodes with a single TagPhase (i.e. there might be another tag with
+                ## BI exactly 1s less or 1s more than this tag).
+                ##
+                ## n3->n4p [label="g4+1,\lg4+1+BI,\lg4+1+2*BI,\l...", style="dashed", center=1]
+                ## n3->n4m [label="g4-1,\lg4-1+BI,\lg4-1+2*BI,\l...", style="dashed", center=1]
+                ##
+
                 n7->n4p [label="g4+1,\lg4+1+BI,\lg4+1+2*BI,\l...", style="dashed", center=1]
                 n7->n4m [label="g4-1,\lg4-1+BI,\lg4-1+2*BI,\l...", style="dashed", center=1]
                 n4p->n5p [label="g1", style="dashed"];

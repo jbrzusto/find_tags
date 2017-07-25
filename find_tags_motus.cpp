@@ -424,6 +424,7 @@ usage() {
         "    use the same parameter value because the jumps are assumed to be unbiased.\n"
         "    default: 0, meaning no correction.\n"
         "    This option is only permitted if --lotek is specified.\n\n"
+        "    FIXME: only MAX_JUMP = 0 or 1 are currently supported\n"
 
         "-u, --unsigned_dfreq\n"
         "    ignore the sign of frequency offsets, as some versions of the pulse detection\n"
@@ -637,11 +638,11 @@ main (int argc, char **argv) {
     Tag_Foray::set_default_burst_slop_ms(burst_slop);
     Tag_Foray::set_default_burst_slop_expansion_ms(burst_slop_expansion);
     Tag_Foray::set_default_max_skipped_bursts(max_skipped_bursts);
+    Tag_Foray::set_timestamp_wonkiness(timestamp_wonkiness);
     Tag_Candidate::set_pulses_to_confirm_id(pulses_to_confirm);
     Tag_Candidate::set_sig_slop_dB(sig_slop_dB);
     Tag_Candidate::set_freq_slop_kHz(freq_slop_kHz);
     Tag_Candidate::set_max_unconfirmed_bursts(max_unconfirmed_bursts);
-    Tag_Candidate::set_timestamp_wonkiness(timestamp_wonkiness);
 
     string tag_filename = string(argv[optind++]);
 
