@@ -117,7 +117,9 @@ int main (int argc, char * argv[] ) {
       if (p) {
         std::cerr << "Tag " << t->motusID << " found in ambiguity " << p->motusID << " after deletion.\n";
       } else {
+#ifdef DEBUG
         g.findTag(t, false);
+#endif
       }
       inTree[r] = false;
       t->active = false;
@@ -128,10 +130,12 @@ int main (int argc, char * argv[] ) {
 #endif
       g.addTag(t, tol, timeFuzz, 30);
       auto p = Ambiguity::proxyFor(t);
+#ifdef DEBUG
       if (p)
         g.findTag(p, true);
       else
         g.findTag(t, true);
+#endif
       inTree[r] = true;
       t->active = true;
       ++numTags;
