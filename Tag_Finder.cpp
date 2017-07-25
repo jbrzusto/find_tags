@@ -72,12 +72,12 @@ Tag_Finder::process(Pulse &p) {
 #endif
       // check whether candidate has expired
       if (ci->second->expired(p.ts)) {
-        auto p = ci->second;
+        auto tc = ci->second;
         cs.erase(ci);
 #ifdef DEBUG2
-        dbg && std::cerr << "Deleting " << (void *) p << " last_ts " << (p->last_ts)<< std::endl;
+        dbg && std::cerr << "Deleting " << (void *) tc << " last_ts " << (tc->last_ts)<< std::endl;
 #endif
-        delete p;
+        delete tc;
         continue;
       }
 
