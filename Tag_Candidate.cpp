@@ -25,12 +25,23 @@ Tag_Candidate::Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse)
 };
 
 Tag_Candidate::~Tag_Candidate() {
+  maybe_end_run();
+  --num_cands;
+};
+
+void
+Tag_Candidate::maybe_end_run() {
+  // end run if this candidate has a valid run_id and no other candidates with that run_id still exist
   if (tag_id_level == CONFIRMED && run_id > 0) {
     int n = Tag_Foray::num_cands_with_run_id(run_id, -1);
     if (n == 0)
       filer -> end_run(run_id, hit_count, last_dumped_ts, ending_batch);
   }
-  --num_cands;
+  // reset hit_count and run_id so we don't try to end *this* run again, in
+  // case tag_candidate is having its tag renamed, rather than deleted.
+
+  hit_count = 0;
+  run_id = 0;
 };
 
 Tag_Candidate *
@@ -342,14 +353,7 @@ Tag_Candidate::renTag(Tag * t1, Tag * t2) {
   if (tag != t1)
     return;
   // end the current run for t1
-  if (hit_count > 0 && run_id > 0) {
-    filer -> end_run(run_id, hit_count, last_dumped_ts);
-  }
-  // force start of a new run if a burst is accepted
-  hit_count = 0;
-  // prevent deletion of this candidate before any new bursts are
-  // accepted from re-rending the run.
-  run_id = 0;
+  maybe_end_run();
 
   // maintain the current confirmation level and pulse buffer;
   // subsequent hits will be reported as t2;

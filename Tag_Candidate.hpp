@@ -85,6 +85,8 @@ public:
 
   ~Tag_Candidate();
 
+  void maybe_end_run(); //!< end run if this candidate has a valid run_id and no other candidates with that run_id still exist
+
   bool has_same_id_as(Tag_Candidate *tc);
 
   bool shares_any_pulses(Tag_Candidate *tc);
