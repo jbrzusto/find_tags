@@ -462,7 +462,12 @@ Tag_Candidate::renTag(Tag * t1, Tag * t2) {
   if (hit_count > 0 && run_id > 0) {
     filer -> end_run(run_id, hit_count, last_dumped_ts);
   }
+  // force start of a new run if a burst is accepted
   hit_count = 0;
+  // prevent deletion of this candidate before any new bursts are
+  // accepted from re-rending the run.
+  run_id = 0;
+
   // maintain the current confirmation level and pulse buffer;
   // subsequent hits will be reported as t2;
   tag = t2;
