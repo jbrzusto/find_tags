@@ -37,6 +37,12 @@ int main (int argc, char * argv[] ) {
     ++i;
   }
 
+  bool do_graphs = true;
+  if (argc > i && std::string(argv[i]) == "-G") {
+    do_graphs = false;
+    ++i;
+  }
+
   string fn;
   if (argc > i)
     fn = std::string(argv[i++]);
@@ -78,7 +84,8 @@ int main (int argc, char * argv[] ) {
   int numTags = 0;
 #ifdef DEBUG
   g.validateSetToNode();
-  g.viz();
+  if (do_graphs)
+    g.viz();
 #endif
   std::cout << "Before any events, # tags in tree is " << numTags << ", # Nodes = " << Node::numNodes() << ", # Sets = " << Set::numSets() << ", # Edges = " << Node::numLinks() << std::endl;
 
@@ -134,7 +141,8 @@ int main (int argc, char * argv[] ) {
     };
 #ifdef DEBUG
     g.validateSetToNode();
-    g.viz();
+    if (do_graphs)
+      g.viz();
 #endif
     if (numEvts % 1 == 0)
       std::cout << "After "  << (1 + numEvts) << " events, # tags in tree is " << numTags << ", # Nodes = " << Node::numNodes() << ", # Sets = " << Set::numSets() << ", # Edges = " << Node::numLinks() << std::endl;
