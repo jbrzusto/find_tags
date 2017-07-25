@@ -31,7 +31,7 @@ int main (int argc, char * argv[] ) {
   if (argc > i && isdigit(argv[i][0]))
     maxEvts = atoi(argv[i++]);
 
-  bool randomize = true;
+  bool randomize = false;
   if (argc > i && std::string(argv[i]) == "-R") {
     randomize = true;
     ++i;
@@ -85,7 +85,7 @@ int main (int argc, char * argv[] ) {
   History *hist = 0;
   Ticker cron;
 
-  if (randomize) {
+  if (!randomize) {
     hist = T.get_history();
     cron = hist->getTicker();
     maxEvts = hist->size();
