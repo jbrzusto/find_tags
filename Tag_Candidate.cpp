@@ -7,17 +7,14 @@ Tag_Candidate::Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse)
   state(state),
   pulses(),
   last_ts(pulse.ts),
-  last_ts_burst1(BOGUS_TIMESTAMP),
   last_dumped_ts(BOGUS_TIMESTAMP),
   tag(BOGUS_TAG),
   tag_id_level(MULTIPLE),
   run_id(0),
   hit_count(0),
-  burst_count(0),
   num_pulses(0),
   freq_range(freq_slop_kHz, pulse.dfreq),
-  sig_range(sig_slop_dB, pulse.sig),
-  burst_step_gcd(0)
+  sig_range(sig_slop_dB, pulse.sig)
 {
   pulses.push_back(pulse);
   state->tcLink();
@@ -127,7 +124,10 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
 
     So candidates compete for pulses, with the first one which can confirm
     ownership being the winner.  "Confirmation" only happens at the end
-    of a burst, and is subject to burst-level sanity checks.
+    of a burst, and only if the sequence of pulses to the end of that
+    burst uniquely identifies the tag and meets the pulses_to_confirm_id
+    parameter, which is helps control false positives by increasing the
+    number of accepted pulses required before confirmation.
   */
 
   int own = false; // assume we can't confirm ownership of this pulse
@@ -145,120 +145,33 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
   // see whether the tag_id_level can increase
 
   if (tag_id_level == MULTIPLE) {
-
-#ifdef DEBUG
-    if (pulses.size() > pulses_to_confirm_id)
-      throw std::runtime_error("Still at MULTIPLE tag_id_level but with pulses_to_confirm bursts\nAmbiguity code failed to manage this.");
-#endif
-
     if (state->is_unique()) {
+      // we now know which tag this must be, if it is one
       tag = state->get_tag();
       num_pulses = tag->gaps.size();
       tag_id_level = SINGLE;
     }
   }
 
+  if (tag_id_level == SINGLE) {
+    if (pulses.size() >= pulses_to_confirm_id)
+      tag_id_level = CONFIRMED;
+  }
+
   if (tag_id_level != MULTIPLE) {
-    // if completing a burst perform burst-level sanity checks
+    // we know which tag these pulses must belong to, and so how many
+    // pulses there are per burst, so we can tell whether this pulse completes
+    // a burst
 
     pulse_completes_burst = new_state->get_phase() % num_pulses == num_pulses - 1;
 
-    if (pulse_completes_burst) {
-#ifdef DEBUG
-      if (pulses.size() % num_pulses != 0)
-        throw std::runtime_error("pulse_completes_burst is wrong, according to size of pulse buffer");
-#endif
-      int nbi;
-      if (burst_count == 0) {
-        // no burst has been delineated so far, because until now, we
-        // didn't now which tag this was, and hence how many pulses
-        // were in a burst.  Now that we know, record the timestamp of
-        // the last pulse in the first burst.
-        last_ts_burst1 = pulses[num_pulses - 1].ts;
+    // At the CONFIRMED level, if this pulse completes a burst, then
+    // this candidate is deemed to own the pulses in its buffer.
 
-        // there will be two bursts buffered, unless the tag
-        // is uniquely determined by a single burst.
-        int ndb = pulses.size() / num_pulses;
-        if (ndb == 1) {
-          burst_count = 1;
-        } else if (ndb == 2) {
-          burst_count = 1 + round((p.ts - last_ts_burst1) / tag->period);
-          nbi = burst_count - 1;
-        } else {
-          throw std::runtime_error("assert fail: more than 2 bursts buffered upon first arrival at CONFIRMED tag id level");
-        }
-      } else {
-      // previous bursts already delineated, but possibly still in buffer
-        Timestamp prev_burst_end_ts = pulses.size() > num_pulses ? pulses[pulses.size() - 1 - num_pulses].ts : last_dumped_ts;
-        nbi = round((p.ts - prev_burst_end_ts) / tag->period);
-        burst_count += nbi;   // add these to burst count for this candidate (detected and imputed)
-      }
-
-      if (burst_count >= 2) {
-
-        // There's a previous burst, so perform burst-level sanity
-        // checks on this tag_candidate:
-        //
-        // 1. make sure we've not gone too long without confirming this
-        //    candidate by the gcd test, if enabled
-        //
-        // 2. make sure we haven't drifted too far from the tag's
-        //    BI, if correcting for Lotek clock jumps
-
-        // Get the number of bursts represented by this gap (usual
-        // case is 1, but some bursts might have gone undetected).
-
-        // The last timestamp of the previous detected burst is either
-        // - the ts of the pulse in the buffer before this burst
-        // or
-        // - last_dumped_ts, if there are no pulses in the buffer
-        //   from before this burst (because they've been dumped)
-        //
-
-
-        if (tag_id_level == SINGLE) {
-          bool maybe_confirm = pulses.size() >= pulses_to_confirm_id;
-
-          if (max_unconfirmed_bursts > 0) {
-            // 1. do the gcd test for confirmation (result is pass, fail, or inconclusive)
-            // which is still in the pulses buffer because we only dump
-            // bursts at the CONFIRMED level.
-            burst_step_gcd = gcd(burst_step_gcd, nbi);
-
-            if (burst_step_gcd == 0)
-              throw std::runtime_error("Got gcd=0");
-
-            if (burst_step_gcd != 1) {
-              // not confirming this candidate because we haven't (yet?) passed the gcd test
-              maybe_confirm = false;
-              if (pulses.size() / num_pulses > max_unconfirmed_bursts) {
-                // This candidate failed the gcd test:
-                // we've gone too many bursts without getting to burst_step_gcd==1, so
-                // mark tag candidate for deletion
-#ifdef DEBUG
-                std::cerr << "Candidate " << (void * ) this << " forced expiry with gcd = " << burst_step_gcd
-                          << "; Tag ID: " << tag->motusID << "; first ts: " << std::setprecision(14) << pulses[0].ts
-                          << "; bursts in buf: " << pulses.size() / num_pulses
-                          << "; burst_count: " << burst_count
-                          << std::endl;
-#endif
-                // mark tag candidate for deletion
-                last_ts = FORCE_EXPIRY_TIMESTAMP;
-              }
-            }
-          }
-          if (maybe_confirm) {
-            tag_id_level = CONFIRMED;
-          }
-        }
-
-        if (tag_id_level == CONFIRMED) {
-          own = true; // we're accepting this pulse at the confirmed level, so we own it unless
-          // we fail the 2nd sanity check
-        }
-      }
-    }
+    if (tag_id_level == CONFIRMED)
+      own = pulse_completes_burst;
   }
+
   // Update the range of signal strengths and frequency offsets
   // acceptible to this candidate.
 
@@ -283,7 +196,6 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     sig_range.extend_by(p.sig);
     freq_range.extend_by(p.dfreq);
   }
-
   return own;
 };
 
@@ -311,10 +223,6 @@ bool Tag_Candidate::has_burst() {
 bool Tag_Candidate::next_pulse_confirms() {
   return pulses.size() == pulses_to_confirm_id - 1;
 };
-
-// bool Tag_Candidate::at_end_of_burst() {
-//   return state->get_phase() % num_pulses == num_pulses - 1;
-// };
 
 void Tag_Candidate::clear_pulses() {
   // drop pulses from the most recent burst (presumably after
@@ -463,22 +371,6 @@ Tag_Candidate::get_max_cand_time() {
   return max_cand_time;
 };
 
-void
-Tag_Candidate::set_max_unconfirmed_bursts(int m) {
-  max_unconfirmed_bursts = m;
-};
-
-int
-Tag_Candidate::gcd(int x, int y) {
-  while(x != 0) {
-    int m = y % x;
-    y = x;
-    x = m;
-  }
-  return(y);
-};
-
-
 Frequency_Offset_kHz Tag_Candidate::freq_slop_kHz = 2.0;       // (kHz) maximum allowed frequency bandwidth of a burst
 
 float Tag_Candidate::sig_slop_dB = 10;         // (dB) maximum allowed range of signal strengths within a burst
@@ -496,4 +388,3 @@ Burst_Params Tag_Candidate::burst_par;
 long long Tag_Candidate::num_cands = 0; // count of allocated but not freed candidates.
 long long Tag_Candidate::max_num_cands = 0; // count of allocated but not freed candidates.
 Timestamp Tag_Candidate::max_cand_time = 0; // timestamp at maximum candidate count
-int Tag_Candidate::max_unconfirmed_bursts = 10;// maximum bursts before burst_step_gcd reaches 1; if exceeded, we discard candidate
