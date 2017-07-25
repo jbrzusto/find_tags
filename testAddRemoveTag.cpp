@@ -66,11 +66,7 @@ int main (int argc, char * argv[] ) {
     tags[i++] = *j;
   }
 
-  std::vector < bool > inTree;
-  if (randomize)
-    inTree.reserve(nt);
-  else
-    inTree.reserve(T.get_max_motusID() + 1); // maximum
+  std::vector < bool > inTree ( randomize ? nt : T.get_max_motusID() + 1);
 
   std::random_device rd;     // only used once to initialise (seed) engine
   std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
