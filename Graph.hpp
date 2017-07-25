@@ -34,7 +34,7 @@ public:
   std::pair < Tag *, Tag * > addTag(Tag * tag, double tol, double timeFuzz, double maxTime, unsigned int timestamp_wonkiness);  //!< add a tag to the tree, handling ambiguity
   std::pair < Tag *, Tag * >  delTag(Tag * tag); //!< remove a tag from the tree, handling ambiguity
   void renTag(Tag *t1, Tag *t2);//!< "rename" tag t1 to tag t2
-  Tag * find(Tag * tag);
+  Tag * find(Tag * tag, double tol, double timeFuzz);
   void viz();
   void dumpSetToNode();
   void validateSetToNode();

@@ -38,11 +38,7 @@ Graph::root() {
 
 std::pair < Tag *, Tag * >
 Graph::addTag(Tag * tag, double tol, double timeFuzz, double maxTime, unsigned int timestamp_wonkiness) {
-  auto ot = find(tag); // FIXME: we're only looking for match of the
-  // exact tag values; we really should be doing a tree search
-  // for each node where the tag should be unique but isn't
-  // (i.e. each node with TagPhase(tag, n) where n is the number
-  // of pulses in n
+  auto ot = find(tag, tol, timeFuzz);
 
   // if we renamed a tag in the graph due to ambiguity management,
   // we return this pair to the caller.  Else, we return (0, 0);
@@ -232,20 +228,47 @@ Graph::_delTag(Tag *tag) {
 };
 
 Tag *
-Graph::find(Tag * tag) {
+Graph::find(Tag * tag, double tol, double timeFuzz) {
+  // FIXME: we're only looking for match of the
+  // exact tag values; we really should be doing a tree search
+  // for each node where the tag should be unique but isn't
+  // (i.e. each node with TagPhase(tag, n) where n is the number
+  // of pulses in n
+
   Node * n = _root;
-  for (auto g = tag->gaps.begin(); g != tag->gaps.end(); ++g) {
-    n = n->advance(*g);
+  int ng = tag->gaps.size();
+  int i;
+  Gap g;
+  for (i = 0; i < ng - 1; ++i) {
+    g = tag->gaps[i];
+    n = n->advance(g);
     if (! n)
       return 0;
   }
-  if (n->s->s.size() > 1)
-    throw std::runtime_error("Graph::find: tag not unique");
-  if (! (n->s->s.begin()->first-> active)) {
-    std::cerr << "motusID = " << n->s->s.begin()->first->motusID << "=" << (void *) n->s->s.begin()->first << std::endl;
-    throw std::runtime_error("Graph::find: tag not active");
+  // To work around at least one problem, we widen the search
+  // at the last gap (the 'long' gap) to the bounds provided
+  // by tol and timeFuzz, checking the endpoints as well as
+  // the centre.
+
+  Gap_Range gr(tag->gaps[i], tol, timeFuzz);
+  std::vector < Gap > gg;
+  gg.push_back(tag->gaps[i]);
+  gg.push_back(gr.first);
+  gg.push_back(gr.second);
+
+  for (i = 0; i < gg.size(); ++i) {
+    auto m = n->advance(gg[i]);
+    if (m) {
+      if (m->s->s.size() > 1)
+        throw std::runtime_error("Graph::find: tag not unique");
+      if (! (m->s->s.begin()->first-> active)) {
+        std::cerr << "motusID = " << m->s->s.begin()->first->motusID << "=" << (void *) m->s->s.begin()->first << std::endl;
+        throw std::runtime_error("Graph::find: tag not active");
+      }
+      return m->s->s.begin()->first;
+    }
   }
-  return n->s->s.begin()->first;
+  return 0;
 };
 
 
