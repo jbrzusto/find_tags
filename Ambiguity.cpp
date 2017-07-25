@@ -5,7 +5,7 @@
 
 Ambiguity::AmbigBimap Ambiguity::abm;//  = AmbigMap();
 Ambiguity::AmbigIDBimap Ambiguity::ids;//  = AmbigIDMap();
-int Ambiguity::nextID = 0;
+int Ambiguity::nextID = -1;
 
 void
 Ambiguity::addIDs(Motus_Tag_ID proxyID, AmbigIDs newids) {
