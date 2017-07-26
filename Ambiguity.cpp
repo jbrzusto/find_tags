@@ -4,10 +4,18 @@
 #include "DB_Filer.hpp"
 
 Ambiguity::AmbigBimap Ambiguity::abm;//  = AmbigMap();
-int Ambiguity::nextID = 0;
+Ambiguity::AmbigIDBimap Ambiguity::ids;//  = AmbigIDMap();
+int Ambiguity::nextID = -1;
+
+void
+Ambiguity::addIDs(Motus_Tag_ID proxyID, AmbigIDs newids) {
+  if (proxyID >= 0)
+    throw std::runtime_error("Attempt to create a proxy with non-negative ID");
+  ids.insert(AmbigIDSetProxy(newids, proxyID));
+};
 
 Tag *
-Ambiguity::add(Tag *t1, Tag * t2, Motus_Tag_ID proxyID) {
+Ambiguity::add(Tag *t1, Tag * t2) {
   // return a proxy tag representing the ambiguous tags t1 and t2; t1
   // might already be a proxy
   AmbigTags s; // set of ambiguous tags
@@ -45,10 +53,7 @@ Ambiguity::add(Tag *t1, Tag * t2, Motus_Tag_ID proxyID) {
     // a proxy already exists for this set of ambiguous tags
     return j->second;
   // create a new proxy tag for this set
-  Tag * t = newProxy(t1, proxyID);
-
-  abm.insert(AmbigSetProxy(s, t));
-  return t;
+  return newProxy(s, t1);
 };
 
 Tag *
@@ -71,6 +76,8 @@ Ambiguity::remove(Tag * t1, Tag *t2) {
   if (! s.count(t2))
      throw std::runtime_error("Trying to remove tag from a proxy that does not represent it");
 
+  if (t1->count > 0)
+    record_if_new(i->second, i->first->motusID);
   s.erase(t2);
   if (s.size() == 1) {
     // only a single tag left in the set, so return the original
@@ -93,9 +100,7 @@ Ambiguity::remove(Tag * t1, Tag *t2) {
     return t1;
   }
   // create a new proxy tag for the reduced set
-  Tag * t = newProxy(t1);
-  abm.insert(AmbigSetProxy(s, t));
-  return t;
+  return newProxy(s, t1);
 };
 
 Tag *
@@ -106,29 +111,28 @@ Ambiguity::proxyFor(Tag *t) {
   return 0;
 }
 
-void
-Ambiguity::detected(Tag * t) {
-  // first detection, so record this ambiguity group in the DB
-  auto i = abm.right.find(t);
-  Tag_Candidate::filer->save_ambiguity(t->motusID, i->second);
-};
-
 Tag *
-Ambiguity::newProxy(Tag * t, Motus_Tag_ID proxyID) {
+Ambiguity::newProxy(AmbigTags & tags, Tag * t) {
+  // lookup the set in the persistent map to see if there's already
+  // a (negative) proxyID for it
+
+  AmbigIDs tmpids;
+  for (auto i = tags.begin(); i != tags.end(); ++i)
+    tmpids.insert((*i)->motusID);
+
+  Motus_Tag_ID proxyID = 0;
+  auto j = ids.left.find(tmpids);
+  if (j != ids.left.end()) {
+    proxyID = j->second;
+  } else {
+    proxyID = nextID--;
+  };
+
   Tag * nt = new Tag();
   *nt = *t;
-  if (proxyID) {
-    // caller is restoring an existing ambiguity group from the
-    // database
-    nt->motusID = proxyID;
-  } else {
-    // caller is building a new ambiguity group
-    nt->motusID = nextID--;
-    // set the count to zero to indicate this ambiguity group
-    // has not yet been detected so is mutable: tags can be added
-    // to it until a detection renders it immutable.
-    nt->count = 0;
-  }
+  nt->motusID = proxyID;
+  nt->count = 0;
+  abm.insert(AmbigSetProxy(tags, nt));
   return nt;
 };
 
@@ -136,3 +140,27 @@ void
 Ambiguity::setNextProxyID(Motus_Tag_ID proxyID) {
   nextID = proxyID;
 };
+
+void
+Ambiguity::record_if_new( AmbigTags tags, Motus_Tag_ID id) {
+  AmbigIDs tmpids;
+  for(auto j = tags.begin(); j != tags.end(); ++j)
+    tmpids.insert((*j)->motusID);
+  if (ids.left.find(tmpids) == ids.left.end()) {
+    Tag_Candidate::filer->save_ambiguity(id, tags);
+  }
+};
+
+void
+Ambiguity::record_new() {
+  // if any new sets of ambiguous tags were actually detected,
+  // write them to the DB
+
+  for (auto i = abm.left.begin(); i != abm.left.end(); ++i) {
+    // if a tag in this proxy set was actually detected, search the original mappings for this set
+    // and if not found, record this new pairing
+    if (i->second->count > 0) {
+      record_if_new (i->first, i->second->motusID);
+    }
+  }
+}

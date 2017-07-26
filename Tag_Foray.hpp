@@ -64,6 +64,8 @@ public:
 
   static void set_default_max_skipped_bursts(unsigned int skip);
 
+  static void set_timestamp_wonkiness(unsigned int w);
+
   static int num_cands_with_run_id(DB_Filer::Run_ID rid, int delta); //!< return the number of candidates with the given run id
   // if delta is 0. Otherwise, adjust the count by delta, and return the new count.
 
@@ -99,7 +101,7 @@ protected:
   // runtime storage
 
   unsigned long long line_no;                    // count lines of input seen
-  
+
   std::map < Port_Num, Freq_Setting > port_freq; // keep track of frequency settings on each port
 
   std::vector < int > pulse_count;     // keep track of hourly counts of pulses on each port
@@ -152,6 +154,7 @@ protected:
   static Gap default_burst_slop;
   static Gap default_burst_slop_expansion;
   static unsigned int default_max_skipped_bursts;
+  static unsigned int timestamp_wonkiness; //!< maximum clock jump size in data from Lotek .DTA files
 
   // keep track of how many candidates share the same run; this is
   // to manage clones at the confirmed level, so that death of a single
@@ -189,7 +192,7 @@ public:
     ar & BOOST_SERIALIZATION_NVP( max_skipped_bursts );
     ar & BOOST_SERIALIZATION_NVP( hist );
     ar & BOOST_SERIALIZATION_NVP( cron );
-  };  
+  };
 };
 
 #endif // TAG_FORAY

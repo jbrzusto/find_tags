@@ -72,12 +72,12 @@ Tag_Finder::process(Pulse &p) {
 #endif
       // check whether candidate has expired
       if (ci->second->expired(p.ts)) {
-        auto p = ci->second;
+        auto tc = ci->second;
         cs.erase(ci);
 #ifdef DEBUG2
-        dbg && std::cerr << "Deleting " << (void *) p << " last_ts " << (p->last_ts)<< std::endl;
+        dbg && std::cerr << "Deleting " << (void *) tc << " last_ts " << (tc->last_ts)<< std::endl;
 #endif
-        delete p;
+        delete tc;
         continue;
       }
 
@@ -112,24 +112,16 @@ Tag_Finder::process(Pulse &p) {
       // add the pulse
       Tag_Candidate * tc = ci->second;
       if (tc->add_pulse(p, next_state)) {
-        switch (tc->tag_id_level) {
-        case Tag_Candidate::MULTIPLE:
-        case Tag_Candidate::SINGLE:
+        // this candidate has confirmed ownership of the pulse
 
-          // do nothing
-          break;
+        // delete any other candidate sharing any pulse with this one
+        delete_competitors(ci, nextci);
 
-        case Tag_Candidate::CONFIRMED:
+        // dump all complete bursts from this confirmed tag
+        (ci->second)->dump_bursts(ant);
 
-          // delete any other candidate sharing a pulse with this one
-          delete_competitors(ci, nextci);
-
-          // dump all complete bursts from this confirmed tag
-          (ci->second)->dump_bursts(ant);
-
-          // mark that this pulse has been accepted by a candidate at the CONFIRMED level
-          confirmed_acceptance = true;
-        }
+        // mark that this pulse has been accepted by a candidate at the CONFIRMED level
+        confirmed_acceptance = true;
       }
 
       // this candidate has accepted a pulse, and needs to be re-indexed

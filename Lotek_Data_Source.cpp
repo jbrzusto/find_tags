@@ -48,6 +48,9 @@ Lotek_Data_Source::getline(char * buf, int maxLen) {
     if (i != sgbuf.end() && i->first + MAX_LEAD_SECONDS <= latestInputTS) {
       // easy case - there's a sufficiently old line in the buffer
       strncpy(buf, i->second.c_str(), maxLen);
+#ifdef DEBUG
+      std::cerr << i->second << std::endl;
+#endif
       sgbuf.erase(i);
       return true;
     }
@@ -93,7 +96,7 @@ Lotek_Data_Source::translateLine()
     std::ostringstream freqRec;
     // make frequency setting record like: S,1366227448.192,5,-m,166.376,0,
 
-    freqRec << "S," << std::setprecision(14) << dtar.ts << std::setprecision(3) << "," << dtar.ant << ",-m," << dtar.freq << ",0,";
+    freqRec << "S," << std::setprecision(14) << dtar.ts << std::setprecision(6) << "," << dtar.ant << ",-m," << dtar.freq << ",0,";
     sgbuf.insert(std::make_pair(dtar.ts, freqRec.str()));
   }
 

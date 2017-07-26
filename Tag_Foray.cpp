@@ -68,7 +68,10 @@ Tag_Foray::set_default_max_skipped_bursts(unsigned int skip) {
   default_max_skipped_bursts = skip;
 };
 
-
+void
+Tag_Foray::set_timestamp_wonkiness(unsigned int w) {
+  timestamp_wonkiness = w;
+};
 
 void
 Tag_Foray::start() {
@@ -202,7 +205,7 @@ Tag_Foray::process_event(Event e) {
     {
       if (t->active)
         return;
-      auto rv = g->addTag(t, pulse_slop, burst_slop / 4.0, (1 + max_skipped_bursts) * 4.0);
+      auto rv = g->addTag(t, pulse_slop, burst_slop / 4.0, (1 + max_skipped_bursts) * 4.0, timestamp_wonkiness);
 #ifdef DEBUG
       g->viz();
 #endif
@@ -295,6 +298,7 @@ Gap Tag_Foray::default_pulse_slop = 0.0015; // 1.5 ms
 Gap Tag_Foray::default_burst_slop = 0.010; // 10 ms
 Gap Tag_Foray::default_burst_slop_expansion = 0.001; // 1ms = 1 part in 10000 for 10s BI
 unsigned int Tag_Foray::default_max_skipped_bursts = 60;
+unsigned int Tag_Foray::timestamp_wonkiness = 0;// maximum seconds of clock jump size in Lotek .DTA data files
 
 Tag_Foray::Run_Cand_Counter Tag_Foray::num_cands_with_run_id_ = Run_Cand_Counter();
 
@@ -320,6 +324,8 @@ Tag_Foray::pause() {
   std::ostringstream ofs;
 
   Tag_Candidate::filer->end_batch(tsBegin, ts);
+
+  Ambiguity::record_new();
 
   {
     // block to ensure oa dtor is called

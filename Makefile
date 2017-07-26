@@ -1,6 +1,6 @@
 ## Makefile for linux
 
-CXX=~john/bin/gfilt
+CXX=gfilt
 
 ## PROFILING FLAGS (uncomment to enable profiling)
 ##PROFILING=-g3 -pg -fno-omit-frame-pointer
@@ -16,7 +16,7 @@ LDFLAGS=-ldl -lrt -L /usr/local/lib/boost_1.60 -lboost_serialization -lsqlite3
 PROGRAM_VERSION=\""$(shell git describe)\""
 PROGRAM_BUILD_TS=$(shell date +%s)
 
-all: find_tags_motus testAddRemoveTag ## find_tags_unifile
+all: find_tags_motus testAddRemoveTag dfa_graph.pdf ## find_tags_unifile
 
 OBJS=                            \
    Ambiguity.o			 \
@@ -123,3 +123,6 @@ testum.o: testum.cpp
 
 testum: testum.o
 	g++ $(PROFILING) -o $@ $^ $(LDFLAGS)
+
+dfa_graph.pdf: dfa_graph.dot
+	dot -Tpdf $< > $@

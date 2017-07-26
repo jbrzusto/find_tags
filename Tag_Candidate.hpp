@@ -33,27 +33,25 @@ public:
   typedef enum {CONFIRMED=0, SINGLE=1, MULTIPLE=2} Tag_ID_Level;	// how well-resolved is the tag ID?  Note the order.
 
 protected:
-  // fundamental structure
+  // ------ START OF SERIALIZABLE MEMBERS ------
 
   Tag_Finder    *owner;
   Node	        *state;		 // where in the appropriate DFA I am
   Pulse_Buffer	 pulses;	 // pulses in the path so far
   Timestamp	 last_ts;        // timestamp of last pulse accepted by this candidate
   Timestamp	 last_dumped_ts; // timestamp of last pulse in last dumped burst (used to calculate burst slop when dumping)
-  Tag   	 *tag;            // current unique tag ID, if confirmed, or BOGUS_TAG when more than one is compatible
+  Tag   	 *tag;           // current unique tag ID, if confirmed, or BOGUS_TAG when more than one is compatible
   Tag_ID_Level   tag_id_level;   // how well-resolved is the current tag ID?
 
   DB_Filer::Run_ID	run_id;	// ID for the run formed by bursts from this candidate (i.e. consecutive in-phase hits on a tag)
   unsigned int		hit_count;	// counter of bursts output by this tag candidate
-  unsigned int		burst_count;	// total number of bursts, detected and imputed (i.e. count missed bursts)
 
   unsigned short num_pulses; // number of pulses in burst (once tag has been identified)
 
   Bounded_Range < Frequency_MHz > freq_range; // range of pulse frequency offsets
   Bounded_Range < float > sig_range;  // range of pulse signal strengths, in dB
 
-  int burst_step_gcd; //!< GCD of burst steps; when this reaches 1, we confirm tag identity. (prevents aliasing on a tag whose BI is nearly an integer
-                      // multiple of another tag's BI)
+  // ------ END OF SERIALIZABLE MEMBERS ------
 
   static const float BOGUS_BURST_SLOP; // burst slop reported for first burst of run (where we don't have a previous burst)  Doesn't really matter, since we can distinguish this situation in the data by "pos.in.run==1"
 
@@ -77,8 +75,6 @@ protected:
 
   static Timestamp max_cand_time;
 
-  static int max_unconfirmed_bursts; //!< maximum number of bursts allowed without having reached burst_step_gcd = 1
-
 public:
 
   Tag_Candidate() {}; // default ctor for deserialization
@@ -88,6 +84,8 @@ public:
   Tag_Candidate * clone();
 
   ~Tag_Candidate();
+
+  void maybe_end_run(); //!< end run if this candidate has a valid run_id and no other candidates with that run_id still exist
 
   bool has_same_id_as(Tag_Candidate *tc);
 
@@ -99,7 +97,7 @@ public:
 
   Node * advance_by_pulse(const Pulse &p);
 
-  bool add_pulse(const Pulse &p, Node *new_state); //!< add a pulse, and return true iff either the tag_id_level changes or a burst is completed
+  bool add_pulse(const Pulse &p, Node *new_state); //!< add a pulse, and return true if we can confirm the candidate owns this pulse.
 
   Tag * get_tag();
 
@@ -136,8 +134,6 @@ public:
   static Timestamp get_max_cand_time();
 
   static void set_max_unconfirmed_bursts(int m);
-
-  static int gcd(int x, int y); //!< gcd of x, y
 
   void renTag(Tag * t1, Tag * t2); //!< if this candidate is for tag t1, make it finish any run and start a new one pointing at t2.
 
