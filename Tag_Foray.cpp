@@ -27,6 +27,7 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   unsigned_dfreq(unsigned_dfreq),
   line_no(0),
   pulse_count(MAX_PORT_NUM + 1),
+  ts(0),
   pulse_slop(default_pulse_slop),
   burst_slop(default_burst_slop),
   burst_slop_expansion(default_burst_slop_expansion),
