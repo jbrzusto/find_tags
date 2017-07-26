@@ -85,6 +85,13 @@ Tag_Foray::start() {
     // get begin time, allowing for small time reversals (10 seconds)
     if (! tsBegin || (r.ts < tsBegin && r.ts >= tsBegin - 10.0))
       tsBegin = r.ts;
+
+    // skip record if it includes a time reversal of more than 10 seconds
+    // (small time reversals are perfectly valid, and typically due to interleaved data
+    // coming from different radios)
+    if (r.ts - ts < -10.0)
+      continue;
+
     ts = r.ts;
     switch (r.type) {
     case SG_Record::GPS:
