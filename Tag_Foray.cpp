@@ -37,6 +37,9 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   tsBegin(0),
   prevHourBin(0)
 {
+  // set the max valid timestamp, allowing for 5 minutes of slop
+  Clock_Repair::set_max_ts(now() + 300);
+
   // create one empty graph for each nominal frequency
   auto fs = tags->get_nominal_freqs();
   for (auto i = fs.begin(); i != fs.end(); ++i)

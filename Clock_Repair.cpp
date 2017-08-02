@@ -75,6 +75,12 @@ Clock_Repair::read_record(SG_Record & r) {
       std::cerr << "Warning: malformed line in input\n  at line " << * line_no << ":\n" << (string("") + buf) << std::endl;
       continue;
     }
+    if (r.ts > max_ts
+        || (isMonotonic(r.ts) && r.ts + TS_BEAGLEBONE_BOOT > max_ts)
+        || (isPreGPS(r.ts) && offset > 0.0 && r.ts + offset > max_ts)) {
+      // timestamp too large!
+      continue;
+    }
     return true;
   }
   return false;
@@ -110,3 +116,11 @@ Clock_Repair::get(SG_Record &r) {
     r.ts += offset;
   return true;
 };
+
+void
+Clock_Repair::set_max_ts(Timestamp ts) {
+  max_ts = ts;
+};
+
+Timestamp
+Clock_Repair::max_ts = 0;

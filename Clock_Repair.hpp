@@ -180,6 +180,8 @@ protected:
 
   char buf[MAX_LINE_SIZE + 1]; // input buffer
 
+  static Timestamp max_ts; //!< maximum valid timestamp; records with larger timestamps are ignored.
+
 public:
 
   // public serialize function.
@@ -195,6 +197,7 @@ public:
     ar & BOOST_SERIALIZATION_NVP( offsetError );
   };
 
+  static void set_max_ts(Timestamp ts);
 
 };
 
