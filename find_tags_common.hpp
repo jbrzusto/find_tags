@@ -68,6 +68,7 @@ typedef double Gap;
 
 typedef int16_t Port_Num;
 static const int MAX_PORT_NUM = 10; //!< largest possible port number
+static const int NUM_SPECIAL_PORTS = 5; //!< number of "special" ports (these are assigned negative antenna numbers)
 static const int BOGUS_PORT_NUM = -999; //!< indicates port number not relevant
 
 // common standard stuff
