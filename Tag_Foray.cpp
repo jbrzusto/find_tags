@@ -8,7 +8,7 @@
 
 Tag_Foray::Tag_Foray () :  // default ctor for deserializing into
   line_no(0),   // line numbers reset even when resuming
-  pulse_count(MAX_PORT_NUM + 1),
+  pulse_count(MAX_PORT_NUM + 1 + NUM_SPECIAL_PORTS),
   hist(0),      // we recreate history on resume
   tsBegin(0),
   prevHourBin(0)
@@ -26,7 +26,8 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   min_bogus_spacing(min_bogus_spacing),
   unsigned_dfreq(unsigned_dfreq),
   line_no(0),
-  pulse_count(MAX_PORT_NUM + 1),
+  pulse_count(MAX_PORT_NUM + 1 + NUM_SPECIAL_PORTS),
+  ts(0),
   pulse_slop(default_pulse_slop),
   burst_slop(default_burst_slop),
   burst_slop_expansion(default_burst_slop_expansion),
@@ -36,6 +37,9 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   tsBegin(0),
   prevHourBin(0)
 {
+  // set the max valid timestamp, allowing for 5 minutes of slop
+  Clock_Repair::set_max_ts(now() + 300);
+
   // create one empty graph for each nominal frequency
   auto fs = tags->get_nominal_freqs();
   for (auto i = fs.begin(); i != fs.end(); ++i)
@@ -84,6 +88,13 @@ Tag_Foray::start() {
     // get begin time, allowing for small time reversals (10 seconds)
     if (! tsBegin || (r.ts < tsBegin && r.ts >= tsBegin - 10.0))
       tsBegin = r.ts;
+
+    // skip record if it includes a time reversal of more than 10 seconds
+    // (small time reversals are perfectly valid, and typically due to interleaved data
+    // coming from different radios)
+    if (r.ts - ts < -10.0)
+      continue;
+
     ts = r.ts;
     switch (r.type) {
     case SG_Record::GPS:
@@ -110,9 +121,9 @@ Tag_Foray::start() {
         double hourBin = round(r.ts / 3600);
         if (hourBin != prevHourBin) {
           if (prevHourBin > 0) {
-            for (int i = 0; i <= MAX_PORT_NUM; ++i) {
+            for (int i = 0; i < pulse_count.size(); ++i) {
               if (pulse_count[i] > 0) {
-                Tag_Candidate::filer->add_pulse_count(prevHourBin, i, pulse_count[i]);
+                Tag_Candidate::filer->add_pulse_count(prevHourBin, i - NUM_SPECIAL_PORTS, pulse_count[i]);
                 pulse_count[i] = 0;
               }
             }
@@ -120,8 +131,8 @@ Tag_Foray::start() {
           prevHourBin = hourBin;
         }
 
-        if (r.port >= 0 && r.port < MAX_PORT_NUM)
-          ++pulse_count[r.port];
+        if (r.port >= - NUM_SPECIAL_PORTS && r.port <= MAX_PORT_NUM)
+          ++pulse_count[r.port + NUM_SPECIAL_PORTS];
 
         // skip this record if its offset frequency is out of bounds
         if (r.v.dfreq > max_dfreq || r.v.dfreq < min_dfreq)
@@ -190,9 +201,9 @@ Tag_Foray::start() {
   }
   // record pulse counts from the last hour bin
 
-  for (int i = 0; i <= MAX_PORT_NUM; ++i)
+  for (int i = 0; i < pulse_count.size(); ++i)
     if (pulse_count[i] > 0)
-      Tag_Candidate::filer->add_pulse_count(prevHourBin, i, pulse_count[i]);
+      Tag_Candidate::filer->add_pulse_count(prevHourBin, i - NUM_SPECIAL_PORTS, pulse_count[i]);
 };
 
 void

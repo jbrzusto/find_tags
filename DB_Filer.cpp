@@ -505,9 +505,30 @@ DB_Filer::load_findtags_state(long long monoBN, Timestamp & tsData, Timestamp & 
 };
 
 
+/*
 const char *
 DB_Filer::q_get_blob = "select t1.ts, bz2uncompress(t2.contents, t1.size) from files as t1 left join fileContents as t2 on t1.fileID=t2.fileID where t1.monoBN=? and t1.ts >= ? order by ts";
+*/
 
+const char *
+DB_Filer::q_get_blob = R"(select ts,
+case compressed when 0 then readfile(filename) else gzreadfile(filename) end from
+(select
+   (printf('%s/%s/%s/%s%s',
+           (select val from meta where key='fileRepo'),
+           (select val from meta where key='recvSerno'),
+           strftime('%Y-%m-%d', datetime(t1.ts, 'unixepoch')),
+           t1.name,
+           case isDone when 0 then '' else '.gz' end)
+   ) as filename,
+   t1.ts as ts,
+   t1.isDone as compressed
+from
+   files as t1
+where
+   t1.monoBN=? and t1.ts >= ?
+order by ts)
+)";
 
 void
 DB_Filer::start_blob_reader(int monoBN) {
@@ -548,6 +569,10 @@ DB_Filer::get_blob (const char **bufout, int * lenout, Timestamp *ts) {
 
   if (res != SQLITE_ROW)
     throw std::runtime_error("Problem getting next blob.");
+
+  // if row's second field was null (e.g. if decompression failed),
+  // the following will set lenout = 0 and bufout = (void*) 0
+  // The caller should then try read the next blob.
 
   * lenout = sqlite3_column_bytes(st_get_blob, 1);
   * bufout = reinterpret_cast < const char * > (sqlite3_column_blob(st_get_blob, 1));

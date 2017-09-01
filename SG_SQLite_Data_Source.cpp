@@ -23,6 +23,11 @@ SG_SQLite_Data_Source::getline(char * buf, int maxLen) {
 
     if (! db->get_blob(& blob, & bytesLeft, & blobTS))
       return false;
+    // Note: get_blob() can return an empty blob, either because the
+    // file was truly empty, or because it was a corrupt compressed file
+    // and zlib wasn't able to extract anything from it.  That will
+    // leave bytesLeft = 0, so the loop will continue.
+    // We still want to record the timestamp.
     offset = 0;
     // generate a synthetic "File Timestamp" line like this:
     // F,1432456345.2345
