@@ -611,12 +611,18 @@ DB_Filer::end_blob_reader () {
 };
 
 const char *
-DB_Filer::q_get_DTAtags = "select ts, id, ant, sig, antFreq, gain, 0+substr(codeSet, 6, 1), lat, lon from DTAtags order by ts";
-//                                0   1   2    3      4        5        6                    7    8
+DB_Filer::q_get_DTAtags = "select ts, id, ant, sig, antFreq, gain, 0+substr(codeSet, 6, 1), lat, lon "
+  //                               0   1   2    3      4        5        6                    7    8
+  "from DTAtags where ts between (select ts from DTAboot where relboot=?) and ifnull((select ts from DTAboot where relboot=?),1e20) order by ts"
+  //                                                                   1                                                   2
+  ;
+
 void
-DB_Filer::start_DTAtags_reader(Timestamp ts) {
+DB_Filer::start_DTAtags_reader(Timestamp ts, int bootnum) {
   Check(sqlite3_prepare_v2(outdb, q_get_DTAtags, -1, &st_get_DTAtags, 0),
         "output DB does not have valid 'DTAtags' table.");
+  sqlite3_bind_int(st_get_DTAtags, 1, bootnum);
+  sqlite3_bind_int(st_get_DTAtags, 2, bootnum + 1);
 };
 
 bool
@@ -662,5 +668,5 @@ DB_Filer::end_DTAtags_reader() {
 void
 DB_Filer::rewind_DTAtags_reader() {
   end_DTAtags_reader();
-  start_DTAtags_reader();
+  start_DTAtags_reader(0, bootnum);
 };

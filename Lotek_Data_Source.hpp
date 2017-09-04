@@ -57,7 +57,7 @@
 class Lotek_Data_Source : public Data_Source {
 
 public:
-  Lotek_Data_Source(DB_Filer * db, Tag_Database *tdb, Frequency_MHz defFreq);
+  Lotek_Data_Source(DB_Filer * db, Tag_Database *tdb, Frequency_MHz defFreq, int bootnum=0);
   bool getline(char * buf, int maxLen);
   static const int MAX_LOTEK_LINE_SIZE = 100;
   static const int MAX_LEAD_SECONDS = 10;  //!< maximum number of
@@ -81,6 +81,7 @@ protected:
   std::vector < Frequency_MHz > antFreq;                                  //!< most recent listen frequency on each antenna, in MHz
   std::set < std::pair < short, short > > warned;                         //!< sets of tag/codeset combos for which 'non-existent' warning has been issued
   DB_Filer::DTA_Record dtar;                                              //!< record read from database DTAtags table
+  int bootnum;                                                            //!< relative boot number of source data
 
   // methods
 

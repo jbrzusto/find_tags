@@ -74,7 +74,7 @@ public:
 
   void end_blob_reader(); //!< finalize blob reader
 
-  void start_DTAtags_reader(Timestamp ts = 0); //!< initialize reading of DTAtags lines, starting at the specified timestamp
+  void start_DTAtags_reader(Timestamp ts = 0, int bootnum = 0); //!< initialize reading of DTAtags lines, starting at the specified timestamp and boot number
 
   bool get_DTAtags_record(DTA_Record &dta ); //!< get the next DTAtags record; return true on success, false if none left; set items in &dat.
 

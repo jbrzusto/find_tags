@@ -697,7 +697,7 @@ main (int argc, char **argv) {
       Data_Source * pulses = 0;
       if (lotek_data) {
         if (src_sqlite) {
-          pulses = Data_Source::make_Lotek_source(& dbf, & tag_db, default_freq);
+          pulses = Data_Source::make_Lotek_source(& dbf, & tag_db, default_freq, bootNum);
         } else {
           throw std::runtime_error("Must specify --sqlite with a Lotek data source");
         }
