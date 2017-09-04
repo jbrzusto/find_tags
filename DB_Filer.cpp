@@ -348,6 +348,24 @@ DB_Filer::add_param(const string &name, double value) {
   }
 };
 
+void
+DB_Filer::add_param(const string &name, const string &value) {
+  sqlite3_reset(st_check_param);
+  sqlite3_bind_text(st_check_param, 2, name.c_str(), -1, SQLITE_TRANSIENT);
+  int rv = sqlite3_step(st_check_param);
+  if (rv == SQLITE_DONE || (rv == SQLITE_ROW && std::string((const char *)sqlite3_column_text(st_check_param, 0)) != value)) {
+    // parameter value has changed since last batchID where it was set,
+    // so record new value
+    sqlite3_bind_int(st_add_param, 1, bid);
+    // we use SQLITE_TRANSIENT in the following to make a copy, otherwise
+    // the caller's copy might be destroyed before this transaction is committed
+    sqlite3_bind_text(st_add_param, 2, prog_name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(st_add_param, 3, name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(st_add_param, 4, value.c_str(), -1, SQLITE_TRANSIENT);
+    step_commit(st_add_param);
+  }
+};
+
 int
 DB_Filer::Check(int code, int wants, int wants2, int wants3, const std::string & err) {
   if (code == wants
@@ -593,12 +611,18 @@ DB_Filer::end_blob_reader () {
 };
 
 const char *
-DB_Filer::q_get_DTAtags = "select ts, id, ant, sig, antFreq, gain, 0+substr(codeSet, 6, 1), lat, lon from DTAtags order by ts";
-//                                0   1   2    3      4        5        6                    7    8
+DB_Filer::q_get_DTAtags = "select ts, id, ant, sig, antFreq, gain, 0+substr(codeSet, 6, 1), lat, lon "
+  //                               0   1   2    3      4        5        6                    7    8
+  "from DTAtags where ts between (select ts from DTAboot where relboot=?) and ifnull((select ts from DTAboot where relboot=?),1e20) order by ts"
+  //                                                                   1                                                   2
+  ;
+
 void
-DB_Filer::start_DTAtags_reader(Timestamp ts) {
+DB_Filer::start_DTAtags_reader(Timestamp ts, int bootnum) {
   Check(sqlite3_prepare_v2(outdb, q_get_DTAtags, -1, &st_get_DTAtags, 0),
         "output DB does not have valid 'DTAtags' table.");
+  sqlite3_bind_int(st_get_DTAtags, 1, bootnum);
+  sqlite3_bind_int(st_get_DTAtags, 2, bootnum + 1);
 };
 
 bool
@@ -644,5 +668,5 @@ DB_Filer::end_DTAtags_reader() {
 void
 DB_Filer::rewind_DTAtags_reader() {
   end_DTAtags_reader();
-  start_DTAtags_reader();
+  start_DTAtags_reader(0, bootnum);
 };

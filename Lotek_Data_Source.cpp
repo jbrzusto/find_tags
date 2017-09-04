@@ -2,11 +2,12 @@
 #include <sstream>
 #include <cstdio>
 
-Lotek_Data_Source::Lotek_Data_Source(DB_Filer * db, Tag_Database *tdb, Frequency_MHz defFreq) :
+Lotek_Data_Source::Lotek_Data_Source(DB_Filer * db, Tag_Database *tdb, Frequency_MHz defFreq, int bootnum) :
   db(db),
   done(false),
   sgbuf(),
-  latestInputTS(0)
+  latestInputTS(0),
+  bootnum(bootnum)
 {
   // generate the map from (codeSet, ID) -> Tag *
   auto kf = tdb->get_nominal_freqs();
@@ -21,7 +22,7 @@ Lotek_Data_Source::Lotek_Data_Source(DB_Filer * db, Tag_Database *tdb, Frequency
   antFreq = std::vector < Frequency_MHz > ( MAX_ANTENNAS, defFreq);
 
   // start the db reader
-  db->start_DTAtags_reader();
+  db->start_DTAtags_reader(0, bootnum);
 
 };
 

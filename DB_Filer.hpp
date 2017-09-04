@@ -44,6 +44,8 @@ public:
 
   void add_param(const string &name, double val); // record a program parameter value
 
+  void add_param(const string &name, const string &val); // record a program parameter value
+
   void add_GPS_fix(double ts, double lat, double lon, double alt); // record a GPS fix
 
   void add_time_fix(Timestamp tsLow, Timestamp tsHigh, Timestamp by, Timestamp error, char fixType); // record a time fix (i.e. correction)
@@ -72,7 +74,7 @@ public:
 
   void end_blob_reader(); //!< finalize blob reader
 
-  void start_DTAtags_reader(Timestamp ts = 0); //!< initialize reading of DTAtags lines, starting at the specified timestamp
+  void start_DTAtags_reader(Timestamp ts = 0, int bootnum = 0); //!< initialize reading of DTAtags lines, starting at the specified timestamp and boot number
 
   bool get_DTAtags_record(DTA_Record &dta ); //!< get the next DTAtags record; return true on success, false if none left; set items in &dat.
 

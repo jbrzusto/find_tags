@@ -30,7 +30,7 @@ public:
 
   static Data_Source * make_SG_source(std::string infile);
 
-  static Data_Source * make_Lotek_source(DB_Filer * db, Tag_Database *tdb, Frequency_MHz defFreq);
+  static Data_Source * make_Lotek_source(DB_Filer * db, Tag_Database *tdb, Frequency_MHz defFreq, int bootnum);
 
 };
 
