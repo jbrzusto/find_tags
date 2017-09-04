@@ -436,6 +436,11 @@ usage() {
 	"    PULSERATEWIN seconds, all pulses in that period are discarded.\n"
 	"    default: 60 seconds (but this only takes effect if -R is specified)\n\n"
 
+	"-x, --external_param=NAME=VALUE\n"
+	"    record an external parameter for this batch.  This could represent\n"
+	"    e.g. the commit hash for tracking which metadata were used to generate\n"
+	"    the tag database or events table.\n"
+
 	);
 }
 
@@ -465,11 +470,12 @@ main (int argc, char **argv) {
         OPT_TEST                   = 't',
         OPT_TIMESTAMP_WONKINESS    = 'T',
         OPT_UNSIGNED_DFREQ         = 'u',
-	OPT_PULSE_RATE_WINDOW      = 'w'
+	OPT_PULSE_RATE_WINDOW      = 'w',
+        OPT_EXTERNAL_PARAM         = 'x'
     };
 
     int option_index;
-    static const char short_options[] = "b:B:c:ef:FgG:hi:l:Lm:M:p:rR:s:S:tT:uw:";
+    static const char short_options[] = "b:B:c:ef:FgG:hi:l:Lm:M:p:rR:s:S:tT:uw:x:";
     static const struct option long_options[] = {
         {"burst_slop"		   , 1, 0, OPT_BURST_SLOP},
         {"burst_slop_expansion"    , 1, 0, OPT_BURST_SLOP_EXPANSION},
@@ -495,6 +501,7 @@ main (int argc, char **argv) {
         {"test"                    , 0, 0, OPT_TEST},
         {"timestamp_wonkiness"     , 1, 0, OPT_TIMESTAMP_WONKINESS},
         {"unsigned_dfreq"          , 0, 0, OPT_UNSIGNED_DFREQ},
+        {"external_param"          , 1, 0, OPT_EXTERNAL_PARAM},
         {0, 0, 0, 0}
     };
 
@@ -530,6 +537,8 @@ main (int argc, char **argv) {
     float sig_slop_dB = 10;
     Frequency_Offset_kHz freq_slop_kHz = 0.5;       // (kHz) maximum allowed frequency bandwidth of a burst
     long long bootNum = 1; // default boot number
+
+    std::map<std::string, std::string> external_params; // to store any external parameters for recording
 
     while ((c = getopt_long(argc, argv, short_options, long_options, &option_index)) != -1) {
         switch (c) {
@@ -605,6 +614,17 @@ main (int argc, char **argv) {
         case OPT_TIMESTAMP_WONKINESS:
           timestamp_wonkiness = atoi(optarg);
           break;
+        case OPT_EXTERNAL_PARAM:
+          {
+            char *delim=strchr(optarg, '=');
+            if (delim) {
+              *delim = '\0';
+              external_params[std::string(optarg)] = std::string(1 + delim);
+            } else {
+              throw std::runtime_error("the -x (--external_param) options requires an argument that looks like NAME=VALUE");
+            };
+          }
+          break;
         default:
             usage();
             exit(1);
@@ -663,6 +683,8 @@ main (int argc, char **argv) {
       dbf.add_param("resume", resume);
       dbf.add_param("lotek_data", lotek_data);
       dbf.add_param("timestamp_wonkiness", timestamp_wonkiness);
+      for (auto ii=external_params.begin(); ii != external_params.end(); ++ii)
+        dbf.add_param(ii->first.c_str(), ii->second.c_str());
 
       dbf.load_ambiguity(tag_db);
 

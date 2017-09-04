@@ -348,6 +348,24 @@ DB_Filer::add_param(const string &name, double value) {
   }
 };
 
+void
+DB_Filer::add_param(const string &name, const string &value) {
+  sqlite3_reset(st_check_param);
+  sqlite3_bind_text(st_check_param, 2, name.c_str(), -1, SQLITE_TRANSIENT);
+  int rv = sqlite3_step(st_check_param);
+  if (rv == SQLITE_DONE || (rv == SQLITE_ROW && std::string((const char *)sqlite3_column_text(st_check_param, 0)) != value)) {
+    // parameter value has changed since last batchID where it was set,
+    // so record new value
+    sqlite3_bind_int(st_add_param, 1, bid);
+    // we use SQLITE_TRANSIENT in the following to make a copy, otherwise
+    // the caller's copy might be destroyed before this transaction is committed
+    sqlite3_bind_text(st_add_param, 2, prog_name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(st_add_param, 3, name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(st_add_param, 4, value.c_str(), -1, SQLITE_TRANSIENT);
+    step_commit(st_add_param);
+  }
+};
+
 int
 DB_Filer::Check(int code, int wants, int wants2, int wants3, const std::string & err) {
   if (code == wants

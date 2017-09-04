@@ -44,6 +44,8 @@ public:
 
   void add_param(const string &name, double val); // record a program parameter value
 
+  void add_param(const string &name, const string &val); // record a program parameter value
+
   void add_GPS_fix(double ts, double lat, double lon, double alt); // record a GPS fix
 
   void add_time_fix(Timestamp tsLow, Timestamp tsHigh, Timestamp by, Timestamp error, char fixType); // record a time fix (i.e. correction)
