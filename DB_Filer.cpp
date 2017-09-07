@@ -532,9 +532,8 @@ const char *
 DB_Filer::q_get_blob = R"(select ts,
 case compressed when 0 then readfile(filename) else gzreadfile(filename) end from
 (select
-   (printf('%s/%s/%s/%s%s',
+   (printf('%s/%s/%s%s',
            (select val from meta where key='fileRepo'),
-           (select val from meta where key='recvSerno'),
            strftime('%Y-%m-%d', datetime(t1.ts, 'unixepoch')),
            t1.name,
            case isDone when 0 then '' else '.gz' end)
