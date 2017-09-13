@@ -84,6 +84,9 @@ public:
   void rewind_DTAtags_reader(); //!< rewind DTAtags reader
 
   void add_pulse(int ant, Pulse &p); //!< record a pulse
+
+  void add_recv_param(Timestamp ts, int ant, char *param, double val, int error, char *extra); //!< record a receiver parameter setting
+
 protected:
   // settings
 

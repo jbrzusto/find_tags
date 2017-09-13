@@ -34,7 +34,17 @@ SG_Record::from_buf(char * buf) {
        S,1366227448.192,5,-m,166.376,0,
        is S, timestamp, port_num, param flag, value, return code, other error
     */
-    if (buf[1] != '\0' && 5 == sscanf(buf+2, "%lf,%hd,%[^,],%lf,%d,", &rv.ts, &rv.port, (char *) &rv.v.param_flag, &rv.v.param_value, &rv.v.return_code)) {
+    if (buf[1] != '\0' && 5 == sscanf(buf+2, "%lf,%hd,-w,%[^,],%lf,%d,", &rv.ts, &rv.port, (char *) &rv.v.param_flag, &rv.v.param_value, &rv.v.return_code)) {
+      /* this case required by stupid formatting of "-w REG VAL"
+         parameters to fcd, which ends up in files as
+         e.g. "S,12345678,1,-w,0x07,1,0," */
+        rv.type = PARAM;
+    } else if (buf[1] != '\0' && 5 == sscanf(buf+2, "%lf,%hd,%[^,],%lf,%d,", &rv.ts, &rv.port, (char *) &rv.v.param_flag, &rv.v.param_value, &rv.v.return_code)) {
+      rv.type = PARAM;
+    } else if (buf[1] != '\0' && (4 == sscanf(buf+2, "%lf,%hd,%[^,],undefined,%d,", &rv.ts, &rv.port, (char *) &rv.v.param_flag, &rv.v.return_code)
+                || 4 == sscanf(buf+2, "%lf,%hd,%[^,],null,%d,", &rv.ts, &rv.port, (char *) &rv.v.param_flag, &rv.v.return_code))) {
+      /* this case required to report errors in parameter setting that leave value as 'undefined' or 'null' */
+      rv.v.param_value = nan("0");
       rv.type = PARAM;
     }
     break;

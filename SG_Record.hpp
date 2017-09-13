@@ -32,7 +32,7 @@ struct SG_Record {
       char     param_flag[16];
       double   param_value;
       int      return_code;
-      //      char     error[256];  // omit: too large when buffering
+      char     error[256];
     };
 
     struct {

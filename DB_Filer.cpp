@@ -71,6 +71,9 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
   Check(sqlite3_prepare_v2(outdb, q_add_pulse_count, -1, &st_add_pulse_count, 0),
         "output DB does not have valid 'pulseCounts' table.");
 
+  Check(sqlite3_prepare_v2(outdb, q_add_recv_param, -1, &st_add_recv_param, 0),
+        "output DB does not have valid 'params' table.");
+
   sqlite3_stmt * st_check_batchprog;
   msg = "output DB does not have valid 'batchProgs' table.";
 
@@ -709,3 +712,20 @@ DB_Filer::add_pulse(int ant, Pulse &p) {
   step_commit(st_add_pulse);
 };
 
+const char *
+DB_Filer::q_add_recv_param =
+"insert into params (batchID, ts, ant, param, val, error, errinfo) \
+           values   (?,       ?,  ?,   ?,     ?,   ?,   ?)";
+//                   1        2   3    4      5    6    7
+
+void
+DB_Filer::add_recv_param(Timestamp ts, int ant, char *param, double val, int error, char *extra) {
+  sqlite3_bind_int   (st_add_recv_param, 1, bid);
+  sqlite3_bind_double(st_add_recv_param, 2, ts);
+  sqlite3_bind_int   (st_add_recv_param, 3, ant);
+  sqlite3_bind_text  (st_add_recv_param, 4, param, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_double(st_add_recv_param, 5, val);
+  sqlite3_bind_int   (st_add_recv_param, 6, error);
+  sqlite3_bind_text  (st_add_recv_param, 7, extra, -1, SQLITE_TRANSIENT);
+  step_commit(st_add_recv_param);
+};

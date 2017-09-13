@@ -109,6 +109,8 @@ Tag_Foray::start() {
 
     case SG_Record::PARAM:
 
+      Tag_Candidate::filer->add_recv_param( r.ts, r.port, r.v.param_flag, r.v.param_value, r.v.return_code, r.v.error);
+
       if (strcmp("-m", r.v.param_flag) || r.v.return_code) {
         // ignore non-frequency parameter setting, or failed frequency setting
         continue;
