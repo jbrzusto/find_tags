@@ -364,10 +364,11 @@ usage() {
 
         "-P, --pulses_only\n"
         "    Only output a table called `pulses` with these columns:\n"
-        "     - monoBN boot session number\n"
+        "     - batchID batch number\n"
         "     - ts timestamp\n"
         "     - ant antenna number\n"
-        "     - freq pulse frequency (MHz); antenna listen frequency plus pulse offset frequency\n"
+        "     - antFreq (MHz); antenna listen frequency\n"
+        "     - dfreq (kHz); offset frequency of pulse\n"
         "     - sig relative pulse signal strength (dB max)\n"
         "     - noise relative noise strength (dB max)\n"
         "    With this option, the program ignores the tag database (although it must still be\n"
