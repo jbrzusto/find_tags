@@ -44,6 +44,10 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   auto fs = tags->get_nominal_freqs();
   for (auto i = fs.begin(); i != fs.end(); ++i)
     graphs.insert(std::make_pair(*i, new Graph()));
+
+  // set default frequencies for all ports
+  for (auto i = -NUM_SPECIAL_PORTS; i < MAX_PORT_NUM; ++i)
+    port_freq[i] = Freq_Setting(default_freq);
 };
 
 
@@ -137,12 +141,6 @@ Tag_Foray::start() {
         // skip this record if its offset frequency is out of bounds
         if (r.v.dfreq > max_dfreq || r.v.dfreq < min_dfreq)
           continue;
-
-        // if this pulse is from a port whose frequency hasn't been set,
-        // use the default
-
-        if (! port_freq.count(r.port))
-          port_freq[r.port] = Freq_Setting(default_freq);
 
         // NB: cast r.port to work around optimization of passing reference
         // to packed struct
