@@ -362,6 +362,18 @@ usage() {
 	"    in a burst to differ from measured tag values, in milliseconds\n"
 	"    default: 1.5 ms\n\n"
 
+        "-P, --pulses_only\n"
+        "    Only output a table called `pulses` with these columns:\n"
+        "     - monoBN boot session number\n"
+        "     - ts timestamp\n"
+        "     - ant antenna number\n"
+        "     - freq pulse frequency (MHz); antenna listen frequency plus pulse offset frequency\n"
+        "     - sig relative pulse signal strength (dB max)\n"
+        "     - noise relative noise strength (dB max)\n"
+        "    With this option, the program ignores the tag database (although it must still be\n"
+        "    specified) and only uses these options:\n"
+        "    --default_freq, --force_default_freq, --min_dfreq, --max_dfreq\n\n"
+
         "-Q, --src_sqlite\n"
         "    read compressed data files directly from the 'content' column in the 'fileContents'\n"
         "    table of OUTFILE.sqlite, or from the 'DTAtags' table in case of a Lotek receiver; this is preferred, as it is much faster."
@@ -462,6 +474,7 @@ main (int argc, char **argv) {
 	OPT_MAX_DFREQ              = 'M',
         OPT_BOOT_NUM               = 'n',
         OPT_PULSE_SLOP             = 'p',
+        OPT_PULSES_ONLY          = 'P',
         OPT_SRC_SQLITE             = 'Q',
         OPT_RESUME                 = 'r',
 	OPT_MAX_PULSE_RATE         = 'R',
@@ -492,6 +505,7 @@ main (int argc, char **argv) {
 	{"min_dfreq"               , 1, 0, OPT_MIN_DFREQ},
 	{"max_dfreq"               , 1, 0, OPT_MAX_DFREQ},
         {"pulse_slop"		   , 1, 0, OPT_PULSE_SLOP},
+        {"pulses_only"		   , 0, 0, OPT_PULSES_ONLY},
         {"src_sqlite"              , 0, 0, OPT_SRC_SQLITE},
         {"resume"                  , 0, 0, OPT_RESUME},
 	{"max_pulse_rate"          , 1, 0, OPT_MAX_PULSE_RATE},
@@ -528,6 +542,7 @@ main (int argc, char **argv) {
     Gap min_bogus_spacing = 600; // emit bogus tag ID at most once every 10 minutes
 
     Gap pulse_slop = 1.5; // ms
+    bool pulses_only = false; // only record pulses?
     bool src_sqlite = false;
     Gap burst_slop = 10; // ms
     Gap burst_slop_expansion = 1; // 1ms = 1 part in 10000 for 10s BI
@@ -586,6 +601,9 @@ main (int argc, char **argv) {
 	  break;
         case OPT_PULSE_SLOP:
           pulse_slop = atof(optarg);
+	  break;
+        case OPT_PULSES_ONLY:
+          pulses_only = true;
 	  break;
         case OPT_SRC_SQLITE:
           src_sqlite = true;
@@ -674,6 +692,7 @@ main (int argc, char **argv) {
       dbf.add_param("min_dfreq", min_dfreq);
       dbf.add_param("max_dfreq", max_dfreq);
       dbf.add_param("pulse_slop", pulse_slop);
+      dbf.add_param("pulses_only", pulses_only);
       dbf.add_param("max_pulse_rate", max_pulse_rate );
       dbf.add_param("frequency_slop", freq_slop_kHz);
       dbf.add_param("max_skipped_bursts", max_skipped_bursts);

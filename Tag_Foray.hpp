@@ -42,7 +42,7 @@ public:
 
   Tag_Foray (); //!< default ctor to give object into which resume() deserializes
   ~Tag_Foray (); //!< dtor which deletes Tag_Finders and their confirmed candidates, so runs are correctly ended
-  Tag_Foray (Tag_Database * tags, Data_Source * data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq=false);
+  Tag_Foray (Tag_Database * tags, Data_Source * data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq=false, bool pulses_only=false);
 
   void start();                 // begin searching for tags
 
@@ -97,6 +97,8 @@ protected:
                                      // sets the minimum number of seconds between consecutive emissions of this bogus tag ID
 
   bool unsigned_dfreq;               // if true, ignore any sign on frequency offsets (use absolute value)
+
+  bool pulses_only;                  // if true, only output pulses, don't run Tag_Finders
 
   // runtime storage
 
