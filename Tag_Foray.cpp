@@ -14,7 +14,7 @@ Tag_Foray::Tag_Foray () :  // default ctor for deserializing into
   prevHourBin(0)
 {};
 
-Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq) :
+Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq, bool pulses_only) :
   tags(tags),
   data(data),
   default_freq(default_freq),
@@ -25,6 +25,7 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   pulse_rate_window(pulse_rate_window),
   min_bogus_spacing(min_bogus_spacing),
   unsigned_dfreq(unsigned_dfreq),
+  pulses_only(pulses_only),
   line_no(0),
   pulse_count(MAX_PORT_NUM + 1 + NUM_SPECIAL_PORTS),
   ts(0),
@@ -103,7 +104,7 @@ Tag_Foray::start() {
     switch (r.type) {
     case SG_Record::GPS:
       // GPS is not stuck, or Clock_Repair would have dropped the record
-      Tag_Candidate::filer-> add_GPS_fix( r.ts, r.v.lat, r.v.lon, r.v.alt );
+      Tag_Candidate::filer->add_GPS_fix( r.ts, r.v.lat, r.v.lon, r.v.alt );
       break;
 
     case SG_Record::PARAM:
@@ -142,31 +143,35 @@ Tag_Foray::start() {
         if (r.v.dfreq > max_dfreq || r.v.dfreq < min_dfreq)
           continue;
 
-        // NB: cast r.port to work around optimization of passing reference
-        // to packed struct
+        Tag_Finder_Key key;
 
-        // which tag finder should this pulse be passed to?  There is at
-        // last a tag finder on each port, and possibly more than one if
-        // the listening frequency is changing.
+        if (! pulses_only) {
+          // NB: cast r.port to work around optimization of passing reference
+          // to packed struct
 
-        Tag_Finder_Key key((short int) r.port, port_freq[r.port].f_kHz);
+          // which tag finder should this pulse be passed to?  There is at
+          // least a tag finder on each port, and possibly more than one if
+          // the listening frequency is changing.
 
-        // if there isn't already an appropriate Tag_Finder, create it
-        if (! tag_finders.count(key)) {
-          Tag_Finder *newtf;
-          std::ostringstream prefix;
-          prefix << r.port << ",";
-          if (max_pulse_rate > 0)
-            newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix.str());
-          else
-            newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], prefix.str());
-          tag_finders[key] = newtf;
+          key = Tag_Finder_Key((short int) r.port, port_freq[r.port].f_kHz);
+
+          // if there isn't already an appropriate Tag_Finder, create it
+          if (! tag_finders.count(key)) {
+            Tag_Finder *newtf;
+            std::ostringstream prefix;
+            prefix << r.port << ",";
+            if (max_pulse_rate > 0)
+              newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix.str());
+            else
+              newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], prefix.str());
+            tag_finders[key] = newtf;
 #ifdef DEBUG3
-          std::cerr << "Interval Tree for " << prefix.str() << std::endl;
-          newtf->graph.get_root()->dump(std::cerr);
-          std::cerr << "Burst slop expansion is " << Tag_Finder::default_burst_slop_expansion << std::endl;
+            std::cerr << "Interval Tree for " << prefix.str() << std::endl;
+            newtf->graph.get_root()->dump(std::cerr);
+            std::cerr << "Burst slop expansion is " << Tag_Finder::default_burst_slop_expansion << std::endl;
 #endif
-        };
+          };
+        }
 
         if (r.v.dfreq < 0 && unsigned_dfreq)
           r.v.dfreq = - r.v.dfreq;
@@ -179,13 +184,17 @@ Tag_Foray::start() {
         while (cron.ts() <= p.ts)
           process_event(cron.get());
 
+        if (pulses_only) {
+          Tag_Candidate::filer->add_pulse(r.port, p);
+        } else {
 #ifdef DEBUG2
-        std::cerr << p.ts << ": Key: " << r.port << ", " << port_freq[r.port].f_kHz << std::endl;
+          std::cerr << p.ts << ": Key: " << r.port << ", " << port_freq[r.port].f_kHz << std::endl;
 #endif
-        tag_finders[key]->process(p);
+          tag_finders[key]->process(p);
 #ifdef DEBUG3
-        tag_finders[key]->dump(r.ts);
+          tag_finders[key]->dump(r.ts);
 #endif
+        }
       }
       break;
     case SG_Record::EXTENSION:

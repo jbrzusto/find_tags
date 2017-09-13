@@ -176,6 +176,26 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
            msg);
   }
 
+  Check( sqlite3_exec(outdb,        "\
+create table if not exists pulses (  \
+   batchID integer,                  \
+   ts      float(53),                \
+   ant     integer,                  \
+   antFreq float(53),                \
+   dfreq    float(53),               \
+   sig     float,                    \
+   noise   float                     \
+);                                   \
+create index if not exists pulses_ts on pulses(ts);\
+create index if not exists pulses_batchID on pulses(batchID);",
+                      0,
+                      0,
+                      0),
+         "unable to create pulses table in output database");
+
+  msg = "unable to prepare query for add_pulse";
+  Check( sqlite3_prepare_v2(outdb, q_add_pulse,
+                            -1, &st_add_pulse, 0), msg);
 };
 
 
@@ -198,6 +218,7 @@ DB_Filer::~DB_Filer() {
   if (minGPSdt >= 0)
     sqlite3_finalize(st_add_GPS_fix);
   sqlite3_finalize(st_add_hit);
+  sqlite3_finalize(st_add_pulse);
   sqlite3_close(outdb);
   outdb = 0;
 };
@@ -669,3 +690,22 @@ DB_Filer::rewind_DTAtags_reader() {
   end_DTAtags_reader();
   start_DTAtags_reader(0, bootnum);
 };
+
+const char *
+DB_Filer::q_add_pulse =
+"insert into pulses (batchID, ts, ant, antFreq, dfreq, sig, noise) \
+           values   (?,       ?,  ?,   ?,       ?,     ?,   ?)";
+//                   1        2   3    4        5      6    7
+
+void
+DB_Filer::add_pulse(int ant, Pulse &p) {
+  sqlite3_bind_int   (st_add_pulse, 1, bid);
+  sqlite3_bind_double(st_add_pulse, 2, p.ts);
+  sqlite3_bind_int   (st_add_pulse, 3, ant);
+  sqlite3_bind_double(st_add_pulse, 4, p.ant_freq);
+  sqlite3_bind_double(st_add_pulse, 5, p.dfreq);
+  sqlite3_bind_double(st_add_pulse, 6, p.sig);
+  sqlite3_bind_double(st_add_pulse, 7, p.noise);
+  step_commit(st_add_pulse);
+};
+

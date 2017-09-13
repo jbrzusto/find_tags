@@ -474,7 +474,7 @@ main (int argc, char **argv) {
 	OPT_MAX_DFREQ              = 'M',
         OPT_BOOT_NUM               = 'n',
         OPT_PULSE_SLOP             = 'p',
-        OPT_PULSES_ONLY          = 'P',
+        OPT_PULSES_ONLY            = 'P',
         OPT_SRC_SQLITE             = 'Q',
         OPT_RESUME                 = 'r',
 	OPT_MAX_PULSE_RATE         = 'R',
@@ -737,7 +737,7 @@ main (int argc, char **argv) {
       }
       if (! resume) {
         // either not asked to resume, or resume failed (e.g. no resume state saved)
-        foray = Tag_Foray(& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing, unsigned_dfreq);
+        foray = Tag_Foray(& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing, unsigned_dfreq, pulses_only);
       }
       if (graph_only) {
         foray.graph();
