@@ -182,6 +182,9 @@ protected:
 
   static Timestamp max_ts; //!< maximum valid timestamp; records with larger timestamps are ignored.
 
+  static constexpr int MAX_BAD_LINE_WARNINGS = 5; // maximum number of bad line warnings to issue
+  static int num_bad_line_warnings; // number of bad line warnings issued
+
 public:
 
   // public serialize function.

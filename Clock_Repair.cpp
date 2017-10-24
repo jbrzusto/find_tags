@@ -72,7 +72,11 @@ Clock_Repair::read_record(SG_Record & r) {
     ++ *line_no;
     r = SG_Record::from_buf(buf);
     if (r.type == SG_Record::BAD) {
-      std::cerr << "Warning: malformed line in input\n  at line " << * line_no << ":\n" << (string("") + buf) << std::endl;
+      if (++num_bad_line_warnings <= MAX_BAD_LINE_WARNINGS ) {
+        std::cerr << "Warning: malformed line in input\n  at line " << * line_no << ":\n" << (string("") + buf) << std::endl;
+        if (num_bad_line_warnings == MAX_BAD_LINE_WARNINGS)
+          std::cerr << "(skipping further warnings about this)" << std::endl;
+      }
       continue;
     }
     if (r.ts > max_ts
@@ -124,3 +128,6 @@ Clock_Repair::set_max_ts(Timestamp ts) {
 
 Timestamp
 Clock_Repair::max_ts = 0;
+
+int
+Clock_Repair::num_bad_line_warnings = 0;
