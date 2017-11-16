@@ -76,7 +76,7 @@ protected:
   typedef std::map < std::pair < short , short > , std::vector < Gap > * > tcode_t; //!< type of a map from (codeset, ID) to pulse gaps
   tcode_t tcode;                                                          //!< populated from the Lotek tag databse.
   bool done;                                                              //!< true if input stream is finished
-  std::map < double, std::string > sgbuf;                                 //!< buffer of SG-format lines
+  std::multimap < double, std::string > sgbuf;                            //!< buffer of SG-format lines
   Timestamp latestInputTS;                                                //!< timestamp of most recent input line
   std::vector < Frequency_MHz > antFreq;                                  //!< most recent listen frequency on each antenna, in MHz
   std::set < std::pair < short, short > > warned;                         //!< sets of tag/codeset combos for which 'non-existent' warning has been issued

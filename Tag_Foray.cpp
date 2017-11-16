@@ -104,7 +104,9 @@ Tag_Foray::start() {
     switch (r.type) {
     case SG_Record::GPS:
       // GPS is not stuck, or Clock_Repair would have dropped the record
-      Tag_Candidate::filer->add_GPS_fix( r.ts, r.v.lat, r.v.lon, r.v.alt );
+      // but only add it if r.v.lat and r.v.lon are actual numbers; r.v.alt might not be reported
+      if (! (isnan(r.v.lat) || isnan(r.v.lon)))
+        Tag_Candidate::filer->add_GPS_fix( r.ts, r.v.lat, r.v.lon, r.v.alt );
       break;
 
     case SG_Record::PARAM:
