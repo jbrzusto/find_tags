@@ -87,9 +87,15 @@ Lotek_Data_Source::translateLine()
   // clean up weird lotek antenna naming: either a digit or AHdigit or "A1+A2+A3+A4" (the master antenna on SRX 800)
   dtar.ant = (strlen(dtar.antName) >= 3 && dtar.antName[2] == '+') ? -1 : dtar.antName[dtar.antName[0] == 'A' ? 2 : 0] - '0';
 
-  // output a GPS fix
-  if (fabs(dtar.lat) != 999 && fabs(dtar.lon) != 999)
-    Tag_Candidate::filer->add_GPS_fix(dtar.ts, dtar.lat, dtar.lon, 0);
+  // output a GPS fix, if the tag record has valid lat and lon; DTA files don't report altitude, so report as nan
+  if (!(isnan(dtar.lat) || isnan(dtar.lon))) {
+    /* a GPS fix line like:
+       G,1458001712,44.34021,-66.118733333,21.6
+    */
+    std::ostringstream gpsRec;
+    gpsRec << "G," << std::setprecision(14) << dtar.ts << std::setprecision(8) << "," << dtar.lat << "," << dtar.lon << ",nan";
+    sgbuf.insert(std::make_pair(dtar.ts, gpsRec.str()));
+  }
 
   latestInputTS = dtar.ts;
   if (dtar.freq != antFreq[dtar.ant]) {

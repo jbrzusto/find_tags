@@ -1,6 +1,7 @@
 #include "DB_Filer.hpp"
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 
 DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int  bootnum, double minGPSdt):
   prog_name(prog_name),
@@ -675,9 +676,12 @@ DB_Filer::get_DTAtags_record(DTA_Record &dta) {
   dta.freq    = sqlite3_column_double (st_get_DTAtags, 4);
   dta.gain    = sqlite3_column_int    (st_get_DTAtags, 5);
   dta.codeSet = sqlite3_column_int    (st_get_DTAtags, 6);
-  dta.lat     = sqlite3_column_double (st_get_DTAtags, 7);
-  dta.lon     = sqlite3_column_double (st_get_DTAtags, 8);
-
+  if (sqlite3_column_type (st_get_DTAtags, 7) == SQLITE_NULL) {
+    dta.lat = dta.lon = nan("0");
+  } else {
+    dta.lat     = sqlite3_column_double (st_get_DTAtags, 7);
+    dta.lon     = sqlite3_column_double (st_get_DTAtags, 8);
+  }
   return true;
 };
 
