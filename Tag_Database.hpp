@@ -22,6 +22,8 @@ private:
 
   History *h;
 
+  std::string db_hash; // commit hash of metadatabase corresponding to tags and events tables when read in populate_from_sqlite_file
+
 public:
   Tag_Database (); //!< default ctor for deserializing into
 
@@ -41,6 +43,8 @@ public:
 
   History * get_history();
 
+  std::string & get_db_hash();
+
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
   {
@@ -49,7 +53,6 @@ public:
     ar & BOOST_SERIALIZATION_NVP( motusIDToPtr );
     ar & BOOST_SERIALIZATION_NVP( h );
   };
-
 };
 
 #endif // TAG_DATABASE_HPP

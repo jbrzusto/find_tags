@@ -450,9 +450,10 @@ usage() {
 	"    default: 60 seconds (but this only takes effect if -R is specified)\n\n"
 
 	"-x, --external_param=NAME=VALUE\n"
-	"    record an external parameter for this batch.  This could represent\n"
-	"    e.g. the commit hash for tracking which metadata were used to generate\n"
-	"    the tag database or events table.\n"
+	"    record an external parameter for this batch. Note:  the commit hash from\n"
+        "    the tag database's `meta` table is automatically recorded as external\n"
+        "    parameter `metadata_hash` to avoid a race condition, so this option should\n"
+        "    *not* be used for that purpose.\n\n"
 
 	);
 }
@@ -682,6 +683,9 @@ main (int argc, char **argv) {
       }
       Node::init();
       Tag_Database tag_db (tag_filename, use_events);
+      // record the commit hash from the meta database as an external parameter
+      external_params[std::string("metadata_hash")] = tag_db.get_db_hash();
+
       DB_Filer dbf (output_filename, program_name, program_version, program_build_ts, bootNum, GPS_min_dt);
       dbf.add_param("default_freq", default_freq);
       dbf.add_param("force_default_freq", force_default_freq);
