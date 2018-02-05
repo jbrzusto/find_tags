@@ -185,7 +185,6 @@
 
 #include "find_tags_common.hpp"
 #include "Freq_Setting.hpp"
-//#include "Freq_History.hpp"
 #include "Tag_Database.hpp"
 #include "Pulse.hpp"
 #include "Tag_Candidate.hpp"
@@ -193,9 +192,7 @@
 #include "Rate_Limiting_Tag_Finder.hpp"
 #include "Tag_Foray.hpp"
 
-//#define FIND_TAGS_DEBUG 
-
-void 
+void
 usage() {
   puts (
 	"Usage:\n"

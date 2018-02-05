@@ -197,7 +197,6 @@ All output from a run of this program forms a new batch.
 
 #include "find_tags_common.hpp"
 #include "Freq_Setting.hpp"
-//#include "Freq_History.hpp"
 #include "Tag_Database.hpp"
 #include "Pulse.hpp"
 #include "Tag_Candidate.hpp"
@@ -205,8 +204,6 @@ All output from a run of this program forms a new batch.
 #include "Rate_Limiting_Tag_Finder.hpp"
 #include "Tag_Foray.hpp"
 #include "Data_Source.hpp"
-
-//#define FIND_TAGS_DEBUG
 
 #ifdef DEBUG
 // force debugging methods to be emitted
