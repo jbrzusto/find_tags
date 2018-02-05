@@ -72,8 +72,6 @@ public:
 
   Tag_Database * tags;               // registered tags on all known nominal frequencies
 
-  Timestamp now();                   // return time now as double timestamp
-
   Timestamp last_seen() {return ts;}; // return last timestamp seen on input
 
   static constexpr double MIN_VALID_TIMESTAMP = 1262304000; // unix timestamp for 1 Jan 2010, GMT

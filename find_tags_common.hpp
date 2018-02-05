@@ -105,4 +105,8 @@ std::basic_ostream<CharType, CharTraits> &operator<<
   return stream;
 };
 
+/* function to return current time as floating point seconds since epoch */
+
+double time_now();
+
 #endif // FIND_TAGS_COMMON_HPP

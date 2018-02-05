@@ -1,5 +1,9 @@
 #include "Clock_Repair.hpp"
 
+Clock_Repair::Clock_Repair() {
+  init();
+};
+
 Clock_Repair::Clock_Repair(Data_Source *data, unsigned long long *line_no, DB_Filer * filer, Timestamp tol) :
   data(data),
   line_no(line_no),
@@ -12,6 +16,13 @@ Clock_Repair::Clock_Repair(Data_Source *data, unsigned long long *line_no, DB_Fi
   offset(0.0),
   offsetError(0.0)
 {
+  init();
+};
+
+void
+Clock_Repair::init() {
+  // set the max valid timestamp, allowing for 5 minutes of slop
+  max_ts = time_now() + 300;
   memset(&this->buf[0], 0, MAX_LINE_SIZE + 1);
 };
 
@@ -121,13 +132,15 @@ Clock_Repair::get(SG_Record &r) {
   return true;
 };
 
-void
-Clock_Repair::set_max_ts(Timestamp ts) {
-  max_ts = ts;
-};
-
 Timestamp
 Clock_Repair::max_ts = 0;
 
 int
 Clock_Repair::num_bad_line_warnings = 0;
+
+double
+time_now() {
+  struct timespec tsp;
+  clock_gettime(CLOCK_REALTIME, & tsp);
+  return  tsp.tv_sec + 1e-9 * tsp.tv_nsec;
+};

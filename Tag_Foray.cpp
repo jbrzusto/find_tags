@@ -38,9 +38,6 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   tsBegin(0),
   prevHourBin(0)
 {
-  // set the max valid timestamp, allowing for 5 minutes of slop
-  Clock_Repair::set_max_ts(now() + 300);
-
   // create one empty graph for each nominal frequency
   auto fs = tags->get_nominal_freqs();
   for (auto i = fs.begin(); i != fs.end(); ++i)
@@ -298,7 +295,7 @@ void
 Tag_Foray::graph() {
   // plot the DFA graphs for the given tag database, one per nominal frequency
 
-  Timestamp t = now();
+  Timestamp t = time_now();
   while (cron.ts() < t) // process all events to this point in time
     process_event(cron.get());
 
@@ -398,17 +395,10 @@ Tag_Foray::pause() {
 
   Tag_Candidate::filer->
     save_findtags_state( ts,                            // last timestamp parsed from input
-                         now(), // time now
+                         time_now(), // time now
                          ofs.str()                      // serialized state
                          );
 
-};
-
-double
-Tag_Foray::now() {
-  struct timespec tsp;
-  clock_gettime(CLOCK_REALTIME, & tsp);
-  return  tsp.tv_sec + 1e-9 * tsp.tv_nsec;
 };
 
 bool

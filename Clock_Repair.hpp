@@ -122,9 +122,11 @@ class Clock_Repair {
 
 public:
 
-  Clock_Repair() {};
+  Clock_Repair();
 
   Clock_Repair(Data_Source *data, unsigned long long *line_no, DB_Filer * filer, Timestamp tol = 1); //!< ctor, with tolerance for bracketing correction to CLOCK_MONOTONIC
+
+  void init();
 
   //!< get the next record available for processing, and return true.
   // if no (corrected) records are available, return false.
@@ -199,9 +201,6 @@ public:
     ar & BOOST_SERIALIZATION_NVP( offset );
     ar & BOOST_SERIALIZATION_NVP( offsetError );
   };
-
-  static void set_max_ts(Timestamp ts);
-
 };
 
 
