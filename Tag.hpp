@@ -39,6 +39,9 @@ public:
     ar & BOOST_SERIALIZATION_NVP( gaps );
     ar & BOOST_SERIALIZATION_NVP( period );
     ar & BOOST_SERIALIZATION_NVP( count );
+    ar & BOOST_SERIALIZATION_NVP( mfgID );
+    ar & BOOST_SERIALIZATION_NVP( codeSet );
+    ar & BOOST_SERIALIZATION_NVP( active );
   };
 };
 
