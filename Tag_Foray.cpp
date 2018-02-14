@@ -110,7 +110,7 @@ Tag_Foray::start() {
 
       Tag_Candidate::filer->add_recv_param( r.ts, r.port, r.v.param_flag, r.v.param_value, r.v.return_code, r.v.error);
 
-      if (strcmp("-m", r.v.param_flag) || r.v.return_code) {
+      if (strcmp("-m", r.v.param_flag) || r.v.return_code || isnan(r.v.param_value)) {
         // ignore non-frequency parameter setting, or failed frequency setting
         continue;
       }
