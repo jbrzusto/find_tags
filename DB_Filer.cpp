@@ -555,7 +555,8 @@ DB_Filer::q_get_blob = "select t1.ts, bz2uncompress(t2.contents, t1.size) from f
 
 const char *
 DB_Filer::q_get_blob = R"(select ts,
-case compressed when 0 then readfile(filename) else gzreadfile(filename) end from
+case compressed when 0 then readfile(filename) else gzreadfile(filename) end,
+fileID from
 (select
    (printf('%s/%s/%s%s',
            (select val from meta where key='fileRepo'),
@@ -564,13 +565,18 @@ case compressed when 0 then readfile(filename) else gzreadfile(filename) end fro
            case isDone when 0 then '' else '.gz' end)
    ) as filename,
    t1.ts as ts,
-   t1.isDone as compressed
+   t1.isDone as compressed,
+   t1.fileID as fileID
 from
    files as t1
 where
    t1.monoBN=? and t1.ts >= ?
 order by ts)
 )";
+
+const char *
+DB_Filer::q_add_batch_file = "insert or ignore into batchFiles values (?, ?)";
+//                                                                     1  2
 
 void
 DB_Filer::start_blob_reader(int monoBN) {
@@ -590,6 +596,13 @@ DB_Filer::start_blob_reader(int monoBN) {
                             &st_get_blob,
                             0),
          "SQLite input database does not have valid 'files' or 'fileContents' table.");
+
+  Check( sqlite3_prepare_v2(outdb,
+                            q_add_batch_file,
+                            -1,
+                            &st_add_batch_file,
+                            0),
+         "SQLite input database does not have valid 'batchFiles' table.");
 
   sqlite3_bind_int(st_get_blob, 1, monoBN);
 
@@ -619,6 +632,11 @@ DB_Filer::get_blob (const char **bufout, int * lenout, Timestamp *ts) {
   * lenout = sqlite3_column_bytes(st_get_blob, 1);
   * bufout = reinterpret_cast < const char * > (sqlite3_column_blob(st_get_blob, 1));
   * ts = sqlite3_column_double(st_get_blob, 0);
+
+  // record which file we're reading
+  sqlite3_bind_int(st_add_batch_file, 1, bid);
+  sqlite3_bind_int(st_add_batch_file, 2, sqlite3_column_int(st_get_blob, 2));
+  step_commit(st_add_batch_file);
 
   return true;
 };
