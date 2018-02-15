@@ -460,7 +460,7 @@ DB_Filer::q_load_ambig =
 
 
 void
-DB_Filer::load_ambiguity(Tag_Database & tdb) {
+DB_Filer::load_ambiguity() {
   // recreate the persistent tag ID ambiguity map from the database
   // For each record in tagAmbig, we create an ambiguity group
 

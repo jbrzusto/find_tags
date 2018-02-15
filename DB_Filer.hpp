@@ -59,7 +59,7 @@ public:
 
   void save_ambiguity(Motus_Tag_ID proxyID, const Ambiguity::AmbigTags & tags); // save one ambiguity group
 
-  void load_ambiguity(Tag_Database & tdb); // restore all ambiguity groups
+  void load_ambiguity(); // restore all ambiguity groups
 
   void save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string state);
 

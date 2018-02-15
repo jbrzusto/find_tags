@@ -661,9 +661,18 @@ main (int argc, char **argv) {
 
     string tag_filename = string(argv[optind++]);
 
+    // sanity checks on parameters
+
     if (optind == argc) {
       usage();
       exit(1);
+    }
+
+    if (resume && lotek_data) {
+      throw std::runtime_error("Can't use --resume with a Lotek receiver");
+    };
+    if (timestamp_wonkiness > 0 && ! lotek_data) {
+      throw std::runtime_error("must specify --lotek_data in order to use --timestamp_wonkiness=N with N > 0");
     }
 
     string output_filename = string(argv[optind++]);
@@ -673,16 +682,59 @@ main (int argc, char **argv) {
     string program_name("find_tags_motus");
     string program_version(PROGRAM_VERSION); // defined in Makefile
     double program_build_ts = PROGRAM_BUILD_TS; // defined in Makefile
+
+
     try {
-      if (timestamp_wonkiness > 0 && ! lotek_data) {
-        throw std::runtime_error("must specify --lotek_data in order to use --timestamp_wonkiness=N with N > 0");
-      }
-      Node::init();
-      Tag_Database tag_db (tag_filename, use_events);
-      // record the commit hash from the meta database as an external parameter
-      external_params[std::string("metadata_hash")] = tag_db.get_db_hash();
+      // create object that handles all receiver database transactions
 
       DB_Filer dbf (output_filename, program_name, program_version, program_build_ts, bootNum, GPS_min_dt);
+      Tag_Candidate::set_filer(& dbf);
+
+      Tag_Database * tag_db = 0;
+
+      Node::init();
+
+      // set up the data source
+      Data_Source * pulses = 0;
+      if (lotek_data) {
+        if (src_sqlite) {
+          // create tag_db here, since it won't be created below
+          tag_db = new Tag_Database (tag_filename, use_events);
+          pulses = Data_Source::make_Lotek_source(& dbf, tag_db, default_freq, bootNum);
+        } else {
+          throw std::runtime_error("Must specify --sqlite with a Lotek data source");
+        }
+      } else if (src_sqlite) {
+        pulses = Data_Source::make_SQLite_source(& dbf, bootNum);
+      } else {
+        pulses = Data_Source::make_SG_source(optind < argc ? argv[optind++] : "");
+      }
+
+      Tag_Foray foray;
+
+      if (resume) {
+        resume = Tag_Foray::resume(foray, pulses, bootNum);
+        if (! resume) {
+          std::cerr << "find_tags_motus: --resume failed" << std::endl;
+        } else {
+          std::cerr << "resumed successfully" << std::endl;
+          tag_db = foray.tags;
+        }
+      }
+      if (! resume) {
+        // either not asked to resume, or resume failed (e.g. no resume state saved)
+        if (! tag_db)
+          tag_db = new Tag_Database (tag_filename, use_events);
+
+        // Freq_Setting needs to know the set of nominal frequencies
+        Freq_Setting::set_nominal_freqs(tag_db->get_nominal_freqs());
+
+        foray = Tag_Foray(tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing, unsigned_dfreq, pulses_only);
+      }
+
+      // record the commit hash from the meta database as an external parameter
+      external_params[std::string("metadata_hash")] = tag_db->get_db_hash();
+
       dbf.add_param("default_freq", default_freq);
       dbf.add_param("force_default_freq", force_default_freq);
       dbf.add_param("use_events", use_events);
@@ -706,40 +758,8 @@ main (int argc, char **argv) {
       for (auto ii=external_params.begin(); ii != external_params.end(); ++ii)
         dbf.add_param(ii->first.c_str(), ii->second.c_str());
 
-      dbf.load_ambiguity(tag_db);
+      dbf.load_ambiguity();
 
-      Tag_Candidate::set_filer(& dbf);
-
-      // Freq_Setting needs to know the set of nominal frequencies
-      Freq_Setting::set_nominal_freqs(tag_db.get_nominal_freqs());
-
-      // set up the data source
-      Data_Source * pulses = 0;
-      if (lotek_data) {
-        if (src_sqlite) {
-          pulses = Data_Source::make_Lotek_source(& dbf, & tag_db, default_freq, bootNum);
-        } else {
-          throw std::runtime_error("Must specify --sqlite with a Lotek data source");
-        }
-      } else if (src_sqlite) {
-        pulses = Data_Source::make_SQLite_source(& dbf, bootNum);
-      } else {
-        pulses = Data_Source::make_SG_source(optind < argc ? argv[optind++] : "");
-      }
-
-      Tag_Foray foray;
-
-      if (resume) {
-        resume = Tag_Foray::resume(foray, pulses, bootNum);
-        if (! resume)
-          std::cerr << "find_tags_motus: --resume failed" << std::endl;
-        else
-          std::cerr << "resumed successfully" << std::endl;
-      }
-      if (! resume) {
-        // either not asked to resume, or resume failed (e.g. no resume state saved)
-        foray = Tag_Foray(& tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing, unsigned_dfreq, pulses_only);
-      }
       if (graph_only) {
         foray.graph();
         exit(0);

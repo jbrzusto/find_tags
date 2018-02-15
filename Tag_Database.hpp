@@ -52,6 +52,7 @@ public:
     ar & BOOST_SERIALIZATION_NVP( nominal_freqs );
     ar & BOOST_SERIALIZATION_NVP( motusIDToPtr );
     ar & BOOST_SERIALIZATION_NVP( h );
+    ar & BOOST_SERIALIZATION_NVP( db_hash );
   };
 };
 
