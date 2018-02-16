@@ -719,6 +719,8 @@ main (int argc, char **argv) {
         } else {
           std::cerr << "resumed successfully" << std::endl;
           tag_db = foray.tags;
+          // Freq_Setting needs to know the set of nominal frequencies
+          Freq_Setting::set_nominal_freqs(tag_db->get_nominal_freqs());
         }
       }
       if (! resume) {
