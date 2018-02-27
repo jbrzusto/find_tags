@@ -84,8 +84,13 @@ Lotek_Data_Source::translateLine()
   // value for the current antenna, then issue a frequency-change command.
   // Then, issue a set of 4 pulse records, representing the coded ID.
 
-  // clean up weird lotek antenna naming: either a digit or AHdigit or "A1+A2+A3+A4" (the master antenna on SRX 800)
-  dtar.ant = (strlen(dtar.antName) >= 3 && dtar.antName[2] == '+') ? -1 : dtar.antName[dtar.antName[0] == 'A' ? 2 : 0] - '0';
+  // clean up weird lotek antenna naming: either [0-9] or A[0-9] or AH[0-9] or "A1+A2+A3+A4" (the master antenna on SRX 800)
+  int len = strlen(dtar.antName);
+  if (len <= 3) {
+    dtar.ant = dtar.antName[len - 1] - '0';
+  } else {
+    dtar.ant = -1;  // aka A1+A2+A3+A4
+  }
 
   // output a GPS fix, if the tag record has valid lat and lon; DTA files don't report altitude, so report as nan
   if (!(isnan(dtar.lat) || isnan(dtar.lon))) {
