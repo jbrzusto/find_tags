@@ -19,6 +19,9 @@ PROGRAM_BUILD_TS=$(shell date +%s)
 
 all: find_tags_motus testAddRemoveTag dfa_graph.pdf ## find_tags_unifile
 
+install: find_tags_motus find_tags_unifile
+	sudo cp find_tags_motus find_tags_unifile /sgm/bin
+
 OBJS=                            \
    Ambiguity.o			 \
    Clock_Pinner.o		 \
