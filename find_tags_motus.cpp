@@ -702,7 +702,7 @@ main (int argc, char **argv) {
           tag_db = new Tag_Database (tag_filename, use_events);
           pulses = Data_Source::make_Lotek_source(& dbf, tag_db, default_freq, bootNum);
         } else {
-          throw std::runtime_error("Must specify --sqlite with a Lotek data source");
+          throw std::runtime_error("Must specify --src_sqlite with a Lotek data source");
         }
       } else if (src_sqlite) {
         pulses = Data_Source::make_SQLite_source(& dbf, bootNum);
