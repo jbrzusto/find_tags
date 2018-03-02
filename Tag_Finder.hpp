@@ -64,6 +64,8 @@ public:
 
   string prefix;   // prefix before each tag record (e.g. port number then comma)
 
+  short ant;       // antenna value, interpreted from prefix
+
   Tag_Finder() {}; //!< default ctor for deserialization
 
   Tag_Finder(Tag_Foray * owner) {};
@@ -80,7 +82,11 @@ public:
 
   void dump_bogus_burst(Pulse &p);
 
-  void rename_tag(std::pair < Tag *, Tag * > tp);
+  void tag_added(std::pair < Tag *, Tag * > tp); //!< perform any fixups due to a tag having been added to the graph
+
+  void tag_removed(std::pair < Tag *, Tag * > tp); //!< perform any fixups due to a tag having been removed from the graph
+
+  void rename_tag(std::pair < Tag *, Tag * > tp); //!< rename a tag, due to addition or removal of ambiguity
 
   void reap(Timestamp now); //!< reap all tag candidates which have expired by time now; used in case pulse stream from a given
   // slot ends, so we can free up memory and correctly end runs.
@@ -90,9 +96,9 @@ public:
   void delete_competitors(Cand_List::iterator ci, Cand_List::iterator &nextci); //!< delete any candidates for the same tag or sharing any pulses with * ci
 
 public:
-  
+
   // public serialize function.
-  
+
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
   {
@@ -101,7 +107,8 @@ public:
     ar & BOOST_SERIALIZATION_NVP( graph );
     ar & BOOST_SERIALIZATION_NVP( cands );
     ar & BOOST_SERIALIZATION_NVP( prefix );
-    
+
+    sscanf(prefix.c_str(), "%hd", &ant);
   };
 };
 

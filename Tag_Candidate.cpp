@@ -25,12 +25,23 @@ Tag_Candidate::Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse)
 };
 
 Tag_Candidate::~Tag_Candidate() {
+  maybe_end_run();
+  --num_cands;
+};
+
+void
+Tag_Candidate::maybe_end_run() {
+  // end run if this candidate has a valid run_id and no other candidates with that run_id still exist
   if (tag_id_level == CONFIRMED && run_id > 0) {
     int n = Tag_Foray::num_cands_with_run_id(run_id, -1);
     if (n == 0)
-      filer -> end_run(run_id, hit_count, ending_batch);
+      filer -> end_run(run_id, hit_count, last_dumped_ts, ending_batch);
   }
-  --num_cands;
+  // reset hit_count and run_id so we don't try to end *this* run again, in
+  // case tag_candidate is having its tag renamed, rather than deleted.
+
+  hit_count = 0;
+  run_id = 0;
 };
 
 Tag_Candidate *
@@ -45,7 +56,7 @@ Tag_Candidate::clone() {
     Tag_Foray::num_cands_with_run_id(run_id, 1);
   return tc;
 };
-  
+
 bool Tag_Candidate::has_same_id_as(Tag_Candidate *tc) {
   return tag != BOGUS_TAG && tag == tc->tag;
 };
@@ -73,11 +84,13 @@ bool Tag_Candidate::shares_any_pulses(Tag_Candidate *tc) {
   }
   return false;
 };
-  
+
 bool
 Tag_Candidate::expired(Timestamp ts) {
   if (! state) {
+#ifdef DEBUG
     std::cerr << "whoops - checking for expiry of Tag Candidate with NULL state!" << std::endl;
+#endif
     return true;
   }
   bool rv = ts - last_ts > state->get_max_age();
@@ -96,18 +109,18 @@ Tag_Candidate::min_next_pulse_ts() {
 };
 
 
-Node * 
+Node *
 Tag_Candidate::advance_by_pulse(const Pulse &p) {
 
   if (! ( freq_range.is_compatible(p.dfreq)
 	  && sig_range.is_compatible(p.sig)))
     return 0;
-  
+
   Gap gap = p.ts - last_ts;
-	  
+
   // try walk the DFA with this gap
   return state->advance(gap);
-}
+};
 
 bool
 Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
@@ -116,8 +129,20 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     Add this pulse to the tag candidate, given the new state this
     will advance the DFA to.
 
-    Return true if adding the pulse completes a burst at the confirmed ID level.
+    Return true if we can confirm that this candidate "owns" this pulse,
+    meaning that any other candidate which had already accepted it can be
+    deleted, and that no other candidate is permitted to accept it.
+
+    So candidates compete for pulses, with the first one which can confirm
+    ownership being the winner.  "Confirmation" only happens at the end
+    of a burst, and only if the sequence of pulses to the end of that
+    burst uniquely identifies the tag and meets the pulses_to_confirm_id
+    parameter, which is helps control false positives by increasing the
+    number of accepted pulses required before confirmation.
   */
+
+  int own = false; // assume we can't confirm ownership of this pulse
+  bool pulse_completes_burst = false; // assume this pulse does not complete a burst
 
   pulses.push_back(p);
   last_ts = p.ts;
@@ -128,47 +153,52 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
 
   state = new_state;
 
-  bool pulse_completes_burst = false;
-  // see whether our level of ID confirmation has changed
+  // see whether the tag_id_level can increase
 
-  switch (tag_id_level) {
-  case MULTIPLE:
-
-#ifdef DEBUG
-    if (pulses.size() > pulses_to_confirm_id)
-      throw std::runtime_error("Still at MULTIPLE tag_id_level but with pulses_to_confirm bursts");
-#endif
-
+  if (tag_id_level == MULTIPLE) {
     if (state->is_unique()) {
+      // we now know which tag this must be, if it is one
       tag = state->get_tag();
       num_pulses = tag->gaps.size();
       tag_id_level = SINGLE;
     }
-    break;
+  }
 
-  case SINGLE:
+  if (tag_id_level == SINGLE) {
     if (pulses.size() >= pulses_to_confirm_id)
       tag_id_level = CONFIRMED;
+  }
 
-    // fall through
+  if (tag_id_level != MULTIPLE) {
+    // we know which tag these pulses must belong to, and so how many
+    // pulses there are per burst, so we can tell whether this pulse completes
+    // a burst
 
-  case CONFIRMED:
     pulse_completes_burst = new_state->get_phase() % num_pulses == num_pulses - 1;
-    break;
 
-  default:
-    break;
-  };
+    // At the CONFIRMED level, if this pulse completes a burst, then
+    // this candidate is deemed to own the pulses in its buffer.
 
-  // Extend the range of signal strengths seen in this burst, but
-  // only if this is not the last pulse in a burst.  The range and
-  // orientation of antennas can change significantly between
-  // bursts, so we don't want to enforce signal strength
-  // uniformity across bursts, hence we reset the bounds after
-  // each burst.  For frequency offset, the change from burst to burst
-  // will be smaller, as it is due to slowly-varying temperature changes
-  // and a bit to dopller effects, so for frequency, we recentre the bounded
-  // range after each burst.
+    if (tag_id_level == CONFIRMED)
+      own = pulse_completes_burst;
+  }
+
+  // Update the range of signal strengths and frequency offsets
+  // acceptible to this candidate.
+
+  // The range and orientation of antennas can change significantly
+  // between bursts, since the burst interval is typically much longer
+  // than the length of a burst, so we don't want to enforce signal strength
+  // uniformity across bursts, hence we reset the bounds after each
+  // burst.  For frequency offset, the change from burst to burst will
+  // be smaller, as it is due to slowly-varying temperature changes
+  // and a bit to doppler effects, so for frequency, we recentre the
+  // bounded range after each burst.  We used to allow greater changes
+  // in these between bursts, but this fails between the first and
+  // second bursts, since we can't tell we're at the end of the first
+  // burst in the general case of tag databases with tags having
+  // different pulse counts.  So instead, we use a 3s threshold to
+  // imitate earlier behaviour:
 
   if (pulse_completes_burst) {
     sig_range.clear_bounds();
@@ -177,8 +207,7 @@ Tag_Candidate::add_pulse(const Pulse &p, Node *new_state) {
     sig_range.extend_by(p.sig);
     freq_range.extend_by(p.dfreq);
   }
-
-  return pulse_completes_burst && tag_id_level == CONFIRMED;
+  return own;
 };
 
 Tag *
@@ -206,10 +235,6 @@ bool Tag_Candidate::next_pulse_confirms() {
   return pulses.size() == pulses_to_confirm_id - 1;
 };
 
-// bool Tag_Candidate::at_end_of_burst() {
-//   return state->get_phase() % num_pulses == num_pulses - 1;
-// };
-
 void Tag_Candidate::clear_pulses() {
   // drop pulses from the most recent burst (presumably after
   // outputting it)
@@ -220,10 +245,11 @@ void
 Tag_Candidate::calculate_burst_params(Pulse_Iter & p) {
   // calculate these burst parameters:
   // - mean signal and noise strengths
-  // - relative standard deviation (among pulses) of signal strength 
+  // - relative standard deviation (among pulses) of signal strength
   // - mean and sd (among pulses) of offset frequency, in kHz
   // - total slop in gap sizes between observed pulses and registered tag values
 
+  // side effect: set last_dumped_ts
   // return true if successful, false otherwise
 
   float sig		= 0.0;
@@ -267,8 +293,8 @@ Tag_Candidate::calculate_burst_params(Pulse_Iter & p) {
   burst_par.slop     = slop;
   burst_par.num_pred = hit_count;
 };
- 
-void Tag_Candidate::dump_bursts(string prefix) {
+
+void Tag_Candidate::dump_bursts(short ant) {
   // dump as many bursts as we have data for
 
   if (pulses.size() < num_pulses)
@@ -276,13 +302,13 @@ void Tag_Candidate::dump_bursts(string prefix) {
 
   auto p = pulses.begin();
   while (p != pulses.end()) {
+    Timestamp ts = p->ts;
     if (++hit_count == 1) {
       // first hit, so start a run
-      run_id = filer->begin_run(tag->motusID, prefix.c_str()[0]-'0');
+      run_id = filer->begin_run(tag->motusID, ant, ts);
       Tag_Foray::num_cands_with_run_id(run_id, 1);
     }
-    Timestamp ts = p->ts;
-    calculate_burst_params(p);
+    calculate_burst_params(p); // advances p
     filer->add_hit(
                    run_id,
                    ts,
@@ -295,14 +321,12 @@ void Tag_Candidate::dump_bursts(string prefix) {
                    burst_par.burst_slop
                    );
     ++ tag->count;
-    if (tag->count == 1 && tag->motusID < 0)
-      Ambiguity::detected(tag);
   }
   clear_pulses();
 };
 
 void
-Tag_Candidate::dump_bogus_burst(Timestamp ts, std::string &prefix, Frequency_MHz antfreq) {
+Tag_Candidate::dump_bogus_burst(Timestamp ts, short ant, Frequency_MHz antfreq) {
   // FIXME: what, if anything, should we do here?
 }
 
@@ -329,10 +353,8 @@ Tag_Candidate::renTag(Tag * t1, Tag * t2) {
   if (tag != t1)
     return;
   // end the current run for t1
-  if (hit_count > 0 && run_id > 0) {
-    filer -> end_run(run_id, hit_count);
-  }
-  hit_count = 0;
+  maybe_end_run();
+
   // maintain the current confirmation level and pulse buffer;
   // subsequent hits will be reported as t2;
   tag = t2;
@@ -370,4 +392,3 @@ Burst_Params Tag_Candidate::burst_par;
 long long Tag_Candidate::num_cands = 0; // count of allocated but not freed candidates.
 long long Tag_Candidate::max_num_cands = 0; // count of allocated but not freed candidates.
 Timestamp Tag_Candidate::max_cand_time = 0; // timestamp at maximum candidate count
-

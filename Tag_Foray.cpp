@@ -1,4 +1,5 @@
 #include "Tag_Foray.hpp"
+#include "SG_Record.hpp"
 
 #include <string.h>
 #include <sstream>
@@ -7,15 +8,13 @@
 
 Tag_Foray::Tag_Foray () :  // default ctor for deserializing into
   line_no(0),   // line numbers reset even when resuming
-  pulse_count(MAX_PORT_NUM + 1),
+  pulse_count(MAX_PORT_NUM + 1 + NUM_SPECIAL_PORTS),
   hist(0),      // we recreate history on resume
-  ts(0),        // end and start timestamps for new batch set to 0
-  tsPrev(0),
   tsBegin(0),
   prevHourBin(0)
 {};
 
-Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq) :
+Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq, bool pulses_only) :
   tags(tags),
   data(data),
   default_freq(default_freq),
@@ -26,29 +25,27 @@ Tag_Foray::Tag_Foray (Tag_Database * tags, Data_Source *data, Frequency_MHz defa
   pulse_rate_window(pulse_rate_window),
   min_bogus_spacing(min_bogus_spacing),
   unsigned_dfreq(unsigned_dfreq),
+  pulses_only(pulses_only),
   line_no(0),
-  pulse_count(MAX_PORT_NUM + 1),
+  pulse_count(MAX_PORT_NUM + 1 + NUM_SPECIAL_PORTS),
+  ts(0),
   pulse_slop(default_pulse_slop),
-  clock_fuzz(default_clock_fuzz),
-  max_skipped_time(default_max_skipped_time),
+  burst_slop(default_burst_slop),
+  burst_slop_expansion(default_burst_slop_expansion),
+  max_skipped_bursts(default_max_skipped_bursts),
   hist(tags->get_history()),
   cron(hist->getTicker()),
-  ts(0),
-  tsPrev(0),
   tsBegin(0),
-  prevHourBin(0),
-  clockMonotonic(false),
-  GPSstuck(false),
-  tsGPS(0),
-  prevMonoTS(0),
-  bestMonoBracketWidth(1 / 0.0), // + Inf
-  bestMonoBracketMidpoint(0),
-  bestMonoBracketGPSts(0)
+  prevHourBin(0)
 {
   // create one empty graph for each nominal frequency
   auto fs = tags->get_nominal_freqs();
   for (auto i = fs.begin(); i != fs.end(); ++i)
     graphs.insert(std::make_pair(*i, new Graph()));
+
+  // set default frequencies for all ports
+  for (auto i = -NUM_SPECIAL_PORTS; i < MAX_PORT_NUM; ++i)
+    port_freq[i] = Freq_Setting(default_freq);
 };
 
 
@@ -63,190 +60,158 @@ Tag_Foray::set_default_pulse_slop_ms(float pulse_slop_ms) {
 };
 
 void
-Tag_Foray::set_default_clock_fuzz_ppm(float clock_fuzz) {
-  default_clock_fuzz = clock_fuzz * 1E-6;	// ppm -> proportion
+Tag_Foray::set_default_burst_slop_ms(float burst_slop_ms) {
+  default_burst_slop = burst_slop_ms / 1000.0;	// stored as seconds
 };
 
 void
-Tag_Foray::set_default_max_skipped_time(Gap skip) {
-  default_max_skipped_time = skip;
+Tag_Foray::set_default_burst_slop_expansion_ms(float burst_slop_expansion_ms) {
+  default_burst_slop_expansion = burst_slop_expansion_ms / 1000.0;   // stored as seconds
 };
 
+void
+Tag_Foray::set_default_max_skipped_bursts(unsigned int skip) {
+  default_max_skipped_bursts = skip;
+};
 
+void
+Tag_Foray::set_timestamp_wonkiness(unsigned int w) {
+  timestamp_wonkiness = w;
+};
 
 void
 Tag_Foray::start() {
   Tag_Candidate::ending_batch = false;
 
-  char buf[MAX_LINE_SIZE + 1] = {}; // input buffer
-  bool prevRecordWasGPS = false; // true iff the previous record was a GPS fix
-  for (;;) {
-      // read and parse a line from a SensorGnome file
+  cr = new Clock_Repair(data, &line_no, Tag_Candidate::filer);
+  SG_Record r;
 
-      if (! data->getline(buf, MAX_LINE_SIZE))
-          break;
+  while(cr->get(r)) {
+    // get begin time, allowing for small time reversals (10 seconds)
+    if (! tsBegin || (r.ts < tsBegin && r.ts >= tsBegin - 10.0))
+      tsBegin = r.ts;
 
-#ifdef DEBUG
-      std::cerr << buf << std::endl;
-#endif
+    // skip record if it includes a time reversal of more than 10 seconds
+    // (small time reversals are perfectly valid, and typically due to interleaved data
+    // coming from different radios)
+    if (r.ts - ts < -10.0)
+      continue;
 
-      ++line_no;
+    ts = r.ts;
+    switch (r.type) {
+    case SG_Record::GPS:
+      // GPS is not stuck, or Clock_Repair would have dropped the record
+      // but only add it if r.v.lat and r.v.lon are actual numbers; r.v.alt might not be reported
+      if (! (isnan(r.v.lat) || isnan(r.v.lon)))
+        Tag_Candidate::filer->add_GPS_fix( r.ts, r.v.lat, r.v.lon, r.v.alt );
+      break;
 
-      switch (buf[0]) {
-      case 'G':
-        {
-          /* a GPS fix line like:
-             G,1458001712,44.34021,-66.118733333,21.6
-                 ts        lat        lon        alt
-          */
-          double lat=0.0, lon=0.0, alt=0.0;
-          if (4 == sscanf(buf+2, "%lf,%lf,%lf,%lf", &ts, &lat, &lon, &alt)) {
-            // line is okay, so maybe file it, if GPS isn't stuck
-            if (tsGPS == 0 || ts - tsGPS > 60) {
-              // this is the first GPS timestamp, or it has advanced by at least
-              // 1 minute from the previous one, showing the GPS is not stuck
-              Tag_Candidate::filer-> add_GPS_fix( ts, lat, lon, alt );
-              prevRecordWasGPS = true;
-              tsGPS = ts;
-            } else {
-              GPSstuck = true;
-            }
-          } else {
-            // otherwise, quietly ignore malformed GPS fix line
-            ;
-          }
-        }
-        break;
-      case 'S':
-        {
-          /* a parameter-setting line like:
-             S,1366227448.192,5,-m,166.376,0,
-             is S, timestamp, port_num, param flag, value, return code, other error
-          */
-          short port_num = 0;
-          char param_flag[16] = {};
-          double param_value = 0;
-          int return_code = 0;
-          char error[256];
-          if (5 > sscanf(buf+2, "%lf,%hd,%[^,],%lf,%d,%[^\n]", &ts, &port_num, param_flag, &param_value, &return_code, error)) {
-            // silently ignore malformed line (note:  %[^\n] field doesn't increase count if remainder of line is empty, so sscanf here can return 5 or 6
-            continue;
-          }
-          prevRecordWasGPS = false;
+    case SG_Record::PARAM:
 
-          if (strcmp("-m", param_flag) || return_code) {
-            // ignore non-frequency parameter setting
-            continue;
-          }
+      Tag_Candidate::filer->add_recv_param( r.ts, r.port, r.v.param_flag, r.v.param_value, r.v.return_code, r.v.error);
 
-          if (! force_default_freq)
-            port_freq[port_num] = Freq_Setting(param_value);
-          continue;
-        }
-        break;
-      case 'p':
-        {
-          short port_num = 0;
-          float dfreq = 0, sig = 0, noise = 0;
-          if (5 != sscanf(buf+1, "%hd,%lf,%f,%f,%f", &port_num, &ts, &dfreq, &sig, &noise)) {
-            std::cerr << "Warning: malformed line in input\n  at line " << line_no << ":\n" << (string("") + buf) << std::endl;
-            continue;
-          }
-          if (ts < BEAGLEBONE_POWERUP_TS)  // beaglebones power up with the clock set to 1 Jan 2000; if timestamps
-            clockMonotonic = true; // of pulses are before this, it's because the OS is using CLOCK_MONOTONIC
-                                   // for alsa timestamps.
+      if (strcmp("-m", r.v.param_flag) || r.v.return_code || isnan(r.v.param_value)) {
+        // ignore non-frequency parameter setting, or failed frequency setting
+        continue;
+      }
 
-          double hourBin = round(ts / 3600);
-          if (hourBin != prevHourBin && prevHourBin > 0) {
-            for (int i = 0; i <= MAX_PORT_NUM; ++i) {
+      if (! force_default_freq)
+        port_freq[r.port] = Freq_Setting(r.v.param_value);
+      continue;
+      break;
+
+    case SG_Record::PULSE:
+      {
+        // bump up the pulse count for the current hour bin
+
+        double hourBin = round(r.ts / 3600);
+        if (hourBin != prevHourBin) {
+          if (prevHourBin > 0) {
+            for (int i = 0; i < pulse_count.size(); ++i) {
               if (pulse_count[i] > 0) {
-                Tag_Candidate::filer->add_pulse_count(prevHourBin, i, pulse_count[i]);
+                Tag_Candidate::filer->add_pulse_count(prevHourBin, i - NUM_SPECIAL_PORTS, pulse_count[i]);
                 pulse_count[i] = 0;
               }
             }
-            prevHourBin = hourBin;
           }
+          prevHourBin = hourBin;
+        }
 
-          if (port_num >= 0 && port_num < MAX_PORT_NUM)
-            ++pulse_count[port_num];
+        if (r.port >= - NUM_SPECIAL_PORTS && r.port <= MAX_PORT_NUM)
+          ++pulse_count[r.port + NUM_SPECIAL_PORTS];
 
-          // if timestamps are using CLOCK_MONOTONIC and the GPS fix
-          // is valid, see whether we have a tighter CLOCK_MONOTONIC
-          // bracket around the GPS time fix
+        // skip this record if its offset frequency is out of bounds
+        if (r.v.dfreq > max_dfreq || r.v.dfreq < min_dfreq)
+          continue;
 
-          if (prevRecordWasGPS && clockMonotonic && ! GPSstuck && tsGPS > 0)  {
-            if (prevMonoTS > 0) {
-              Gap diff = ts - prevMonoTS;
-              // small time reversals are common because of interleaved
-              // reporting by pulse finders on different channels.
-              // Here we're only interested in proper bracketing:
-              //  prevMonoTS <= ts and the file line for tsGPS occurs
-              // between those for prevMonoTS and ts.
-              if (diff >= 0 && diff < bestMonoBracketWidth) {
-                bestMonoBracketWidth = diff;
-                bestMonoBracketMidpoint = (ts + prevMonoTS) / 2.0;
-                bestMonoBracketGPSts = tsGPS;
-              }
-            }
-          }
-          prevMonoTS = ts;
-          prevRecordWasGPS = false;
+        Tag_Finder_Key key;
 
-          if (dfreq > max_dfreq || dfreq < min_dfreq)
-            continue;
+        if (! pulses_only) {
+          // NB: cast r.port to work around optimization of passing reference
+          // to packed struct
 
-          if (! port_freq.count(port_num))
-            port_freq[port_num] = Freq_Setting(default_freq);
+          // which tag finder should this pulse be passed to?  There is at
+          // least a tag finder on each port, and possibly more than one if
+          // the listening frequency is changing.
 
-          Tag_Finder_Key key(port_num, port_freq[port_num].f_kHz);
+          key = Tag_Finder_Key((short int) r.port, port_freq[r.port].f_kHz);
 
+          // if there isn't already an appropriate Tag_Finder, create it
           if (! tag_finders.count(key)) {
             Tag_Finder *newtf;
             std::ostringstream prefix;
-            prefix << port_num << ",";
+            prefix << r.port << ",";
             if (max_pulse_rate > 0)
               newtf = new Rate_Limiting_Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], pulse_rate_window, max_pulse_rate, min_bogus_spacing, prefix.str());
             else
               newtf = new Tag_Finder(this, key.second, tags->get_tags_at_freq(key.second), graphs[key.second], prefix.str());
             tag_finders[key] = newtf;
+#ifdef DEBUG3
+            std::cerr << "Interval Tree for " << prefix.str() << std::endl;
+            newtf->graph.get_root()->dump(std::cerr);
+            std::cerr << "Burst slop expansion is " << Tag_Finder::default_burst_slop_expansion << std::endl;
+#endif
           };
+        }
 
-          if (dfreq < 0 && unsigned_dfreq)
-            dfreq = - dfreq;
+        if (r.v.dfreq < 0 && unsigned_dfreq)
+          r.v.dfreq = - r.v.dfreq;
 
-          Pulse p = Pulse::make(ts, dfreq, sig, noise, port_freq[port_num].f_MHz);
+        // create a pulse object from this record
+        Pulse p = Pulse::make(r.ts, r.v.dfreq, r.v.sig, r.v.noise, port_freq[r.port].f_MHz);
 
+        // process any tag events up to this point in time
 
-          // process any tag events up to this point in time
+        while (cron.ts() <= p.ts)
+          process_event(cron.get());
 
-          while (cron.ts() <= p.ts)
-            process_event(cron.get());
-
+        if (pulses_only) {
+          Tag_Candidate::filer->add_pulse(r.port, p);
+        } else {
+#ifdef DEBUG2
+          std::cerr << p.ts << ": Key: " << r.port << ", " << port_freq[r.port].f_kHz << std::endl;
+#endif
           tag_finders[key]->process(p);
-#ifdef DEBUG
-          tag_finders[key]->dump(ts);
+#ifdef DEBUG3
+          tag_finders[key]->dump(r.ts);
 #endif
         }
-        break;
-      case '!':
-        {
-          // for future extension: in-band commands
-        }
-        break;
-      default:
-        break;
       }
-      if (! tsBegin)
-        tsBegin = ts;
+      break;
+    case SG_Record::EXTENSION:
+      {
+        // for future extension: in-band commands
+      }
+      break;
+    default:
+      break;
+    }
+  }
+  // record pulse counts from the last hour bin
 
-      if (tsPrev && tsPrev < MIN_VALID_TIMESTAMP && tsPrev > BEAGLEBONE_POWERUP_TS && ts >= MIN_VALID_TIMESTAMP)
-        Tag_Candidate::filer->add_time_jump(tsPrev, ts, 'S'); // indicate jump due to (presumably) setting clock from GPS
-      tsPrev = ts;
-  }
-  // record a pinning timejump if pulses use monotonic clock
-  if (clockMonotonic && std::isfinite(bestMonoBracketWidth)) {
-    Tag_Candidate::filer->add_time_jump(bestMonoBracketMidpoint, bestMonoBracketGPSts, 'M'); // indicate jump due to pinning MONOTONIC clock
-  }
+  for (int i = 0; i < pulse_count.size(); ++i)
+    if (pulse_count[i] > 0)
+      Tag_Candidate::filer->add_pulse_count(prevHourBin, i - NUM_SPECIAL_PORTS, pulse_count[i]);
 };
 
 void
@@ -259,22 +224,47 @@ Tag_Foray::process_event(Event e) {
     {
       if (t->active)
         return;
-      auto rv = g->addTag(t, pulse_slop, burst_slop / t->gaps[3], (1 + max_skipped_bursts) * t->period);
+      auto rv = g->addTag(t, pulse_slop, burst_slop / 4.0, (1 + max_skipped_bursts) * 4.0, timestamp_wonkiness);
+#ifdef DEBUG
+      g->viz();
+#endif
+      // in case an ambiguity proxy tag was generated, mark that as active
+      // A proxy tag might have already existed because it was read from the database
+      // but in that case, it won't have been marked active.
+      // That would be a problem if another tag was to be added to the ambiguity
+      // later (the assert in Graph::find() fails)
+      rv.second && (rv.second->active = true);
+
       for (auto i = tag_finders.begin(); i != tag_finders.end(); ++i)
         if (i->first.second == fs)
-          i->second->rename_tag(rv);
+          i->second->tag_added(rv);
       t->active = true;
+#ifdef DEBUG
+      std::cerr << "Activating " << t->motusID << "=" << (void *) t << std::endl;
+#endif
     }
     break;
   case Event::E_DEACTIVATE:
     {
       if (! t->active)
         return;
-      auto rv = g->delTag(t, pulse_slop, burst_slop / t->gaps[3], (1 + max_skipped_bursts) * t->period);
+      auto rv = g->delTag(t);
+#ifdef DEBUG
+      g->viz();
+#endif
+      // if we removed one ambiguity and replaced it with a reduced one
+      // (or with a real tag), make sure the removed ambiguity is marked
+      // as inactive, and the remaining tag or ambiguity is actve
+      rv.first && (rv.first->active = false);
+      rv.second && (rv.second->active = true);
+
       for (auto i = tag_finders.begin(); i != tag_finders.end(); ++i)
         if (i->first.second == fs)
-          i->second->rename_tag(rv);
+          i->second->tag_removed(rv);
       t->active = false;
+#ifdef DEBUG
+      std::cerr << "Deactivating " << t->motusID << "=" << (void *) t << std::endl;
+#endif
     }
     break;
   default:
@@ -305,7 +295,7 @@ void
 Tag_Foray::graph() {
   // plot the DFA graphs for the given tag database, one per nominal frequency
 
-  Timestamp t = now();
+  Timestamp t = time_now();
   while (cron.ts() < t) // process all events to this point in time
     process_event(cron.get());
 
@@ -324,8 +314,11 @@ Tag_Foray::graph() {
 }
 
 Gap Tag_Foray::default_pulse_slop = 0.0015; // 1.5 ms
-float Tag_Foray::default_clock_fuzz = 50E-6; // 50 ppm
-Gap Tag_Foray::default_max_skipped_time = 1000; // 1000 s; at 50ppm, this translate to fuzz of 50 ms
+Gap Tag_Foray::default_burst_slop = 0.010; // 10 ms
+Gap Tag_Foray::default_burst_slop_expansion = 0.001; // 1ms = 1 part in 10000 for 10s BI
+unsigned int Tag_Foray::default_max_skipped_bursts = 60;
+unsigned int Tag_Foray::timestamp_wonkiness = 0;// maximum seconds of clock jump size in Lotek .DTA data files
+
 Tag_Foray::Run_Cand_Counter Tag_Foray::num_cands_with_run_id_ = Run_Cand_Counter();
 
 void
@@ -351,14 +344,18 @@ Tag_Foray::pause() {
 
   Tag_Candidate::filer->end_batch(tsBegin, ts);
 
+  Ambiguity::record_new();
+
   {
     // block to ensure oa dtor is called
     boost::archive::binary_oarchive oa(ofs);
 
     // Tag_Foray
     oa << make_nvp("default_pulse_slop", Tag_Foray::default_pulse_slop);
-    oa << make_nvp("default_clock_fuzz", Tag_Foray::default_clock_fuzz);
-    oa << make_nvp("default_max_skipped_time", Tag_Foray::default_max_skipped_time);
+    oa << make_nvp("default_burst_slop", Tag_Foray::default_burst_slop);
+    oa << make_nvp("default_burst_slop_expansion", Tag_Foray::default_burst_slop_expansion);
+    oa << make_nvp("default_max_skipped_bursts", Tag_Foray::default_max_skipped_bursts);
+
     oa << make_nvp("num_cands_with_run_id_", Tag_Foray::num_cands_with_run_id_);
 
     // Freq_Setting
@@ -377,7 +374,7 @@ Tag_Foray::pause() {
     oa << make_nvp("_numSets", Set::_numSets);
     oa << make_nvp("maxLabel", Set::maxLabel);
     oa << make_nvp("_empty", Set::_empty);
-#ifdef DEBUG
+#if 0
     oa << make_nvp("allSets", Set::allSets);
 #endif
 
@@ -398,30 +395,24 @@ Tag_Foray::pause() {
 
   Tag_Candidate::filer->
     save_findtags_state( ts,                            // last timestamp parsed from input
-                         now(), // time now
+                         time_now(), // time now
                          ofs.str()                      // serialized state
                          );
 
 };
 
-double
-Tag_Foray::now() {
-  struct timespec tsp;
-  clock_gettime(CLOCK_REALTIME, & tsp);
-  return  tsp.tv_sec + 1e-9 * tsp.tv_nsec;
-};
-
 bool
-Tag_Foray::resume(Tag_Foray &tf, Data_Source *data) {
+Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, long long bootnum) {
   Timestamp paused;
   Timestamp lastLineTS;
   std::string blob;
 
   if (! Tag_Candidate::filer->
-    load_findtags_state( paused,
-                         lastLineTS,
-                         blob                      // serialized state
-                         ))
+      load_findtags_state( bootnum,
+                           paused,
+                           lastLineTS,
+                           blob                      // serialized state
+                           ))
     return false;
 
   std::istringstream ifs (blob);
@@ -429,8 +420,10 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data) {
 
   // Tag_Foray
   ia >> make_nvp("default_pulse_slop", Tag_Foray::default_pulse_slop);
-  ia >> make_nvp("default_clock_fuzz", Tag_Foray::default_clock_fuzz);
-  ia >> make_nvp("default_max_skipped_time", Tag_Foray::default_max_skipped_time);
+  ia >> make_nvp("default_burst_slop", Tag_Foray::default_burst_slop);
+  ia >> make_nvp("default_burst_slop_expansion", Tag_Foray::default_burst_slop_expansion);
+  ia >> make_nvp("default_max_skipped_bursts", Tag_Foray::default_max_skipped_bursts);
+
   ia >> make_nvp("num_cands_with_run_id_", Tag_Foray::num_cands_with_run_id_);
 
   // Freq_Setting
@@ -449,7 +442,7 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data) {
   ia >> make_nvp("_numSets", Set::_numSets);
   ia >> make_nvp("maxLabel", Set::maxLabel);
   ia >> make_nvp("_empty", Set::_empty);
-#ifdef DEBUG
+#if 0
   ia >> make_nvp("allSets", Set::allSets);
 #endif
 

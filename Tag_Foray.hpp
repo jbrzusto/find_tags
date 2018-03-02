@@ -9,13 +9,18 @@
 #include "Rate_Limiting_Tag_Finder.hpp"
 #include "Data_Source.hpp"
 #include "DB_Filer.hpp"
+#include "Clock_Repair.hpp"
+
 #include <sqlite3.h>
-#include <boost/serialization/utility.hpp>
+#include <boost/serialization/deque.hpp>
 #include <boost/serialization/list.hpp>
 #include <boost/serialization/map.hpp>
-#include <boost/serialization/unordered_map.hpp>
+#include <boost/serialization/queue.hpp>
 #include <boost/serialization/set.hpp>
+#include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/unordered_set.hpp>
+#include <boost/serialization/utility.hpp>
+#include <boost/serialization/vector.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/vector.hpp>
@@ -35,11 +40,9 @@ class Tag_Foray {
 
 public:
 
-  static const int MAX_PORT_NUM = 10; //!< largest possible port number
-
   Tag_Foray (); //!< default ctor to give object into which resume() deserializes
   ~Tag_Foray (); //!< dtor which deletes Tag_Finders and their confirmed candidates, so runs are correctly ended
-  Tag_Foray (Tag_Database * tags, Data_Source * data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq=false);
+  Tag_Foray (Tag_Database * tags, Data_Source * data, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq=false, bool pulses_only=false);
 
   void start();                 // begin searching for tags
 
@@ -50,22 +53,24 @@ public:
 
   void pause(); //!< serialize foray to output database
 
-  static bool resume(Tag_Foray &tf, Data_Source *data); //!< resume foray from state saved in output database
+  static bool resume(Tag_Foray &tf, Data_Source *data, long long bootnum); //!< resume foray from state saved in output database
   // returns true if successful
 
   static void set_default_pulse_slop_ms(float pulse_slop_ms);
 
-  static void set_default_clock_fuzz_ppm(float clock_fuzz);
+  static void set_default_burst_slop_ms(float burst_slop_ms);
 
-  static void set_default_max_skipped_time(Gap skip);
+  static void set_default_burst_slop_expansion_ms(float burst_slop_expansion_ms);
+
+  static void set_default_max_skipped_bursts(unsigned int skip);
+
+  static void set_timestamp_wonkiness(unsigned int w);
 
   static int num_cands_with_run_id(DB_Filer::Run_ID rid, int delta); //!< return the number of candidates with the given run id
   // if delta is 0. Otherwise, adjust the count by delta, and return the new count.
 
 
   Tag_Database * tags;               // registered tags on all known nominal frequencies
-
-  Timestamp now();                   // return time now as double timestamp
 
   Timestamp last_seen() {return ts;}; // return last timestamp seen on input
 
@@ -75,6 +80,7 @@ public:
 protected:
                                      // settings
   Data_Source * data;                // stream from which data records are read
+  Clock_Repair * cr;                 // filter to fix timestamps in input
   Frequency_MHz default_freq;        // default listening frequency on a port where no frequency setting has been seen
   bool force_default_freq;           // ignore in-line frequency settings and always use default?
   float min_dfreq;                   // minimum allowed pulse offset frequency; pulses with smaller offset frequency are
@@ -90,11 +96,11 @@ protected:
 
   bool unsigned_dfreq;               // if true, ignore any sign on frequency offsets (use absolute value)
 
+  bool pulses_only;                  // if true, only output pulses, don't run Tag_Finders
+
   // runtime storage
 
   unsigned long long line_no;                    // count lines of input seen
-  
-  typedef short Port_Num;                        // port number can be represented as a short
 
   std::map < Port_Num, Freq_Setting > port_freq; // keep track of frequency settings on each port
 
@@ -108,6 +114,8 @@ protected:
 
   Tag_Finder_Map tag_finders;
 
+  double ts; // for retaining last timestamp
+
   std::map < Nominal_Frequency_kHz, Graph * > graphs;
 
   Gap pulse_slop;	// (seconds) allowed slop in timing between
@@ -120,51 +128,33 @@ protected:
   // corresponding pair in a registered
   // tag, and still match the tag.
 
-  float clock_fuzz;	// max allowed clock rate difference for timing, in ppm
+  Gap burst_slop;	// (seconds) allowed slop in timing between
+                        // consecutive tag bursts, in seconds this is
+                        // meant to allow for measurement error at tag
+                        // registration and detection times
 
-  // how much time can a tag run go without seeing a pulse?
 
-  Gap max_skipped_time;
+  Gap burst_slop_expansion; // (seconds) how much slop in timing
+			    // between tag bursts increases with each
+  // skipped pulse; this is meant to allow for clock drift between
+  // the tag and the receiver.
+
+  // how many consecutive bursts can be missing without terminating a
+  // run?
+
+  unsigned int max_skipped_bursts;
 
   History *hist;
   Ticker cron;
 
-  // -------- FIXME? ----------------------------------------
-  // None of the following members are serialized, so time
-  // corrections can only occur within a batch; so if we get a batch
-  // of data from an SG with no GPS fix within boot session B, and
-  // then a later batch from the same boot session which contains
-  // a GPS fix, the correction of timestamps will only be applied
-  // to detections in the second batch.  This can be corrected
-  // later by re-runing sgFindTags with all those data in a single batch.
-
-  double ts;      // most recent timestamp parsed from input file
-  double tsPrev;  // previous timestamp; used to detect jumps
   double tsBegin; // first timestamp parsed from input file
   double prevHourBin; // previous hourly bin, for counting pulses
 
-  bool clockMonotonic; // true iff the SG was recording pulse
-  // timestamps uing the MONOTONIC rather
-  // REALTIME clock.  If true, we need to
-  // pin the MONOTONIC clock by the tightest
-  // possible bracket around a GPS timefix
-
-  bool GPSstuck; // true iff we see the GPS is stuck; e.g. if two 
-  // consecutive GPS valid timestamps are the same, or differ by
-  // less than 4 minutes (they should be roughly 5 minutes apart).
-
-  double tsGPS; // most recent (valid) GPS timestamp, if > 0.
-  double prevMonoTS; // most recent monotonic clock timestamp, if > 0.
-  double bestMonoBracketWidth; // width of best GPS time bracket so far, in seconds
-  double bestMonoBracketMidpoint; // midpoint of best GPS time bracket
-  double bestMonoBracketGPSts; // GPS ts being bracketed
-
-  // -------- END OF FIXME ------------------------------
-
-
   static Gap default_pulse_slop;
-  static float default_clock_fuzz;
-  static Gap default_max_skipped_time;
+  static Gap default_burst_slop;
+  static Gap default_burst_slop_expansion;
+  static unsigned int default_max_skipped_bursts;
+  static unsigned int timestamp_wonkiness; //!< maximum clock jump size in data from Lotek .DTA files
 
   // keep track of how many candidates share the same run; this is
   // to manage clones at the confirmed level, so that death of a single
@@ -182,6 +172,7 @@ public:
   void serialize(Archive & ar, const unsigned int version)
   {
     ar & BOOST_SERIALIZATION_NVP( tags );
+    ar & BOOST_SERIALIZATION_NVP( cr );
     ar & BOOST_SERIALIZATION_NVP( default_freq );
     ar & BOOST_SERIALIZATION_NVP( force_default_freq );
     ar & BOOST_SERIALIZATION_NVP( min_dfreq );
@@ -196,11 +187,12 @@ public:
     ar & BOOST_SERIALIZATION_NVP( tag_finders );
     ar & BOOST_SERIALIZATION_NVP( graphs );
     ar & BOOST_SERIALIZATION_NVP( pulse_slop );
-    ar & BOOST_SERIALIZATION_NVP( clock_fuzz );
-    ar & BOOST_SERIALIZATION_NVP( max_skipped_time );
+    ar & BOOST_SERIALIZATION_NVP( burst_slop );
+    ar & BOOST_SERIALIZATION_NVP( burst_slop_expansion );
+    ar & BOOST_SERIALIZATION_NVP( max_skipped_bursts );
     ar & BOOST_SERIALIZATION_NVP( hist );
     ar & BOOST_SERIALIZATION_NVP( cron );
-  };  
+  };
 };
 
 #endif // TAG_FORAY

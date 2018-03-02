@@ -9,6 +9,7 @@ Tag_Finder::Tag_Finder (Tag_Foray * owner, Nominal_Frequency_kHz nom_freq, TagSe
   cands(NUM_CAND_LISTS),
   prefix(prefix)
 {
+  sscanf(prefix.c_str(), "%hd", &ant);
 };
 
 void
@@ -46,21 +47,37 @@ Tag_Finder::process(Pulse &p) {
 
   bool confirmed_acceptance = false; // has pulse been accepted by a confirmed candidate?
 
+#ifdef DEBUG2
+  std::cerr << std::setprecision(14);
+  std::cerr << "Pulse " << p.ts << std::endl;
+#endif
+
   for (int i = 0; i < NUM_CAND_LISTS; ++i) {
 
     Cand_List & cs = cands[i];
-    
+
+#ifdef DEBUG2
+    bool dbg = true;
+    dbg && std::cerr << "=== cand list " << i << " ===\n";
+#endif
+
     Cand_List::iterator nextci; // "next" iterator in case we need to delete current one while traversing list
 
     for (Cand_List::iterator ci = cs.begin(); ci != cs.end() && p.ts >= ci->first; ci = nextci ) {
       nextci = ci;
       ++nextci;
 
+#ifdef DEBUG2
+      dbg && std::cerr << "Examining " << (void * ) (ci->second) << " last_ts " << (ci->second->last_ts) << std::endl;
+#endif
       // check whether candidate has expired
       if (ci->second->expired(p.ts)) {
-        auto p = ci->second;
+        auto tc = ci->second;
         cs.erase(ci);
-        delete p;
+#ifdef DEBUG2
+        dbg && std::cerr << "Deleting " << (void *) tc << " last_ts " << (tc->last_ts)<< std::endl;
+#endif
+        delete tc;
         continue;
       }
 
@@ -74,6 +91,9 @@ Tag_Finder::process(Pulse &p) {
 
       Tag_Candidate * clone = (ci->second)->clone();
 
+#ifdef DEBUG2
+      dbg && std::cerr << "Cloned " << (void *) (ci->second) << " last_ts " << (ci->second->last_ts) << " as " << (void *) clone << std::endl;
+#endif
       // NB: DANGEROUS ASSUMPTION!!  Because we've already computed
       // the next value for ci as nextci, inserting the clone (which
       // has the same key as ci does before it accepts the pulse) into
@@ -90,18 +110,19 @@ Tag_Finder::process(Pulse &p) {
       cs.insert(ci, std::make_pair(clone->min_next_pulse_ts(), clone));
 
       // add the pulse
-      if ((ci->second)->add_pulse(p, next_state)) {
-        // this candidate tag just completed a burst at the CONFIRMED level
-        // So delete any other candidate for this tag, and delete any 
-        // other candidate that shares any of the same points.
+      Tag_Candidate * tc = ci->second;
+      if (tc->add_pulse(p, next_state)) {
+        // this candidate has confirmed ownership of the pulse
+
+        // delete any other candidate sharing any pulse with this one
         delete_competitors(ci, nextci);
 
         // dump all complete bursts from this confirmed tag
-        (ci->second)->dump_bursts(prefix);
+        (ci->second)->dump_bursts(ant);
 
         // mark that this pulse has been accepted by a candidate at the CONFIRMED level
         confirmed_acceptance = true;
-      } 
+      }
 
       // this candidate has accepted a pulse, and needs to be re-indexed
       // within its Cand_list, which might also have changed.
@@ -134,7 +155,7 @@ Tag_Finder::~Tag_Finder() {
 
     if ((ci->second)->get_tag_id_level() == Tag_Candidate::CONFIRMED && (ci->second)->has_burst()) {
       // dump remaining bursts
-      (ci->second)->dump_bursts(prefix);
+      (ci->second)->dump_bursts(ant);
     }
     delete (ci->second);
   }
@@ -150,7 +171,7 @@ Tag_Finder::delete_competitors(Cand_List::iterator ci, Cand_List::iterator &next
 
   for (int j = 0; j < NUM_CAND_LISTS; ++j) {
     for (Cand_List::iterator cci = cands[j].begin(); cci != cands[j].end(); /**/ ) {
-      if ((cci->second) != (ci->second) 
+      if ((cci->second) != (ci->second)
           && ((cci->second)->has_same_id_as(ci->second)
               || (cci->second)->shares_any_pulses(ci->second))) {
         Cand_List::iterator di = cci;
@@ -177,13 +198,57 @@ Tag_Finder::get_true_gaps(TagID tid) {
 
 void
 Tag_Finder::dump_bogus_burst(Pulse &p) {
-  Tag_Candidate::dump_bogus_burst(p.ts, prefix, p.ant_freq);
+  Tag_Candidate::dump_bogus_burst(p.ts, ant, p.ant_freq);
 };
 
 void
+Tag_Finder::tag_added(std::pair < Tag *, Tag * > tp) {
+  // possibly rename a tag, due to it now being ambiguous
+  if (tp.first)
+    rename_tag(tp);
+  // check for candidates at level SINGLE which might now
+  // be at level MULTIPLE
+  Cand_List & cs = cands[Tag_Candidate::SINGLE];
+  Cand_List::iterator nextci; // "next" iterator in case we need to delete current one while traversing list
+  for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); ci = nextci ) {
+    nextci = ci;
+    ++nextci;
+    Tag_Candidate *tc = ci->second;
+    if (! tc->state->is_unique()) {
+      tc->tag_id_level = Tag_Candidate::MULTIPLE;
+      tc->tag = BOGUS_TAG;
+      cands[tc->tag_id_level].insert(std::make_pair((ci->second)->min_next_pulse_ts(), ci->second));
+      cs.erase(ci);
+    }
+  }
+}
+
+void
+Tag_Finder::tag_removed(std::pair < Tag *, Tag * > tp) {
+  // possibly rename a tag, due to it now being ambiguous
+  if (tp.first)
+    rename_tag(tp);
+  // check for candidates at level MULTIPLE which might now
+  // be at level SINGLE
+  Cand_List & cs = cands[Tag_Candidate::MULTIPLE];
+  Cand_List::iterator nextci; // "next" iterator in case we need to delete current one while traversing list
+  for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); ci = nextci ) {
+    nextci = ci;
+    ++nextci;
+    Tag_Candidate *tc = ci->second;
+    if (tc->state->is_unique()) {
+      tc->tag_id_level = Tag_Candidate::SINGLE;
+      tc->tag = tc->state->get_tag();
+      tc->num_pulses = tc->tag->gaps.size();
+      cands[tc->tag_id_level].insert(std::make_pair((ci->second)->min_next_pulse_ts(), ci->second));
+      cs.erase(ci);
+    }
+  }
+}
+
+
+void
 Tag_Finder::rename_tag(std::pair < Tag *, Tag * > tp) {
-  if (! tp.first)
-    return;
   for (int i = 0; i < 2; ++i) {
     Cand_List & cs = cands[i];
     for (Cand_List::iterator ci = cs.begin(); ci != cs.end(); ++ci )
@@ -223,4 +288,3 @@ Tag_Finder::dump(Timestamp latest) {
     }
   }
 }
-  

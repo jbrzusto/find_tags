@@ -9,7 +9,7 @@
 // of Lotek receiver firmware, detection timestamps are not guaranteed to
 // be monotonic (time can sometimes jump backwards when the clock is corrected
 // by GPS, or due to other issues).
-// 
+//
 // Therefore, we buffer output pulses in chronological order, and
 // don't pass them to the tag finder until a fixed lead time has
 // elapsed, as judged by the timestamps on incoming detections.
@@ -20,7 +20,7 @@
 //
 // This presents a dilemma when pausing/resuming tag finding (e.g.
 // when field data are received in batches, weeks apart):
-// 
+//
 // Either
 //
 // A: we process all detections before a pause, then the first few
@@ -54,10 +54,10 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/set.hpp>
 
-class Lotek_Data_Source : public Data_Source { 
+class Lotek_Data_Source : public Data_Source {
 
 public:
-  Lotek_Data_Source(std::istream * data, Tag_Database *tdb, Frequency_MHz defFreq);
+  Lotek_Data_Source(DB_Filer * db, Tag_Database *tdb, Frequency_MHz defFreq, int bootnum=0);
   bool getline(char * buf, int maxLen);
   static const int MAX_LOTEK_LINE_SIZE = 100;
   static const int MAX_LEAD_SECONDS = 10;  //!< maximum number of
@@ -66,25 +66,30 @@ public:
                                          //! for small time reversals
                                          //! and interleaving of
                                          //! output pulses
-  static const int MAX_ANTENNAS=10;      //!< maximum number of antennas
+  static const int MAX_ANTENNAS=12;      //!< maximum number of antennas (0: direct beaglebone; 1-10 USB hub ports; 11: Lotek master antenna A1+A2+A3+A4
+  static const int MAX_LINE_FORMAT_CHARS=64; //!< maximum number of chars in scanf format string for an input line
+
 
 
 protected:
-  std::istream *data;                                                     //!< pointer to true input stream
-  std::map < std::pair < short , short > , std::vector < Gap > * > tcode; //!< map (codeset, ID) to pulse gaps from the tag DB
-  char ltbuf[MAX_LOTEK_LINE_SIZE];                                        //!< buffer for reading true input stream
+  DB_Filer * db;                                                          //!< pointer to DB Filer, which holds manages database
+  typedef std::map < std::pair < short , short > , std::vector < Gap > * > tcode_t; //!< type of a map from (codeset, ID) to pulse gaps
+  tcode_t tcode;                                                          //!< populated from the Lotek tag databse.
   bool done;                                                              //!< true if input stream is finished
-  std::map < double, std::string > sgbuf;                                 //!< buffer of SG-format lines
+  std::multimap < double, std::string > sgbuf;                            //!< buffer of SG-format lines
   Timestamp latestInputTS;                                                //!< timestamp of most recent input line
   std::vector < Frequency_MHz > antFreq;                                  //!< most recent listen frequency on each antenna, in MHz
   std::set < std::pair < short, short > > warned;                         //!< sets of tag/codeset combos for which 'non-existent' warning has been issued
+  DB_Filer::DTA_Record dtar;                                              //!< record read from database DTAtags table
+  int bootnum;                                                            //!< relative boot number of source data
 
   // methods
 
-  bool getInputLine(); //!< get line from true input stream; return
-                       //! false on EOS
+  bool getInputLine();
 
-  bool translateLine(); //!< parse
+  void rewind(); //!< start over, presumably after determining a time correction
+
+  void translateLine(); //!< translate the line into zero or more SG-style records; return true if any records generated
 
   void serialize(boost::archive::binary_iarchive & ar, const unsigned int version);
   void serialize(boost::archive::binary_oarchive & ar, const unsigned int version);

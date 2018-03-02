@@ -17,6 +17,7 @@ const static unsigned int MAX_LINE_SIZE = 512;	// characters in a .CSV file line
 
 typedef double Timestamp;
 const static Timestamp BOGUS_TIMESTAMP = -1; // timestamp representing not-a-timestamp
+const static Timestamp FORCE_EXPIRY_TIMESTAMP = -1e20; // timestamp that forces any tag to expire if used as last_ts
 
 // type representing a VHF frequency, in MHz
 
@@ -29,6 +30,9 @@ typedef float Frequency_Offset_kHz;
 // type representing a nominal frequency
 
 typedef int Nominal_Frequency_kHz;
+
+// type representing a signal strength, in dB max
+typedef float SignaldB;
 
 // Tag IDs: we use integer primary keys into the Motus master tag database
 // These are obtained by the harness code when it queries that database
@@ -44,19 +48,28 @@ class Tag;
 typedef Tag * TagID;
 static const TagID BOGUS_TAG = 0;
 
-typedef std::unordered_set < TagID > TagSet; 
+typedef std::unordered_set < TagID > TagSet;
 
 typedef short Phase;
 static const Phase BOGUS_PHASE = -1;
 
 typedef std::pair < TagID, Phase > TagPhase;
-typedef std::unordered_multimap < TagID, Phase > TagPhaseSet;
+typedef std::unordered_map < TagID, Phase > TagPhaseSet;
 
 // The type for interpulse gaps this should be able to represent a
 // difference between two nearby timestamp values. We use double.
 // On the embedded version for beaglebone / RPi, we should use float.
 
 typedef double Gap;
+
+//!< the type representing a port number (e.g. antenna number)
+// which is the USB port on which a device is attached,
+// if applicable
+
+typedef int16_t Port_Num;
+static const int MAX_PORT_NUM = 10; //!< largest possible port number
+static const int NUM_SPECIAL_PORTS = 5; //!< number of "special" ports (these are assigned negative antenna numbers)
+static const int BOGUS_PORT_NUM = -999; //!< indicates port number not relevant
 
 // common standard stuff
 
@@ -91,5 +104,9 @@ std::basic_ostream<CharType, CharTraits> &operator<<
     stream << "\\n" << (*i);
   return stream;
 };
+
+/* function to return current time as floating point seconds since epoch */
+
+double time_now();
 
 #endif // FIND_TAGS_COMMON_HPP

@@ -1,61 +1,68 @@
 #include "Set.hpp"
-
-Set * 
+#undef DEBUG
+Set *
 Set::empty() {
   return _empty;
 };
 
-int 
+int
 Set::label() const {
   return _label;
 };
 
 Set::~Set() {
 #ifdef DEBUG
+  std::cerr << "Set::~Set() " << (void* ) this << std::endl;
   allSets.erase(this);
 #endif
   --_numSets;
 };
 
-int 
+int
 Set::numSets() {
   return _numSets;
 };
-  
+
 Set::Set() : s(), _label(maxLabel++) , hash(0) {
 #ifdef DEBUG
+  std::cerr << "Set::Set() " << (void* ) this << std::endl;
   allSets.insert(this);
 #endif
   ++_numSets;
 };
 
-Set::Set(TagPhase p) : s(), _label(maxLabel++), hash(hashTP(p)) {
+Set::Set(TagPhase p) : s(), _label(maxLabel++), hash(hashT(p.first)) {
     s.insert(p);
 #ifdef DEBUG
-    allSets.insert(this); 
+    std::cerr << "Set::Set(TagPhase) " << (void* ) this << std::endl;
+    allSets.insert(this);
 #endif
     ++_numSets;
 };
 
 Set *
-Set::augment(TagPhase p) { 
+Set::augment(TagPhase p) {
   // augment this set with p, unless this set is empty
   // in which case return a new set with just p;
-  if(this == _empty) 
+  if(this == _empty)
     return new Set(p);
+  for(auto e = s.equal_range(p.first); e.first != e.second; ++e.first) {
+    if (e.first->second == p.second)
+      throw std::runtime_error("Adding existing tagphase to tagphaseset");
+  }
   s.insert(p);
-  hash ^= hashTP(p);
+  hash ^= hashT(p.first);
   return this;
 };
 
-Set * 
-Set::reduce(TagPhase p) { 
-  // remove p from set; return pointer to empty set if 
+Set *
+Set::reduce(Tag * t) {
+  // remove t from set; return pointer to empty set if
   // reduction leads to that
-  if(this == _empty) 
-    throw std::runtime_error("Reducing empty set"); 
-  erase(p);
-  hash ^= hashTP(p);
+  if(this == _empty)
+    throw std::runtime_error("Reducing empty set");
+  erase(t);
+  hash ^= hashT(t);
   if (s.size() == 0) {
     delete this;
     return _empty;
@@ -64,26 +71,20 @@ Set::reduce(TagPhase p) {
 };
 
 void
-Set::erase(TagPhase p) {
-    // erase specific element p from multimap; i.e. match
+Set::erase(Tag * t) {
+    // erase specific element t from multimap; i.e. match
     // by both key and value
-  auto r = s.equal_range(p.first);
-  for (auto i = r.first; i != r.second; ++i) {
-    if (i->second == p.second) {
-      s.erase(i);
-      return;
-    }
-  }
+  s.erase(t);
 };
 
-int 
+int
 Set::count(TagID id) const {
   return s.count(id);
 };
 
 int
 Set::count(TagPhase p) const {
-  // count specific element p from multimap; i.e. match
+  // count specific element p from map; i.e. match
   // by both key and value; returns 0 or 1
   auto r = s.equal_range(p.first);
   for (auto i = r.first; i != r.second; ++i)
@@ -92,32 +93,36 @@ Set::count(TagPhase p) const {
   return 0;
 };
 
-Set * 
+Set *
 Set::cloneAugment(TagPhase p) {
   // return pointer to clone of this Set, augmented by p
   if (this == _empty)
     return new Set(p);
-  Set * ns = new Set(); 
-  ns->s = s; 
+  for(auto e = s.equal_range(p.first); e.first != e.second; ++e.first) {
+    if (e.first->second == p.second)
+      throw std::runtime_error("Adding existing tagphase to tagphaseset");
+  }
+  Set * ns = new Set();
+  ns->s = s;
   ns->s.insert(p);
-  ns->hash = hash ^ hashTP(p);
+  ns->hash = hash ^ hashT(p.first);
   return ns;
 };
-      
+
 
 Set *
-Set::cloneReduce(TagPhase p) {
+Set::cloneReduce(Tag * t) {
   // return pointer to clone of this Set, reduced by p
-  if (count(p) == 0)
-    throw std::runtime_error("Set::cloneReduce(p) called with p not in set");
-  Set * ns = new Set(); 
-  ns->s = s; 
-  ns->erase(p);
+  if (count(t) == 0)
+    throw std::runtime_error("Set::cloneReduce(t) called with t not in set");
+  Set * ns = new Set();
+  ns->s = s;
+  ns->erase(t);
   if (ns->s.size() == 0) {
     delete ns;
     return empty();
   }
-  ns->hash = hash ^ hashTP(p);
+  ns->hash = hash ^ hashT(t);
   return ns;
 };
 
@@ -147,7 +152,6 @@ Set::dump() const {
 void
 Set::init() {
   _empty = new Set();
-  ++_numSets;
 
 #ifdef DEBUG
   allSets = std::set < Set * > ();
@@ -167,9 +171,9 @@ Set::operator== (const Set & s) const {
   return hash == s.hash && this->s == s.s;
 };
 
-TagPhaseSetHash 
-Set::hashTP (TagPhase tp) {
-  return reinterpret_cast < long long > (tp.first) * tp.second;
+TagPhaseSetHash
+Set::hashT (Tag * t) {
+  return reinterpret_cast < long long > (t);
 };
 
 Set * Set::_empty = 0;

@@ -15,7 +15,7 @@ public:
   Motus_Tag_ID		motusID;			// motus tag ID
   Frequency_MHz		freq;				// nominal transmit frequency (MHz)
   Frequency_Offset_kHz	dfreq;				// offset from nominal frequency observed by funcube at registration (kHz)
-  std::vector < Gap >	gaps;	                        // gaps between pulses; a tag is assumed to transmit a sequence of pulses with 
+  std::vector < Gap >	gaps;	                        // gaps between pulses; a tag is assumed to transmit a sequence of pulses with
   // gaps given (cyclically) by this vector
   Gap                   period;                         // sum of the gaps
 
@@ -39,6 +39,9 @@ public:
     ar & BOOST_SERIALIZATION_NVP( gaps );
     ar & BOOST_SERIALIZATION_NVP( period );
     ar & BOOST_SERIALIZATION_NVP( count );
+    ar & BOOST_SERIALIZATION_NVP( mfgID );
+    ar & BOOST_SERIALIZATION_NVP( codeSet );
+    ar & BOOST_SERIALIZATION_NVP( active );
   };
 };
 

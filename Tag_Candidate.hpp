@@ -32,15 +32,15 @@ public:
 
   typedef enum {CONFIRMED=0, SINGLE=1, MULTIPLE=2} Tag_ID_Level;	// how well-resolved is the tag ID?  Note the order.
 
-protected: 
-  // fundamental structure
+protected:
+  // ------ START OF SERIALIZABLE MEMBERS ------
 
   Tag_Finder    *owner;
   Node	        *state;		 // where in the appropriate DFA I am
   Pulse_Buffer	 pulses;	 // pulses in the path so far
   Timestamp	 last_ts;        // timestamp of last pulse accepted by this candidate
   Timestamp	 last_dumped_ts; // timestamp of last pulse in last dumped burst (used to calculate burst slop when dumping)
-  Tag   	 *tag;            // current unique tag ID, if confirmed, or BOGUS_TAG when more than one is compatible
+  Tag   	 *tag;           // current unique tag ID, if confirmed, or BOGUS_TAG when more than one is compatible
   Tag_ID_Level   tag_id_level;   // how well-resolved is the current tag ID?
 
   DB_Filer::Run_ID	run_id;	// ID for the run formed by bursts from this candidate (i.e. consecutive in-phase hits on a tag)
@@ -50,6 +50,8 @@ protected:
 
   Bounded_Range < Frequency_MHz > freq_range; // range of pulse frequency offsets
   Bounded_Range < float > sig_range;  // range of pulse signal strengths, in dB
+
+  // ------ END OF SERIALIZABLE MEMBERS ------
 
   static const float BOGUS_BURST_SLOP; // burst slop reported for first burst of run (where we don't have a previous burst)  Doesn't really matter, since we can distinguish this situation in the data by "pos.in.run==1"
 
@@ -70,18 +72,20 @@ protected:
   static long long num_cands;
 
   static long long max_num_cands;
-  
+
   static Timestamp max_cand_time;
 
 public:
 
   Tag_Candidate() {}; // default ctor for deserialization
-  
+
   Tag_Candidate(Tag_Finder *owner, Node *state, const Pulse &pulse);
 
   Tag_Candidate * clone();
 
   ~Tag_Candidate();
+
+  void maybe_end_run(); //!< end run if this candidate has a valid run_id and no other candidates with that run_id still exist
 
   bool has_same_id_as(Tag_Candidate *tc);
 
@@ -93,7 +97,7 @@ public:
 
   Node * advance_by_pulse(const Pulse &p);
 
-  bool add_pulse(const Pulse &p, Node *new_state);
+  bool add_pulse(const Pulse &p, Node *new_state); //!< add a pulse, and return true if we can confirm the candidate owns this pulse.
 
   Tag * get_tag();
 
@@ -110,8 +114,8 @@ public:
   void clear_pulses();
 
   void calculate_burst_params(Pulse_Iter &p);
- 
-  void dump_bursts(string prefix="");
+
+  void dump_bursts(short prefix);
 
   static void set_freq_slop_kHz(float slop);
 
@@ -119,7 +123,7 @@ public:
 
   static void set_pulses_to_confirm_id(unsigned int n);
 
-  static void dump_bogus_burst(Timestamp ts, std::string & prefix, Frequency_MHz antfreq);
+  static void dump_bogus_burst(Timestamp ts, short prefix, Frequency_MHz antfreq);
 
   static void set_filer(DB_Filer *dbf);
 
@@ -128,6 +132,8 @@ public:
   static long long get_num_cands();
 
   static Timestamp get_max_cand_time();
+
+  static void set_max_unconfirmed_bursts(int m);
 
   void renTag(Tag * t1, Tag * t2); //!< if this candidate is for tag t1, make it finish any run and start a new one pointing at t2.
 

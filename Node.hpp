@@ -23,7 +23,7 @@ protected:
   int tcUseCount; //!< number of Tag_Candidates pointing to this state
   bool _valid;  //!< true iff this node is part of a graph
   int label; //!< unique label for this node, during run
-  
+
 
   static int _numNodes;  //!< number of allocated nodes not yet deleted
   static int _numLinks; //!< number of links between nodes
@@ -39,7 +39,7 @@ public:
   // the stamp the first time they are touched in a given run of the algorithm.  This is cheaper than keeping a bool at each
   //node, and resetting across all nodes at the start of each recursive algorithm, except when the
   // stamp value has wrapped.
-  
+
   Gap get_max_age();  //!< maximum gap value for which there's an edge to another node
 
   Gap get_min_age();  //!< minimum gap value for which there's an edge to another node
@@ -50,11 +50,12 @@ public:
   static void init(); //!< initialize static class members
 
   Node();  //!< ctor
+
   Node(const Node *n); //!< pointer copy ctor
 
   void link(); //!< indicate a link into node is added
   bool unlink();//!< indicate a link into node is removed
-  void drop(); //!< remove this node 
+  void drop(); //!< remove this node
   Node * advance (Gap dt); //!< move to the next node, given a gap
 
   static Node * empty(); //!< return unique node for empty set
@@ -78,4 +79,3 @@ public:
 };
 
 #endif // NODE_HPP
-

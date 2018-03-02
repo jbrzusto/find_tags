@@ -22,6 +22,8 @@ private:
 
   History *h;
 
+  std::string db_hash; // commit hash of metadatabase corresponding to tags and events tables when read in populate_from_sqlite_file
+
 public:
   Tag_Database (); //!< default ctor for deserializing into
 
@@ -31,6 +33,8 @@ public:
 
   void populate_from_sqlite_file(string filename, bool get_history);
 
+  Motus_Tag_ID get_max_motusID();
+
   Freq_Set & get_nominal_freqs();
 
   TagSet * get_tags_at_freq(Nominal_Frequency_kHz freq);
@@ -39,6 +43,8 @@ public:
 
   History * get_history();
 
+  std::string & get_db_hash();
+
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
   {
@@ -46,8 +52,8 @@ public:
     ar & BOOST_SERIALIZATION_NVP( nominal_freqs );
     ar & BOOST_SERIALIZATION_NVP( motusIDToPtr );
     ar & BOOST_SERIALIZATION_NVP( h );
+    ar & BOOST_SERIALIZATION_NVP( db_hash );
   };
-
 };
 
 #endif // TAG_DATABASE_HPP
