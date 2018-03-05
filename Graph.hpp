@@ -102,6 +102,7 @@ public:
     ar & BOOST_SERIALIZATION_NVP( _root );
     ar & BOOST_SERIALIZATION_NVP( vizPrefix );
     ar & BOOST_SERIALIZATION_NVP( numViz );
+    ar & BOOST_SERIALIZATION_NVP( setToNode );
     ar & BOOST_SERIALIZATION_NVP( stamp );
   };
 };
