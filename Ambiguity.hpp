@@ -49,8 +49,10 @@ public:
   typedef AmbigIDBimap::value_type AmbigIDSetProxy;
 
   static AmbigBimap abm;           //!< bimap between sets of indistinguishable real tags and their proxy tag; tracks adding/removing of tags over time
-  static AmbigIDBimap ids;         //!< bimap between sets of IDs of indistinguishable real tags and the (negative) ID of their proxy Tag; persistent:  a given set of indistinguishable tags always uses the same proxyID
-  static int nextID;               //!< motus_Tag_ID for next proxy created; initialized from DB_Filer::get_next_ambigID(), decremented for each new proxy
+  static AmbigIDBimap ids;         //!< bimap between sets of IDs of indistinguishable real tags and the (negative) ID of their proxy
+                                   //!Tag; persistent: a given set of indistinguishable tags always uses the same proxyID
+  static int nextID;               //!< (negative) motus_Tag_ID for next proxy created; starts at -1, decremented for each new proxy;
+                                   //!these ID value are only valid within a (possibly resumed) session of the tag finder
 
   // methods
 
@@ -62,6 +64,11 @@ public:
   static void record_if_new( AmbigTags tags, Motus_Tag_ID id); //!< save an ambiguity set to the DB if it is new
   static void record_new(); //!< record any new ambiguity sets to the DB (used when a batch completes processing)
 
+#ifdef DEBUG
+  // debug methods
+  static void dump();//!< dump the full map
+  static void * dump_ptr; //!< pointer to force emission of method
+#endif
 
 protected:
   static Tag * newProxy(AmbigTags & tags, Tag * t);       //!< return a new proxy tag representing tags like t and representing the tags in tags

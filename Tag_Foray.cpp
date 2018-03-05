@@ -350,6 +350,10 @@ Tag_Foray::pause() {
     // block to ensure oa dtor is called
     boost::archive::binary_oarchive oa(ofs);
 
+    // Ambiguity (serialized structures)
+    oa << make_nvp("abm", Ambiguity::abm);
+    oa << make_nvp("ids", Ambiguity::ids);
+
     // Tag_Foray
     oa << make_nvp("default_pulse_slop", Tag_Foray::default_pulse_slop);
     oa << make_nvp("default_burst_slop", Tag_Foray::default_burst_slop);
@@ -417,6 +421,10 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, long long bootnum) {
 
   std::istringstream ifs (blob);
   boost::archive::binary_iarchive ia(ifs);
+
+  // Ambiguity (serialized structures)
+  ia >> make_nvp("abm", Ambiguity::abm);
+  ia >> make_nvp("ids", Ambiguity::ids);
 
   // Tag_Foray
   ia >> make_nvp("default_pulse_slop", Tag_Foray::default_pulse_slop);
