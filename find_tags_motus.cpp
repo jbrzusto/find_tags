@@ -732,10 +732,6 @@ main (int argc, char **argv) {
         Freq_Setting::set_nominal_freqs(tag_db->get_nominal_freqs());
 
         foray = Tag_Foray(tag_db, pulses, default_freq, force_default_freq, min_dfreq, max_dfreq, max_pulse_rate, pulse_rate_window, min_bogus_spacing, unsigned_dfreq, pulses_only);
-        // load any existing ambiguity mappings so that we don't generate new ambigIDs for the
-        // same sets of ambiguous tags.  We don't do this if resuming, because in that case,
-        // the entire Ambiguity object is restored from saved state.
-
       }
 
       // record the commit hash from the meta database as an external parameter
@@ -764,7 +760,14 @@ main (int argc, char **argv) {
       for (auto ii=external_params.begin(); ii != external_params.end(); ++ii)
         dbf.add_param(ii->first.c_str(), ii->second.c_str());
 
+      // load any existing ambiguity mappings so that we don't generate new ambigIDs for the
+      // same sets of ambiguous tags.  (This is where Ambiguity::ids is loaded, rather
+      // than in Tag_Foray::resume, because we *always* want it).
+
       dbf.load_ambiguity();
+#ifdef DEBUG
+      std::cerr << "after resuming, nextID is " << Ambiguity::nextID << std::endl;
+#endif DEBUG
 
       if (graph_only) {
         foray.graph();
