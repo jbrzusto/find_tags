@@ -426,7 +426,7 @@ Graph::linkNode (Node *n) {
 void
 Graph::unlinkNode (Node *n) {
   if (n->unlink() && n != Node::empty()) {
-#ifdef DEBUG
+#ifdef DEBUG2
     std::cout << "Unlink Node(" << n->label << ") for set " << n->s->s << std::endl;
 #endif
     unmapSet(n->s);

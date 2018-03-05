@@ -225,7 +225,7 @@ Tag_Foray::process_event(Event e) {
       if (t->active)
         return;
       auto rv = g->addTag(t, pulse_slop, burst_slop / 4.0, (1 + max_skipped_bursts) * 4.0, timestamp_wonkiness);
-#ifdef DEBUG
+#ifdef DEBUG2
       g->viz();
 #endif
       // in case an ambiguity proxy tag was generated, mark that as active
@@ -239,7 +239,7 @@ Tag_Foray::process_event(Event e) {
         if (i->first.second == fs)
           i->second->tag_added(rv);
       t->active = true;
-#ifdef DEBUG
+#ifdef DEBUG2
       std::cerr << "Activating " << t->motusID << "=" << (void *) t << std::endl;
 #endif
     }
@@ -249,7 +249,7 @@ Tag_Foray::process_event(Event e) {
       if (! t->active)
         return;
       auto rv = g->delTag(t);
-#ifdef DEBUG
+#ifdef DEBUG2
       g->viz();
 #endif
       // if we removed one ambiguity and replaced it with a reduced one
@@ -262,7 +262,7 @@ Tag_Foray::process_event(Event e) {
         if (i->first.second == fs)
           i->second->tag_removed(rv);
       t->active = false;
-#ifdef DEBUG
+#ifdef DEBUG2
       std::cerr << "Deactivating " << t->motusID << "=" << (void *) t << std::endl;
 #endif
     }
@@ -378,7 +378,7 @@ Tag_Foray::pause() {
     oa << make_nvp("_numSets", Set::_numSets);
     oa << make_nvp("maxLabel", Set::maxLabel);
     oa << make_nvp("_empty", Set::_empty);
-#if 0
+#ifdef DEBUG2
     oa << make_nvp("allSets", Set::allSets);
 #endif
 
@@ -450,7 +450,7 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, long long bootnum) {
   ia >> make_nvp("_numSets", Set::_numSets);
   ia >> make_nvp("maxLabel", Set::maxLabel);
   ia >> make_nvp("_empty", Set::_empty);
-#if 0
+#ifdef DEBUG2
   ia >> make_nvp("allSets", Set::allSets);
 #endif
 

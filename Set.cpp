@@ -1,5 +1,4 @@
 #include "Set.hpp"
-#undef DEBUG
 Set *
 Set::empty() {
   return _empty;
@@ -11,7 +10,7 @@ Set::label() const {
 };
 
 Set::~Set() {
-#ifdef DEBUG
+#ifdef DEBUG2
   std::cerr << "Set::~Set() " << (void* ) this << std::endl;
   allSets.erase(this);
 #endif
@@ -24,7 +23,7 @@ Set::numSets() {
 };
 
 Set::Set() : s(), _label(maxLabel++) , hash(0) {
-#ifdef DEBUG
+#ifdef DEBUG2
   std::cerr << "Set::Set() " << (void* ) this << std::endl;
   allSets.insert(this);
 #endif
@@ -33,7 +32,7 @@ Set::Set() : s(), _label(maxLabel++) , hash(0) {
 
 Set::Set(TagPhase p) : s(), _label(maxLabel++), hash(hashT(p.first)) {
     s.insert(p);
-#ifdef DEBUG
+#ifdef DEBUG2
     std::cerr << "Set::Set(TagPhase) " << (void* ) this << std::endl;
     allSets.insert(this);
 #endif
@@ -126,7 +125,7 @@ Set::cloneReduce(Tag * t) {
   return ns;
 };
 
-#ifdef DEBUG
+#ifdef DEBUG2
 void
 Set::dumpAll() {
   for (auto i = allSets.begin(); i != allSets.end(); ++i) {
@@ -153,7 +152,7 @@ void
 Set::init() {
   _empty = new Set();
 
-#ifdef DEBUG
+#ifdef DEBUG2
   allSets = std::set < Set * > ();
   allSets.insert(_empty);
 #endif
@@ -177,7 +176,7 @@ Set::hashT (Tag * t) {
 };
 
 Set * Set::_empty = 0;
-#ifdef DEBUG
+#ifdef DEBUG2
 std::set < Set * > Set::allSets = std::set < Set * > ();
 #endif
 int Set::_numSets = 0;

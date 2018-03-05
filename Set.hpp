@@ -24,7 +24,7 @@ protected:
   static int _numSets;
   static int maxLabel;
   static Set * _empty;
-#ifdef DEBUG
+#ifdef DEBUG2
   static std::set < Set * > allSets;
 #endif
 

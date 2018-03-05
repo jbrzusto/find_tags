@@ -208,7 +208,7 @@ All output from a run of this program forms a new batch.
 #ifdef DEBUG
 // force debugging methods to be emitted
 
-extern "C" void * tabfun[] = { (void *) &Tag_Database::getTagForMotusID };
+void * tabfun[] = { (void *) &Tag_Database::getTagForMotusID };
 
 #endif
 
