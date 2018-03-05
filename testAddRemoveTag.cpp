@@ -32,7 +32,7 @@ Usage:\n\
 \n\
 Tests adding and removing tags from the DFA graph used by find_tags.\n\
 Tags are read from the 'tags' table in the sqlite database given by DBNAME, or\n\
-in /sgm/cache/motus_meta_db.sqlite if DBNAME is not specified.\n\
+in /sgm_local/motus_meta_db.sqlite if DBNAME is not specified.\n\
 \n\
 If MAXNT is given, only that many tags are read from the database.\n\
 Otherwise, all tags are read.\n\
@@ -72,7 +72,7 @@ a graph in graphviz format named testAddRemoveNNN.gv is plotted after event NNN.
   if (argc > i)
     fn = std::string(argv[i++]);
   else
-    fn = std::string("/sgm/cache/motus_meta_db.sqlite");
+    fn = std::string("/sgm_local/motus_meta_db.sqlite");
 
 
   Tag_Database T(fn, true);
