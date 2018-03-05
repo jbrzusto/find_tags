@@ -736,8 +736,6 @@ main (int argc, char **argv) {
         // same sets of ambiguous tags.  We don't do this if resuming, because in that case,
         // the entire Ambiguity object is restored from saved state.
 
-        dbf.load_ambiguity();
-
       }
 
       // record the commit hash from the meta database as an external parameter
@@ -765,6 +763,8 @@ main (int argc, char **argv) {
       dbf.add_param("timestamp_wonkiness", timestamp_wonkiness);
       for (auto ii=external_params.begin(); ii != external_params.end(); ++ii)
         dbf.add_param(ii->first.c_str(), ii->second.c_str());
+
+      dbf.load_ambiguity();
 
       if (graph_only) {
         foray.graph();
