@@ -389,10 +389,10 @@ Tag_Foray::pause() {
     oa << make_nvp("num_cands", Tag_Candidate::num_cands);
 
     // dynamic members of all classes
-    serialize(oa, 1);
+    serialize(oa, SERIALIZATION_VERSION);
 
     // data source
-    data->serialize(oa, 1);
+    data->serialize(oa, SERIALIZATION_VERSION);
 
   }
   // record this state
@@ -461,13 +461,13 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, long long bootnum) {
   ia >> make_nvp("num_cands", Tag_Candidate::num_cands);
 
   // dynamic members of all classes
-  tf.serialize(ia, 1);
+  tf.serialize(ia, SERIALIZATION_VERSION);
 
   // data source deserialization happens into the
   // new data source
   tf.data = data;
 
-  data->serialize(ia, 1);
+  data->serialize(ia, SERIALIZATION_VERSION);
 
   return true;
 };

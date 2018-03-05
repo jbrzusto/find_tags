@@ -31,7 +31,7 @@
 using boost::serialization::make_nvp;
 
 /*
-  Tag_Foray - manager a collection of tag finders searching the same
+  Tag_Foray - manage a collection of tag finders searching the same
   data stream.  The data stream has pulses from multiple ports, as
   well as frequency settings for those ports.
 */
@@ -77,8 +77,15 @@ public:
   static constexpr double MIN_VALID_TIMESTAMP = 1262304000; // unix timestamp for 1 Jan 2010, GMT
   static constexpr double BEAGLEBONE_POWERUP_TS = 946684800; // unix timestamp for 1 Jan 2000, GMT
 
+  // Serialization version.  Whenever the format of serialized data changes (i.e. changes are made
+  // to any class's `serialize` method, or to how `Tag_Foray::pause()` writes data,
+  // this version must be incremented so that find_tags_motus doesn't resume from incompatible
+  // state, which might cause a segfault, or worse, incorrect data!
+
+  static constexpr int SERIALIZATION_VERSION = 2; // version for serialization
+
 protected:
-                                     // settings
+
   Data_Source * data;                // stream from which data records are read
   Clock_Repair * cr;                 // filter to fix timestamps in input
   Frequency_MHz default_freq;        // default listening frequency on a port where no frequency setting has been seen
