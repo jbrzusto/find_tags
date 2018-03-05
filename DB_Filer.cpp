@@ -119,7 +119,7 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
 
   sqlite3_stmt * st_get_last_ambigID;
   Check( sqlite3_prepare_v2(outdb,
-                            "select coalesce(-1, min(ambigID) - 1) from tagAmbig",
+                            "select coalesce(min(ambigID) - 1, -1) from tagAmbig",
                             -1,
                             & st_get_last_ambigID,
                             0),
