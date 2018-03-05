@@ -531,7 +531,7 @@ DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string sta
 };
 
 const char *
-DB_Filer::q_load_findtags_state = "select (select max(batchID) from batchState) as batchID, tsData, tsRun, state from batchState where progName=? and monoBN=? order by tsRun desc limit 1;";
+DB_Filer::q_load_findtags_state = "select (select max(batchID) from batchState) as batchID, tsData, tsRun, state from batchState where progName=? and monoBN=?";
 //                                      0      1      2     3
 
 bool
@@ -546,12 +546,6 @@ DB_Filer::load_findtags_state(long long monoBN, Timestamp & tsData, Timestamp & 
   state = std::string(reinterpret_cast < const char * > (sqlite3_column_blob(st_load_findtags_state, 3)), sqlite3_column_bytes(st_load_findtags_state, 3));
   return true;
 };
-
-
-/*
-const char *
-DB_Filer::q_get_blob = "select t1.ts, bz2uncompress(t2.contents, t1.size) from files as t1 left join fileContents as t2 on t1.fileID=t2.fileID where t1.monoBN=? and t1.ts >= ? order by ts";
-*/
 
 const char *
 DB_Filer::q_get_blob = R"(select ts,
