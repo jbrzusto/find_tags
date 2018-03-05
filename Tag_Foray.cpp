@@ -327,7 +327,6 @@ Tag_Foray::pause() {
   // this is the top-level of the serializer,
   // so we dump class static members from here.
 
-
   // before doing so, reap candidates from all tag finders so
   // we finish runs which have expired. (needed e.g. when no
   // pulses have been received for an antenna in a long time)
@@ -344,7 +343,7 @@ Tag_Foray::pause() {
 
   Tag_Candidate::filer->end_batch(tsBegin, ts);
 
-  Ambiguity::record_new();
+  Ambiguity::record_ids();
 
   {
     // block to ensure oa dtor is called
@@ -352,7 +351,6 @@ Tag_Foray::pause() {
 
     // Ambiguity (serialized structures)
     oa << make_nvp("abm", Ambiguity::abm);
-    oa << make_nvp("ids", Ambiguity::ids);
     oa << make_nvp("nextID", Ambiguity::nextID);
 
     // Tag_Foray
@@ -425,7 +423,6 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, long long bootnum) {
 
   // Ambiguity (serialized structures)
   ia >> make_nvp("abm", Ambiguity::abm);
-  ia >> make_nvp("ids", Ambiguity::ids);
   ia >> make_nvp("nextID", Ambiguity::nextID);
 
   // Tag_Foray

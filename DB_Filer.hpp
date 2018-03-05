@@ -57,7 +57,7 @@ public:
 
   void end_batch(Timestamp tsStart, Timestamp tsEnd); //!< end current batch
 
-  void save_ambiguity(Motus_Tag_ID proxyID, const Ambiguity::AmbigTags & tags); // save one ambiguity group
+  void save_ambiguity(Motus_Tag_ID proxyID, const Ambiguity::AmbigIDs & tags); // save one ambiguity group
 
   void load_ambiguity(); // restore all ambiguity groups
 

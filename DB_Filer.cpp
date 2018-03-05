@@ -489,7 +489,7 @@ DB_Filer::q_save_ambig =
   //                       1           2            3            4            5            6            7
 
 void
-DB_Filer::save_ambiguity(Motus_Tag_ID proxyID, const Ambiguity::AmbigTags & tags) {
+DB_Filer::save_ambiguity(Motus_Tag_ID proxyID, const Ambiguity::AmbigIDs & tags) {
   // proxyID must be a negative integer
   // add mid to its ambiguity group.
   if (proxyID >= 0)
@@ -499,7 +499,7 @@ DB_Filer::save_ambiguity(Motus_Tag_ID proxyID, const Ambiguity::AmbigTags & tags
   auto t = tags.begin();
   for (int i = 1; i <= MAX_TAGS_PER_AMBIGUITY_GROUP; ++i) {
     if (t != tags.end())
-      sqlite3_bind_int( st_save_ambig, 1 + i, (*t++) -> motusID);
+      sqlite3_bind_int( st_save_ambig, 1 + i, (*t++));
     else
       sqlite3_bind_null(st_save_ambig, 1 + i);
   }

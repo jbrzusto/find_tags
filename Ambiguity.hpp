@@ -51,6 +51,26 @@ public:
   static AmbigBimap abm;           //!< bimap between sets of indistinguishable real tags and their proxy tag; tracks adding/removing of tags over time
   static AmbigIDBimap ids;         //!< bimap between sets of IDs of indistinguishable real tags and the (negative) ID of their proxy
                                    //!Tag; persistent: a given set of indistinguishable tags always uses the same proxyID
+
+  // Note: `abm` and `ids` above are parallel structures recording the
+  // ambiguity proxy relationship.  `ids` records it in the
+  // `Motus_Tag_ID` domain, including negative values for proxy tags.
+  // So `ids` has meaning beyond a particular run of the tag finder,
+  // and can sensibly be stored as a table in the receiver database,
+  // where it is accessible by other applications, and from runs of the
+  // tagfinder which are not linked by pause/resume.
+  //
+  // `abm` records the same relationship in the `* Tag` domain; i.e.
+  // it records a relationship between pointers and sets of pointers.
+  // This is needed for fast operations during a tag finder run, but
+  // has no external meaning and so is not stored in a database table
+  // except as part of the pause/resume serialization object, which is
+  // opaque to other applications and not available to runs of the
+  // tag finder for other boot sessions.
+  //
+  // So `abm` gets serialized, but `ids` gets saved and loaded separately.
+  // (See Tag_Foray::pause/resume)
+
   static int nextID;               //!< (negative) motus_Tag_ID for next proxy created; starts at -1, decremented for each new proxy;
                                    //!these ID value are only valid within a (possibly resumed) session of the tag finder
 
@@ -61,8 +81,7 @@ public:
   static Tag * remove(Tag * t1, Tag *t2); //!< return a real or proxy tag representing the proxy tag t1 with any t2 removed
   static Tag * proxyFor(Tag *t);          //!< return the proxy for a tag, if it is ambiguous; otherwise, returns 0;
   static void setNextProxyID(Motus_Tag_ID proxyID); //!< set the next proxyID to be used
-  static void record_if_new( AmbigTags tags, Motus_Tag_ID id); //!< save an ambiguity set to the DB if it is new
-  static void record_new(); //!< record any new ambiguity sets to the DB (used when a batch completes processing)
+  static void record_ids(); //!< record any new ambiguity id mappings to the DB (used when a batch completes processing)
 
 #ifdef DEBUG
   // debug methods

@@ -76,8 +76,6 @@ Ambiguity::remove(Tag * t1, Tag *t2) {
   if (! s.count(t2))
      throw std::runtime_error("Trying to remove tag from a proxy that does not represent it");
 
-  if (t1->count > 0)
-    record_if_new(i->second, i->first->motusID);
   s.erase(t2);
   if (s.size() == 1) {
     // only a single tag left in the set, so return the original
@@ -126,6 +124,7 @@ Ambiguity::newProxy(AmbigTags & tags, Tag * t) {
     proxyID = j->second;
   } else {
     proxyID = nextID--;
+    ids.insert(AmbigIDSetProxy(tmpids, proxyID));
   };
 
   Tag * nt = new Tag();
@@ -142,22 +141,12 @@ Ambiguity::setNextProxyID(Motus_Tag_ID proxyID) {
 };
 
 void
-Ambiguity::record_if_new( AmbigTags tags, Motus_Tag_ID id) {
-  AmbigIDs tmpids;
-  for(auto j = tags.begin(); j != tags.end(); ++j)
-    tmpids.insert((*j)->motusID);
-  if (ids.left.find(tmpids) == ids.left.end()) {
-    Tag_Candidate::filer->save_ambiguity(id, tags);
-  }
-};
-
-void
-Ambiguity::record_new() {
+Ambiguity::record_ids() {
   // if any new sets of ambiguous tags were actually detected,
   // write them to the DB
 
-  for (auto i = abm.left.begin(); i != abm.left.end(); ++i) {
-    record_if_new (i->first, i->second->motusID);
+  for (auto i = ids.left.begin(); i != ids.left.end(); ++i) {
+    Tag_Candidate::filer->save_ambiguity(i->second, i->first);
   }
 };
 
