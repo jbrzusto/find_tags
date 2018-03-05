@@ -157,13 +157,10 @@ Ambiguity::record_new() {
   // write them to the DB
 
   for (auto i = abm.left.begin(); i != abm.left.end(); ++i) {
-    // if a tag in this proxy set was actually detected, search the original mappings for this set
-    // and if not found, record this new pairing
-    if (i->second->count > 0) {
-      record_if_new (i->first, i->second->motusID);
-    }
+    record_if_new (i->first, i->second->motusID);
   }
-}
+};
+
 #ifdef DEBUG
 void
 Ambiguity::dump() {
