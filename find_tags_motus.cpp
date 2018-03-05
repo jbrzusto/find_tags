@@ -735,7 +735,9 @@ main (int argc, char **argv) {
         // load any existing ambiguity mappings so that we don't generate new ambigIDs for the
         // same sets of ambiguous tags.  We don't do this if resuming, because in that case,
         // the entire Ambiguity object is restored from saved state.
+
         dbf.load_ambiguity();
+
       }
 
       // record the commit hash from the meta database as an external parameter
