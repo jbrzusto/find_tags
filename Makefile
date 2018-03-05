@@ -18,8 +18,16 @@ PROGRAM_BUILD_TS=$(shell date +%s)
 
 all: find_tags_motus testAddRemoveTag dfa_graph.pdf ## find_tags_unifile
 
-install: find_tags_motus find_tags_unifile
-	sudo cp find_tags_motus find_tags_unifile /sgm/bin
+install: find_tags_motus
+	sudo cp find_tags_motus /sgm/bin
+	strip /sgm/bin/find_tags_motus
+
+## separate installation for find_tags_unifile, which must be built
+## after checkout out tag `find_tags_unifile`.  Yes, ugly.
+
+install_find_tags_unifile: find_tags_unifile
+	sudo cp find_tags_unifile /sgm/bin
+	strip /sgm/bin/find_tags_unifile
 
 OBJS=                            \
    Ambiguity.o			 \

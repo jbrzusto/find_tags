@@ -767,7 +767,7 @@ main (int argc, char **argv) {
       dbf.load_ambiguity();
 #ifdef DEBUG
       std::cerr << "after resuming, nextID is " << Ambiguity::nextID << std::endl;
-#endif DEBUG
+#endif
 
       if (graph_only) {
         foray.graph();
