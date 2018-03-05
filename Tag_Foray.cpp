@@ -353,6 +353,7 @@ Tag_Foray::pause() {
     // Ambiguity (serialized structures)
     oa << make_nvp("abm", Ambiguity::abm);
     oa << make_nvp("ids", Ambiguity::ids);
+    oa << make_nvp("nextID", Ambiguity::nextID);
 
     // Tag_Foray
     oa << make_nvp("default_pulse_slop", Tag_Foray::default_pulse_slop);
@@ -425,6 +426,7 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, long long bootnum) {
   // Ambiguity (serialized structures)
   ia >> make_nvp("abm", Ambiguity::abm);
   ia >> make_nvp("ids", Ambiguity::ids);
+  ia >> make_nvp("nextID", Ambiguity::nextID);
 
   // Tag_Foray
   ia >> make_nvp("default_pulse_slop", Tag_Foray::default_pulse_slop);
