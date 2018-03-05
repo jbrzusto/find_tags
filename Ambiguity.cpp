@@ -137,6 +137,9 @@ Ambiguity::newProxy(AmbigTags & tags, Tag * t) {
 
 void
 Ambiguity::setNextProxyID(Motus_Tag_ID proxyID) {
+#ifdef DEBUG
+  std::cerr << "setting nextID to " << proxyID << "; original value was " << nextID;
+#endif
   nextID = proxyID;
 };
 
@@ -153,14 +156,22 @@ Ambiguity::record_ids() {
 #ifdef DEBUG
 void
 Ambiguity::dump() {
-  std::cerr << "Dumping Ambiguity bimap from left\n";
+  std::cerr << "Dumping abm bimap from left\n";
   for (auto i = abm.left.begin(); i != abm.left.end(); ++i) {
     for (auto j = i->first.begin(); j != i->first.end(); ++j) {
       std::cerr << (*j)->motusID << " ";
     }
     std::cerr << ":" << i->second->motusID << std::endl;
   }
+  std::cerr << "\n\nDumping ids bimap from left\n";
+  for (auto i = ids.left.begin(); i != ids.left.end(); ++i) {
+    for (auto j = i->first.begin(); j != i->first.end(); ++j) {
+      std::cerr << *j << " ";
+    }
+    std::cerr << ":" << i->second << std::endl;
+  }
 };
+
 
 void *
 Ambiguity::dump_ptr  = (void *) & Ambiguity::dump;
