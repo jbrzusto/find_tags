@@ -463,13 +463,20 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, long long bootnum) {
   ia >> make_nvp("num_cands", Tag_Candidate::num_cands);
 
   // dynamic members of all classes
+#ifdef DEBUG2
+  tf.serialize(ia, - SERIALIZATION_VERSION);
+#else
   tf.serialize(ia, SERIALIZATION_VERSION);
-
+#endif
   // data source deserialization happens into the
   // new data source
   tf.data = data;
 
+#ifdef DEBUG2
+  data->serialize(ia, - SERIALIZATION_VERSION);
+#else
   data->serialize(ia, SERIALIZATION_VERSION);
+#endif
 
   return true;
 };
