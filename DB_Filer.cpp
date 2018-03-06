@@ -509,12 +509,12 @@ DB_Filer::save_ambiguity(Motus_Tag_ID proxyID, const Ambiguity::AmbigIDs & tags)
 const char *
 DB_Filer::q_save_findtags_state =
   "insert or replace into batchState \
-             (batchID, progName, monoBN, tsData, tsRun, state)\
-      values (?,       ?,        ?,      ?,      ?,     ? );";
-  //          1        2         3       4       5      6
+             (batchID, progName, monoBN, tsData, tsRun, state, version)\
+      values (?,       ?,        ?,      ?,      ?,     ?,     ? );";
+  //          1        2         3       4       5      6      7
 
 void
-DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string state) {
+DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string state, int version) {
   // drop any saved state for previous batch
   // FIXME: we need a reasonable way to decide when we can drop saved state from
   // boot session; i.e. when do we have all of its files?  This argues for a file counter...
@@ -527,22 +527,28 @@ DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string sta
   sqlite3_bind_double(st_save_findtags_state, 4, tsData);
   sqlite3_bind_double(st_save_findtags_state, 5, tsRun);
   sqlite3_bind_blob(st_save_findtags_state,   6, state.c_str(), state.length(), SQLITE_TRANSIENT);
+  sqlite3_bind_int(st_save_findtags_state,    7, version);
   step_commit(st_save_findtags_state);
 };
 
+// the query for fetching saved state compares only the major portion of the version
+// number (the upper 16 bits)
+
 const char *
-DB_Filer::q_load_findtags_state = "select (select max(batchID) from batchState) as batchID, tsData, tsRun, state from batchState where progName=? and monoBN=?";
-//                                      0      1      2     3
+DB_Filer::q_load_findtags_state = "select (select max(batchID) from batchState) as batchID, tsData, tsRun, state, version from batchState where progName=? and monoBN=? and cast(version/65536 as integer)=cast(?/65536 as integer)";
+//                                                                                 0        1       2      3      4
 
 bool
-DB_Filer::load_findtags_state(long long monoBN, Timestamp & tsData, Timestamp & tsRun, std::string & state) {
+DB_Filer::load_findtags_state(long long monoBN, Timestamp & tsData, Timestamp & tsRun, std::string & state, int version, int &blob_version) {
   sqlite3_reset(st_load_findtags_state);
   sqlite3_bind_int64(st_load_findtags_state, 2, monoBN);
+  sqlite3_bind_int(st_load_findtags_state, 3, version);
   if (SQLITE_DONE == sqlite3_step(st_load_findtags_state))
-    return false; // no saved state
+    return false; // no saved state, or at least not of the correct version
   bid = 1 + sqlite3_column_int   (st_load_findtags_state, 0);
   tsData = sqlite3_column_double (st_load_findtags_state, 1);
   tsRun = sqlite3_column_double  (st_load_findtags_state, 2);
+  blob_version = sqlite3_column_int (st_load_findtags_state, 4);
   state = std::string(reinterpret_cast < const char * > (sqlite3_column_blob(st_load_findtags_state, 3)), sqlite3_column_bytes(st_load_findtags_state, 3));
   return true;
 };

@@ -377,9 +377,6 @@ Tag_Foray::pause() {
     oa << make_nvp("_numSets", Set::_numSets);
     oa << make_nvp("maxLabel", Set::maxLabel);
     oa << make_nvp("_empty", Set::_empty);
-#ifdef DEBUG2
-    oa << make_nvp("allSets", Set::allSets);
-#endif
 
     // Tag_Candidate
     oa << make_nvp("freq_slop_kHz", Tag_Candidate::freq_slop_kHz);
@@ -397,9 +394,10 @@ Tag_Foray::pause() {
   // record this state
 
   Tag_Candidate::filer->
-    save_findtags_state( ts,                            // last timestamp parsed from input
-                         time_now(), // time now
-                         ofs.str()                      // serialized state
+    save_findtags_state( ts,                   // last timestamp parsed from input
+                         time_now(),           // time now
+                         ofs.str(),            // serialized state
+                         SERIALIZATION_VERSION // version
                          );
 
 };
@@ -410,11 +408,15 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, long long bootnum) {
   Timestamp lastLineTS;
   std::string blob;
 
+  int ser_ver; // serialization version of saved data
+
   if (! Tag_Candidate::filer->
       load_findtags_state( bootnum,
                            paused,
                            lastLineTS,
-                           blob                      // serialized state
+                           blob,                      // serialized state
+                           SERIALIZATION_VERSION,
+                           ser_ver
                            ))
     return false;
 
@@ -449,9 +451,6 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, long long bootnum) {
   ia >> make_nvp("_numSets", Set::_numSets);
   ia >> make_nvp("maxLabel", Set::maxLabel);
   ia >> make_nvp("_empty", Set::_empty);
-#ifdef DEBUG2
-  ia >> make_nvp("allSets", Set::allSets);
-#endif
 
   // Tag_Candidate
   ia >> make_nvp("freq_slop_kHz", Tag_Candidate::freq_slop_kHz);
@@ -460,20 +459,13 @@ Tag_Foray::resume(Tag_Foray &tf, Data_Source *data, long long bootnum) {
   ia >> make_nvp("num_cands", Tag_Candidate::num_cands);
 
   // dynamic members of all classes
-#ifdef DEBUG2
-  tf.serialize(ia, - SERIALIZATION_VERSION);
-#else
-  tf.serialize(ia, SERIALIZATION_VERSION);
-#endif
+  tf.serialize(ia, ser_ver);
+
   // data source deserialization happens into the
   // new data source
   tf.data = data;
 
-#ifdef DEBUG2
-  data->serialize(ia, - SERIALIZATION_VERSION);
-#else
-  data->serialize(ia, SERIALIZATION_VERSION);
-#endif
+  data->serialize(ia, ser_ver);
 
   return true;
 };

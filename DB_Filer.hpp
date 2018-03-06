@@ -61,9 +61,9 @@ public:
 
   void load_ambiguity(); // restore all ambiguity groups
 
-  void save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string state);
+  void save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string state, int version);
 
-  bool load_findtags_state(long long monoBN, Timestamp & tsData, Timestamp & tsRun, std::string & state);
+  bool load_findtags_state(long long monoBN, Timestamp & tsData, Timestamp & tsRun, std::string & state, int version, int &blob_version);
 
   void start_blob_reader(int monoBN); //!< initialize reading of filecontents blobs for a given boot number
 

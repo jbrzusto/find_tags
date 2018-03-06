@@ -77,12 +77,23 @@ public:
   static constexpr double MIN_VALID_TIMESTAMP = 1262304000; // unix timestamp for 1 Jan 2010, GMT
   static constexpr double BEAGLEBONE_POWERUP_TS = 946684800; // unix timestamp for 1 Jan 2000, GMT
 
-  // Serialization version.  Whenever the format of serialized data changes (i.e. changes are made
-  // to any class's `serialize` method, or to how `Tag_Foray::pause()` writes data,
-  // this version must be incremented so that find_tags_motus doesn't resume from incompatible
-  // state, which might cause a segfault, or worse, incorrect data!
+  // Serialization version.  Whenever the format of serialized data
+  // changes (i.e. changes are made to any class's `serialize` method,
+  // or to how `Tag_Foray::pause()` writes data, this version must be
+  // changed appropriately so that find_tags_motus doesn't resume from
+  // incompatible state, which might cause a segfault, or worse,
+  // incorrect data!
 
-  static constexpr int SERIALIZATION_VERSION = 2; // version for serialization
+  // We'll distinguish between minor and major serialization versions:
+  //
+  //  - serialized state is incompatible across changes to major version
+  //  - serialized state is compatible across changes to minor version, but class methods
+  //  have to deal with it.
+  //  The serialization version will be (major << 16) | minor
+
+  static constexpr int SERIALIZATION_MAJOR_VERSION = 1;
+  static constexpr int SERIALIZATION_MINOR_VERSION = 0;
+  static constexpr int SERIALIZATION_VERSION = (SERIALIZATION_MAJOR_VERSION << 16) | SERIALIZATION_MINOR_VERSION;
 
 protected:
 
