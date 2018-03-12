@@ -47,6 +47,7 @@ SG_Record::from_buf(char * buf) {
       rv.v.param_value = nan("0");
       rv.type = PARAM;
     }
+    rv.v.error[0] = '\0';
     break;
 
   case 'C':
