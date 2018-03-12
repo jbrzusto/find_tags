@@ -9,7 +9,7 @@
 #include "Pulse.hpp"
 
 /*
-  DB_Filer - manage output of detection data.
+  DB_Filer - manage sqlite databases (input for data file indexes, resuming state; output for detections and saving state)
 */
 
 class DB_Filer {
