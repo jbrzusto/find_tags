@@ -8,6 +8,8 @@ SG_SQLite_Data_Source::SG_SQLite_Data_Source(DB_Filer * db, unsigned int monoBN)
   originOffset(0),
   originBytesLeft(0)
 {
+  emptyBlob[0] = '\0';
+  blob = &emptyBlob[0];
   db->start_blob_reader(monoBN);
 };
 
@@ -57,6 +59,7 @@ void
 SG_SQLite_Data_Source::rewind() {
   db->rewind_blob_reader(originTS);
   db->get_blob(& blob, & bytesLeft, & blobTS);
+  offset = 0;
   if (originTS > 0) {
     offset    = originOffset;
     bytesLeft = originBytesLeft;

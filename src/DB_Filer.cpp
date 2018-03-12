@@ -348,7 +348,6 @@ DB_Filer::step_commit(sqlite3_stmt * st) {
   if (++num_steps == steps_per_tx) {
     end_tx();
     begin_tx();
-    num_steps = 0;
   }
 }
 
@@ -445,12 +444,16 @@ DB_Filer::end_batch(Timestamp tsStart, Timestamp tsEnd) {
 
 void
 DB_Filer::begin_tx() {
-  Check( sqlite3_exec(outdb, "begin", 0, 0, 0), "Failed to commit remaining inserts.");
+  num_steps = 0;
+  Check( sqlite3_exec(outdb, "begin", 0, 0, 0), "Failed to begin transaction.");
 };
 
 void
 DB_Filer::end_tx() {
-  Check( sqlite3_exec(outdb, "commit", 0, 0, 0), "Failed to commit remaining inserts.");
+  if (num_steps > 0) {
+    Check( sqlite3_exec(outdb, "commit", 0, 0, 0), "Failed to commit remaining inserts.");
+    num_steps = 0;
+  }
 };
 
 const char *
@@ -529,6 +532,7 @@ DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string sta
   sqlite3_bind_blob(st_save_findtags_state,   6, state.c_str(), state.length(), SQLITE_TRANSIENT);
   sqlite3_bind_int(st_save_findtags_state,    7, version);
   step_commit(st_save_findtags_state);
+  end_tx(); // force a commit, because the bind_blob above is to a local variable
 };
 
 // the query for fetching saved state compares only the major portion of the version

@@ -25,6 +25,7 @@ protected:
   Timestamp originTS; //!< timestamp of start of blob to which we rewind, after resume()
   int originOffset; //!< offset from first blob to which we rewind, after resume()
   int originBytesLeft; //!< bytes left in blob after rewind, after resume()
+  char emptyBlob[1]; //!< empty buffer for initial blob
 
   void serialize(boost::archive::binary_iarchive & ar, const unsigned int version);
   void serialize(boost::archive::binary_oarchive & ar, const unsigned int version);
