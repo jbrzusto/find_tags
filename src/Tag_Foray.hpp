@@ -199,10 +199,12 @@ public:
     ar & BOOST_SERIALIZATION_NVP( pulse_rate_window );
     ar & BOOST_SERIALIZATION_NVP( min_bogus_spacing );
     ar & BOOST_SERIALIZATION_NVP( unsigned_dfreq );
+    ar & BOOST_SERIALIZATION_NVP( pulses_only );
     ar & BOOST_SERIALIZATION_NVP( line_no );
     ar & BOOST_SERIALIZATION_NVP( port_freq );
     ar & BOOST_SERIALIZATION_NVP( pulse_count );
     ar & BOOST_SERIALIZATION_NVP( tag_finders );
+    ar & BOOST_SERIALIZATION_NVP( ts );
     ar & BOOST_SERIALIZATION_NVP( graphs );
     ar & BOOST_SERIALIZATION_NVP( pulse_slop );
     ar & BOOST_SERIALIZATION_NVP( burst_slop );
