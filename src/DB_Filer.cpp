@@ -149,6 +149,37 @@ DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &pr
 
   const char * ftsm = "SQLite output database does not have valid 'batchState' table";
 
+  sqlite3_enable_load_extension(outdb, 1);
+
+  const static int MAX_PATH_SIZE = 2048;
+  char extension_lib_path_buffer[2*MAX_PATH_SIZE + 1];
+  int n = readlink("/proc/self/exe", extension_lib_path_buffer, MAX_PATH_SIZE);
+  for (;;) { // not a loop
+    if (n > 0) {
+      extension_lib_path_buffer[n] = '\0';
+      char * dir_slash = (char *) memrchr(extension_lib_path_buffer, '/', n);
+      if (dir_slash) {
+        strcpy( dir_slash + 1, "Sqlite_Compression_Extension.so");
+        Check( sqlite3_prepare_v2(outdb,
+                                  q_load_extension,
+                                  -1,
+                                  &st_load_extension,
+                                  0),
+               "Can't prepare statement to load extension library!");
+
+        sqlite3_bind_text(st_load_extension, 1, extension_lib_path_buffer, -1, SQLITE_STATIC);
+        int res = sqlite3_step(st_load_extension);
+        if (res == SQLITE_DONE || res == SQLITE_ROW) {
+          sqlite3_finalize(st_load_extension);
+          st_load_extension = 0;
+          break;
+        }
+      }
+    }
+    // all errors end up here
+    throw std::runtime_error("Unable to load Sqlite_Compression_Extension.so from folder with `find_tags_motus`");
+  };
+
   Check ( sqlite3_prepare_v2(outdb, q_save_findtags_state, -1, & st_save_findtags_state, 0), ftsm);
   sqlite3_bind_text(st_save_findtags_state, 2, prog_name.c_str(), -1, SQLITE_TRANSIENT);
 
@@ -529,7 +560,7 @@ DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string sta
   sqlite3_bind_int(st_save_findtags_state,    3, bootnum);
   sqlite3_bind_double(st_save_findtags_state, 4, tsData);
   sqlite3_bind_double(st_save_findtags_state, 5, tsRun);
-  sqlite3_bind_blob(st_save_findtags_state,   6, state.c_str(), state.length(), SQLITE_TRANSIENT);
+  sqlite3_bind_blob(st_save_findtags_state,   6, state.c_str(), state.length(), SQLITE_STATIC);
   sqlite3_bind_int(st_save_findtags_state,    7, version);
   step_commit(st_save_findtags_state);
   end_tx(); // force a commit, because the bind_blob above is to a local variable
@@ -582,17 +613,12 @@ const char *
 DB_Filer::q_add_batch_file = "insert or ignore into batchFiles values (?, ?)";
 //                                                                     1  2
 
+const char *
+DB_Filer::q_load_extension = "select load_extension(?)";
+
 void
 DB_Filer::start_blob_reader(int monoBN) {
 
-  sqlite3_enable_load_extension(outdb, 1);
-
-  Check(sqlite3_exec(outdb,
-                     "select load_extension('/sgm/bin/Sqlite_Compression_Extension.so')",
-                     0,
-                     0,
-                     0),
-        "Unable to load required library Sqlite_Compression_Extension.so from /sgm/bin");
 
   Check( sqlite3_prepare_v2(outdb,
                             q_get_blob,

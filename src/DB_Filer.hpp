@@ -115,6 +115,7 @@ protected:
   sqlite3_stmt * st_add_pulse; //!< record a pulse
   sqlite3_stmt * st_add_recv_param; //!< record a receiver parameter setting
   sqlite3_stmt * st_add_batch_file; //!< record use of an input file
+  sqlite3_stmt * st_load_extension; //!< load an extension library
 
   string prog_name; //!< name of program, for recording in DB
 
@@ -173,6 +174,7 @@ protected:
   static const char * q_add_pulse;
   static const char * q_add_recv_param;
   static const char * q_add_batch_file;
+  static const char * q_load_extension;
 
 };
 
