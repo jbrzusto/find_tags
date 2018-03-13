@@ -513,8 +513,8 @@ const char *
 DB_Filer::q_save_findtags_state =
   "insert or replace into batchState \
              (batchID, progName, monoBN, tsData, tsRun, state, version)\
-      values (?,       ?,        ?,      ?,      ?,     ?,     ? );";
-  //          1        2         3       4       5      6      7
+      values (?,       ?,        ?,      ?,      ?,     gzcompress(?),     ? );";
+  //          1        2         3       4       5                 6       7
 
 void
 DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string state, int version) {
@@ -539,8 +539,8 @@ DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string sta
 // number (the upper 16 bits)
 
 const char *
-DB_Filer::q_load_findtags_state = "select (select max(batchID) from batchState) as batchID, tsData, tsRun, state, version from batchState where progName=? and monoBN=? and cast(version/65536 as integer)=cast(?/65536 as integer)";
-//                                                                                 0        1       2      3      4
+DB_Filer::q_load_findtags_state = "select (select max(batchID) from batchState) as batchID, tsData, tsRun, gzuncompress(state), version from batchState where progName=? and monoBN=? and cast(version/65536 as integer)=cast(?/65536 as integer)";
+//                                                                                 0        1       2      3                    4
 
 bool
 DB_Filer::load_findtags_state(long long monoBN, Timestamp & tsData, Timestamp & tsRun, std::string & state, int version, int &blob_version) {

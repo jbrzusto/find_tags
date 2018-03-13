@@ -91,7 +91,9 @@ public:
   //  have to deal with it.
   //  The serialization version will be (major << 16) | minor
 
-  static constexpr int SERIALIZATION_MAJOR_VERSION = 1;
+  // VERSION 2.0: gzip-compressed
+
+  static constexpr int SERIALIZATION_MAJOR_VERSION = 2;
   static constexpr int SERIALIZATION_MINOR_VERSION = 0;
   static constexpr int SERIALIZATION_VERSION = (SERIALIZATION_MAJOR_VERSION << 16) | SERIALIZATION_MINOR_VERSION;
 
