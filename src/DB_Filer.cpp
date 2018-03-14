@@ -564,6 +564,7 @@ DB_Filer::save_findtags_state(Timestamp tsData, Timestamp tsRun, std::string sta
   sqlite3_bind_int(st_save_findtags_state,    7, version);
   step_commit(st_save_findtags_state);
   end_tx(); // force a commit, because the bind_blob above is to a local variable
+  begin_tx(); // open last transaction; see https://github.com/jbrzusto/find_tags/issues/64
 };
 
 // the query for fetching saved state compares only the major portion of the version
