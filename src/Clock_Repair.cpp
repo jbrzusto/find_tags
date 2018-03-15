@@ -14,7 +14,8 @@ Clock_Repair::Clock_Repair(Data_Source *data, unsigned long long *line_no, DB_Fi
   GPSstuck(false),
   correcting(false),
   offset(0.0),
-  offsetError(0.0)
+  offsetError(0.0),
+  buf()
 {
   init();
 };
@@ -23,7 +24,6 @@ void
 Clock_Repair::init() {
   // set the max valid timestamp, allowing for 5 minutes of slop
   max_ts = time_now() + 300;
-  memset(&this->buf[0], 0, MAX_LINE_SIZE + 1);
 };
 
 //!< handle a record from an SG file; return TRUE if any

@@ -1,14 +1,14 @@
 #include "Clock_Pinner.hpp"
 
 Clock_Pinner::Clock_Pinner() :
+  lo(),
+  hi(),
+  runLen(),
   runType(NONE),
   haveOffset(false),
   estOffset(0),
   maxError(0)
 {
-  hi[VALID] = hi[INVALID] = 0;
-  lo[VALID] = lo[INVALID] = 0;
-  runLen[VALID] = runLen[INVALID ] = 0;
 };
 
 bool

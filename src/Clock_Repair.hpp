@@ -177,10 +177,10 @@ protected:
   Timestamp offset;
   Timestamp offsetError;
 
+  char buf[MAX_LINE_SIZE + 1]; //!< input buffer
+
   //!< are pulses using CLOCK_MONOTONIC?
   bool clock_monotonic();
-
-  char buf[MAX_LINE_SIZE + 1]; // input buffer
 
   static Timestamp max_ts; //!< maximum valid timestamp; records with larger timestamps are ignored.
 

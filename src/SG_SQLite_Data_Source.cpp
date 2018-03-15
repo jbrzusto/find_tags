@@ -6,9 +6,9 @@ SG_SQLite_Data_Source::SG_SQLite_Data_Source(DB_Filer * db, unsigned int monoBN)
   offset(0),
   originTS(0),
   originOffset(0),
-  originBytesLeft(0)
+  originBytesLeft(0),
+  emptyBlob()
 {
-  emptyBlob[0] = '\0';
   blob = &emptyBlob[0];
   db->start_blob_reader(monoBN);
 };

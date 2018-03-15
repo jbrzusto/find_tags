@@ -6,11 +6,11 @@ CXX=gfilt
 ##PROFILING=-g3 -pg -fno-omit-frame-pointer
 
 ## DEBUG FLAGS:
-##CPPFLAGS=-Wall -Wno-sign-compare -g3  -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS) -I/usr/local/include/boost_1.60 -DDEBUG
+##CPPFLAGS=-Wall -Wno-sign-compare -g3  -std=c++11 $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS) -I/usr/local/include/boost_1.60 -DDEBUG
 ## add -DDEBUG2 and -DDEBUG3 for more extensive debug output
 
 ## PRODUCTION FLAGS:
-CPPFLAGS=-Wall -Wno-sign-compare -g -O3 -std=c++0x $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS)  -I/usr/local/include/boost_1.60
+CPPFLAGS=-Wall -Wno-sign-compare -g -O3 -std=c++11 $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS)  -I/usr/local/include/boost_1.60
 
 LDFLAGS=-ldl -lrt -L /usr/local/lib/boost_1.60 -lboost_serialization -lsqlite3
 PROGRAM_VERSION=\""$(shell git describe)\""
@@ -130,4 +130,9 @@ testAddRemoveTag: testAddRemoveTag.o Ambiguity.o  Freq_Setting.o  History.o  Pul
 testum.o: testum.cpp
 
 testum: testum.o
+	g++ $(PROFILING) -o $@ $^ $(LDFLAGS)
+
+bimap_serialize_test.o: bimap_serialize_test.cpp
+
+bimap_serialize_test: bimap_serialize_test.o
 	g++ $(PROFILING) -o $@ $^ $(LDFLAGS)
