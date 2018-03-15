@@ -8,8 +8,9 @@
 
 SQL=sqlite3
 RCVDB=test1/test1.sqlite
-FINDTAGS=../src/find_tags_motus
+FINDTAGS="valgrind --track-origins=yes ../src/find_tags_motus"
 OPTIONS="--pulses_to_confirm=8 --frequency_slop=0.5 --min_dfreq=0 --max_dfreq=12 --pulse_slop=1.5 --burst_slop=4 --burst_slop_expansion=1 --use_events --max_skipped_bursts=20 --default_freq=166.376 --bootnum=176  --src_sqlite $RCVDB"
+##OUTPUT=">/dev/null 2>&1"
 
 tar -xjvf test1.tar.bz2
 
@@ -20,7 +21,7 @@ delete from files where fileID>=15600;
 EOF
 
 ## run 1st set of files
-$FINDTAGS $OPTIONS $RCVDB >/dev/null 2>&1
+$FINDTAGS $OPTIONS $RCVDB $OUTPUT
 
 ## restore 2nd set of files
 $SQL $RCVDB <<EOF
@@ -29,10 +30,10 @@ drop table save_files;
 EOF
 
 ## resume processing of previous boot session (i.e. 2nd set of files)
-$FINDTAGS --resume $OPTIONS $RCVDB >/dev/null 2>&1
+$FINDTAGS --resume $OPTIONS $RCVDB $OUTPUT
 
 ## re-run same boot session (all files)
-$FINDTAGS $OPTIONS $RCVDB >/dev/null 2>&1
+$FINDTAGS $OPTIONS $RCVDB $OUTPUT
 
 $SQL $RCVDB <<EOF
 select "numHits, numRuns correct: " ||
