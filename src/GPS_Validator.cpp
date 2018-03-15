@@ -3,6 +3,7 @@
 GPS_Validator::GPS_Validator(Timestamp thresh) :
   thresh(thresh),
   lastGPSTS(0),
+  pulseTSlo(0),
   pulseTShi(0),
   stuck(false)
 {
