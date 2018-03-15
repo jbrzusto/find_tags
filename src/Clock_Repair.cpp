@@ -81,7 +81,7 @@ bool
 Clock_Repair::read_record(SG_Record & r) {
   while (data->getline(buf, MAX_LINE_SIZE)) {
     ++ *line_no;
-    r = SG_Record::from_buf(buf);
+    r.from_buf(buf);
     if (r.type == SG_Record::BAD) {
       if (++num_bad_line_warnings <= MAX_BAD_LINE_WARNINGS ) {
         std::cerr << "Warning: malformed line in input\n  at line " << * line_no << ":\n" << (string("") + buf) << std::endl;

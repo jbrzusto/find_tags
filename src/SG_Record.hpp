@@ -12,7 +12,7 @@ struct SG_Record {
 
   Timestamp ts;  //!< timestamp from file line; common to all record types
   Port_Num port; //!< port from file line; common to most record types
-  union {
+  union record_union {
     struct {
       // Pulse record
       Frequency_Offset_kHz dfreq;
@@ -41,10 +41,13 @@ struct SG_Record {
       double   clock_remaining;
     };
 
+    record_union() : param_flag(), param_value(), return_code(), error() {};
+
   } v;
 
-  static SG_Record from_buf(char * buf);        //!< construct from buffer
+  SG_Record();
 
+  void from_buf(char * buf);        //!< construct from buffer
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)

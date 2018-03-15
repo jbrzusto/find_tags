@@ -3,19 +3,23 @@
 #include <string.h>
 #include <sstream>
 
-SG_Record
+SG_Record::SG_Record() :
+  v()
+{
+};
+
+void
 SG_Record::from_buf(char * buf) {
   // assume invalid record
-  SG_Record rv;
-  rv.type = BAD;
+  type = BAD;
   switch (buf[0]) {
   case 'p':
     /* a pulse record line like:
        p1,14332651182.1235,3.234,-55.44,-77.33
        port    ts          dfreq  sig    noise
     */
-    if (5 == sscanf(buf+1, "%hd,%lf,%f,%f,%f", &rv.port, &rv.ts, &rv.v.dfreq, &rv.v.sig, &rv.v.noise)) {
-      rv.type = PULSE;
+    if (5 == sscanf(buf+1, "%hd,%lf,%f,%f,%f", &port, &ts, &v.dfreq, &v.sig, &v.noise)) {
+      type = PULSE;
     }
     break;
 
@@ -24,8 +28,8 @@ SG_Record::from_buf(char * buf) {
        G,1458001712,44.34021,-66.118733333,21.6
        ts        lat        lon        alt
     */
-    if (buf[1] != '\0' && 4 == sscanf(buf+2, "%lf,%lf,%lf,%lf", &rv.ts, &rv.v.lat, &rv.v.lon, &rv.v.alt)) {
-      rv.type = GPS;
+    if (buf[1] != '\0' && 4 == sscanf(buf+2, "%lf,%lf,%lf,%lf", &ts, &v.lat, &v.lon, &v.alt)) {
+      type = GPS;
     }
     break;
 
@@ -34,20 +38,20 @@ SG_Record::from_buf(char * buf) {
        S,1366227448.192,5,-m,166.376,0,
        is S, timestamp, port_num, param flag, value, return code, other error
     */
-    if (buf[1] != '\0' && 5 == sscanf(buf+2, "%lf,%hd,-w,%[^,],%lf,%d,", &rv.ts, &rv.port, (char *) &rv.v.param_flag, &rv.v.param_value, &rv.v.return_code)) {
+    if (buf[1] != '\0' && 5 == sscanf(buf+2, "%lf,%hd,-w,%[^,],%lf,%d,", &ts, &port, (char *) &v.param_flag, &v.param_value, &v.return_code)) {
       /* this case required by stupid formatting of "-w REG VAL"
          parameters to fcd, which ends up in files as
          e.g. "S,12345678,1,-w,0x07,1,0," */
-        rv.type = PARAM;
-    } else if (buf[1] != '\0' && 5 == sscanf(buf+2, "%lf,%hd,%[^,],%lf,%d,", &rv.ts, &rv.port, (char *) &rv.v.param_flag, &rv.v.param_value, &rv.v.return_code)) {
-      rv.type = PARAM;
-    } else if (buf[1] != '\0' && (4 == sscanf(buf+2, "%lf,%hd,%[^,],undefined,%d,", &rv.ts, &rv.port, (char *) &rv.v.param_flag, &rv.v.return_code)
-                || 4 == sscanf(buf+2, "%lf,%hd,%[^,],null,%d,", &rv.ts, &rv.port, (char *) &rv.v.param_flag, &rv.v.return_code))) {
+        type = PARAM;
+    } else if (buf[1] != '\0' && 5 == sscanf(buf+2, "%lf,%hd,%[^,],%lf,%d,", &ts, &port, (char *) &v.param_flag, &v.param_value, &v.return_code)) {
+      type = PARAM;
+    } else if (buf[1] != '\0' && (4 == sscanf(buf+2, "%lf,%hd,%[^,],undefined,%d,", &ts, &port, (char *) &v.param_flag, &v.return_code)
+                || 4 == sscanf(buf+2, "%lf,%hd,%[^,],null,%d,", &ts, &port, (char *) &v.param_flag, &v.return_code))) {
       /* this case required to report errors in parameter setting that leave value as 'undefined' or 'null' */
-      rv.v.param_value = nan("0");
-      rv.type = PARAM;
+      v.param_value = nan("0");
+      type = PARAM;
     }
-    rv.v.error[0] = '\0';
+    v.error[0] = '\0';
     break;
 
   case 'C':
@@ -56,8 +60,8 @@ SG_Record::from_buf(char * buf) {
        which gives the new timestamp, level of correction (roughly 10^-X), residual correction
        Mainly of interest because it provides a timestamp.
     */
-    if (buf[1] != '\0' && 3 == sscanf(buf+2, "%lf,%d,%lf", &rv.ts, &rv.v.clock_level, &rv.v.clock_remaining)) {
-      rv.type = CLOCK;
+    if (buf[1] != '\0' && 3 == sscanf(buf+2, "%lf,%d,%lf", &ts, &v.clock_level, &v.clock_remaining)) {
+      type = CLOCK;
     }
     break;
   case 'F':
@@ -68,13 +72,12 @@ SG_Record::from_buf(char * buf) {
        of CLOCK_REALTIME timestamps (e.g. on an SG without a GPS and using NTP for
        clock sync)
     */
-    if (buf[1] != '\0' && 1 == sscanf(buf+2, "%lf", &rv.ts)) {
-      rv.type = SG_Record::FILE;
+    if (buf[1] != '\0' && 1 == sscanf(buf+2, "%lf", &ts)) {
+      type = SG_Record::FILE;
     }
     break;
 
   default:
     break;
   };
-  return rv;
 };
