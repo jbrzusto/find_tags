@@ -10,7 +10,7 @@ CXX=gfilt
 ## add -DDEBUG2 and -DDEBUG3 for more extensive debug output
 
 ## PRODUCTION FLAGS:
-CPPFLAGS=-Wall -Wno-sign-compare -g -O3 -std=c++11 $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS)  -I/usr/local/include/boost_1.60
+CPPFLAGS=-Wall -Wno-sign-compare -g -O3 -std=c++11 $(PROFILING) -DPROGRAM_VERSION=$(PROGRAM_VERSION) -DPROGRAM_BUILD_TS=$(PROGRAM_BUILD_TS) -I/usr/local/include/boost_1.60
 
 LDFLAGS=-ldl -lrt -L /usr/local/lib/boost_1.60 -lboost_serialization -lsqlite3
 PROGRAM_VERSION=\""$(shell git describe)\""
@@ -23,7 +23,7 @@ install: find_tags_motus
 	strip /sgm/bin/find_tags_motus
 
 ## separate installation for find_tags_unifile, which must be built
-## after checkout out tag `find_tags_unifile`.  Yes, ugly.
+## after doing `git checkout find_tags_unifile`.  Yes, ugly.
 
 install_find_tags_unifile: find_tags_unifile
 	sudo cp find_tags_unifile /sgm/bin
@@ -126,13 +126,3 @@ testAddRemoveTag.o: testAddRemoveTag.cpp find_tags_unifile.cpp find_tags_common.
 ## Note: to make testAddRemoteTag, Graph.cpp must be compiled with -DDEBUG
 testAddRemoveTag: testAddRemoveTag.o Ambiguity.o  Freq_Setting.o  History.o  Pulse.o Set.o Tag_Candidate.o  Tag_Finder.o  Tag.o Ticker.o DB_Filer.o Graph.o Node.o Rate_Limiting_Tag_Finder.o Tag_Database.o Tag_Foray.o Data_Source.o Lotek_Data_Source.o SG_File_Data_Source.o Clock_Repair.o Clock_Pinner.o GPS_Validator.o SG_Record.o SG_SQLite_Data_Source.o
 	g++ $(PROFILING) -o testAddRemoveTag $^ $(LDFLAGS)
-
-testum.o: testum.cpp
-
-testum: testum.o
-	g++ $(PROFILING) -o $@ $^ $(LDFLAGS)
-
-bimap_serialize_test.o: bimap_serialize_test.cpp
-
-bimap_serialize_test: bimap_serialize_test.o
-	g++ $(PROFILING) -o $@ $^ $(LDFLAGS)
