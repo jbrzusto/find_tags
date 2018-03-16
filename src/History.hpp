@@ -19,9 +19,10 @@ public:
   void push(Event e); //!< add an event to the end of the history
   Event get (marker m); //!< get event at index m
   size_t size(); //!< return size of timeline
+  void prune_deceased(Timestamp ts); //!< delete all activate/deactivate pairs prior to ts
 
 protected:
-  // represent a time-mapped sequence of events
+  // represent a time-ordered sequence of events
   Timeline q;
 
 public:
@@ -30,6 +31,7 @@ public:
   void serialize(Archive & ar, const unsigned int version) {
     ar & BOOST_SERIALIZATION_NVP( q );
   };
+
 
 };
 

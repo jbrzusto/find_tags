@@ -86,7 +86,19 @@ Tag_Foray::start() {
   cr = new Clock_Repair(data, &line_no, Tag_Candidate::filer);
   SG_Record r;
 
-  while(cr->get(r)) {
+  if (! cr->get(r))
+    return;  // no records, so nothing to do
+
+  // the record returned by cr has a valid timestamp (the whole point of Clock_Repair)
+  // so we can prune events corresponding to a tag having been activated and then died
+  // *before* this first timestamp.  We allow for a 10 second reversal.
+  hist->prune_deceased(r.ts - 10.0);
+
+  // get the event iterator
+  cron = hist->getTicker();
+
+  bool have_record = true;
+  for( ; have_record; have_record = cr->get(r)) {
     // get begin time, allowing for small time reversals (10 seconds)
     if (! tsBegin || (r.ts < tsBegin && r.ts >= tsBegin - 10.0))
       tsBegin = r.ts;
