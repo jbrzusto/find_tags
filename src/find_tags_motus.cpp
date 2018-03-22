@@ -534,7 +534,16 @@ main (int argc, char **argv) {
         if (comma++)
           std::cout << ",";
         std::cout << "{\"name\":\"" << (*i)->long_name() << "\",\"description\":\"" << (*i)->description() << "\",\"default\":";
-        try { std::cout << boost::any_cast<double>(x) << ",\"type\":\"real\""; }
+        try {
+          double y = boost::any_cast<double>(x);
+          // JSON lacks support for inf (and other non-finite IEEE 488 values)
+          // so use values that exceed double and end up parsing as Inf when using
+          // R's jsonlite::fromJSON()
+          if (std::isfinite(y))
+            std::cout << y;
+          else
+            std::cout << ((y > 0) ? "1e1024" : "-1e1024");
+        }
         catch(const boost::bad_any_cast &) {
           try { std::cout << boost::any_cast<float>(x) << ",\"type\":\"real\""; }
           catch(const boost::bad_any_cast &) {
