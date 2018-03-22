@@ -526,23 +526,31 @@ main (int argc, char **argv) {
 
   // doing info?
   if (info_only) {
-    std::cout << "{\"version\":\"" << program_version << "\",\"options\":[";
-    bool comma=false;
+    std::cout << "{\"version\":\"" << program_version << "\",\"build_ts\":" << std::setprecision(14) << program_build_ts << ",\"options\":[";
+    int comma = 0;
     for (auto i = opt.options().begin(); i != opt.options().end(); ++i) {
       boost::any x;
       if ((*i)->semantic()->apply_default(x)) {
-        try
-          {
-            double y = boost::any_cast<double>(x);
-            if (comma)
-              std::cout << ",";
-            std::cout << "{\"name\":\"" << (*i)->long_name() << "\",\"description\":\"" << (*i)->description() << "\",\"default\":";
-            std::cout << y << "}";
-            comma = true;
+        if (comma++)
+          std::cout << ",";
+        std::cout << "{\"name\":\"" << (*i)->long_name() << "\",\"description\":\"" << (*i)->description() << "\",\"default\":";
+        try { std::cout << boost::any_cast<double>(x) << ",\"type\":\"real\""; }
+        catch(const boost::bad_any_cast &) {
+          try { std::cout << boost::any_cast<float>(x) << ",\"type\":\"real\""; }
+          catch(const boost::bad_any_cast &) {
+            try { std::cout << (boost::any_cast<bool>(x) ? "true" : "false") << ",\"type\":\"logical\""; }
+            catch(const boost::bad_any_cast &) {
+              try { std::cout << boost::any_cast<int>(x) << ",\"type\":\"integer\""; }
+              catch(const boost::bad_any_cast &) {
+                try { std::cout << boost::any_cast<unsigned>(x) << ",\"type\":\"unsigned integer\""; }
+                catch(const boost::bad_any_cast &) {
+                  std::cout << "null";
+                }
+              }
+            }
           }
-        catch(const boost::bad_any_cast &)
-          {
-          }
+        }
+        std::cout << "}";
       }
     }
     std::cout << "]}";
