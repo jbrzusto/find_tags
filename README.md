@@ -1,6 +1,10 @@
 find_tags:  assemble putative pulses from coded ID tags and connect them into runs
 of tag detections.
 
+Note: uses a slightly patched version of boost program_options (v 1.60.0) which
+always uses the last specified value for any non-vector option.  This simplifies
+option overrides.  See: https://github.com/jbrzusto/find_tags/issues/67
+
 There are two versions of the program:  `find_tags_motus` and `find_tags_unifile`
 
 find_tags_motus|find_tags_unifile

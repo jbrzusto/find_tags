@@ -282,7 +282,7 @@ main (int argc, char **argv) {
      "print help"
      )
 
-    ("default_freq,f", po::value<Frequency_MHz>(& default_freq)->default_value(166.376),
+    ("default_freq,f", po::value<Frequency_MHz>(& default_freq)->multitoken()->default_value(166.376),
      "the default antenna frequency, in MHz.  Although input data files contain "
      "frequency-setting records, this option can be used to set the frequency when "
      "processing a fragment of an input file that doesn't contain an initial frequency "
