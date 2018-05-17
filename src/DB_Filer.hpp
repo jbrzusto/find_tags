@@ -110,6 +110,7 @@ protected:
   sqlite3_stmt * st_save_ambig; //!< save an ambiguity groups to database
   sqlite3_stmt * st_save_findtags_state; //!< save state of running findtags, for pause
   sqlite3_stmt * st_load_findtags_state; //!< load state of paused findtags, for resume
+  sqlite3_stmt * st_get_file_repo; //!< check whether we have a `fileRepo` symbol in DB meta table
   sqlite3_stmt * st_get_blob; //!< grab and decompress file contents
   sqlite3_stmt * st_get_DTAtags; //!< grab DTA tag records
   sqlite3_stmt * st_add_pulse; //!< record a pulse
@@ -169,6 +170,7 @@ protected:
   static const char * q_save_ambig;
   static const char * q_load_findtags_state;
   static const char * q_save_findtags_state;
+  static const char * q_get_file_repo;
   static const char * q_get_blob;
   static const char * q_get_DTAtags;
   static const char * q_add_pulse;

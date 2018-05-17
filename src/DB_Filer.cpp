@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 DB_Filer::DB_Filer (const string &out, const string &prog_name, const string &prog_version, double prog_ts, int  bootnum, double minGPSdt):
   prog_name(prog_name),
@@ -590,12 +592,15 @@ DB_Filer::load_findtags_state(long long monoBN, Timestamp & tsData, Timestamp & 
 };
 
 const char *
+DB_Filer::q_get_file_repo = R"(select val from meta where key='fileRepo')";
+
+const char *
 DB_Filer::q_get_blob = R"(select ts,
 case compressed when 0 then readfile(filename) else gzreadfile(filename) end,
 fileID from
 (select
    (printf('%s/%s/%s%s',
-           (select val from meta where key='fileRepo'),
+           ?,
            strftime('%Y-%m-%d', datetime(t1.ts, 'unixepoch')),
            t1.name,
            case isDone when 0 then '' else '.gz' end)
@@ -635,16 +640,39 @@ DB_Filer::start_blob_reader(int monoBN) {
                             0),
          "SQLite input database does not have valid 'batchFiles' table.");
 
-  sqlite3_bind_int(st_get_blob, 1, monoBN);
+  Check( sqlite3_prepare_v2(outdb,
+                               q_get_file_repo,
+                               -1,
+                               &st_get_file_repo,
+                               0),
+         "SQLite input database does not have valid 'meta' table.");
+  const char * file_repo;
+  bool file_repo_okay = false;
+  if (sqlite3_step(st_get_file_repo) == SQLITE_ROW) {
+    // bind file repo into query column
+    file_repo = (const char *) sqlite3_column_text(st_get_file_repo, 0);
+    DIR * file_repo_dir = opendir(file_repo);
+    if (file_repo_dir) {
+      file_repo_okay = true;
+      closedir(file_repo_dir);
+    }
+  }
+  if (!file_repo_okay)
+    throw std::runtime_error("missing or invalid value for 'fileRepo' key in receiver DB 'meta' table");
+
+  sqlite3_bind_text(st_get_blob, 1, file_repo, -1, SQLITE_TRANSIENT);
+  sqlite3_finalize(st_get_file_repo);
+
+  sqlite3_bind_int(st_get_blob, 2, monoBN);
 
   // initially, assume we're starting at the first file in that boot session, by specifying fileTS=0.
   // this might be changed by the resume() code.
-  sqlite3_bind_int(st_get_blob, 2, 0);
+  sqlite3_bind_int(st_get_blob, 3, 0);
 };
 
 void
 DB_Filer::seek_blob (Timestamp tsseek) {
-  sqlite3_bind_int(st_get_blob, 2, tsseek);
+  sqlite3_bind_int(st_get_blob, 3, tsseek);
 };
 
 bool
