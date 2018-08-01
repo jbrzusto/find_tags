@@ -267,6 +267,10 @@ main (int argc, char **argv) {
   // additional params
   std::vector < std::string > external_param;
 
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+  double active_tag_dump_interval = 0;
+#endif // ACTIVE_TAG_DIAGNOSTICS
+
   po::options_description opt
     (
      "Find sequences of pulses corresponding to bursts from registered tags\n\n"
@@ -471,7 +475,16 @@ main (int argc, char **argv) {
      "Note:  the commit hash from the tag database's `meta` table is automatically "
      "recorded as external parameter `metadata_hash` to avoid a race condition, "
      "so this option should *not* be used for that purpose."
-     );
+     )
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+    ("active_tag_dump_interval,a", po::value<double>(&active_tag_dump_interval)->default_value(0.0),
+     "how often, in seconds, to dump a list of active tagIDs for each input channel. "
+     "Each dump is a line of the form TS,PORT,NOMFREQ,motusID1,motusID2,...motusIDN\n"
+     "e.g. -a 3600 dumps the list of active tags once per hour\n"
+     "Only values > 0 cause active tag lists to be dumped, so the default (0) does not."
+     )
+#endif // ACTIVE_TAG_DIAGNOSTICS
+    ;
 
   po::positional_options_description popt;
   popt.add("tag_database", 1)
@@ -499,6 +512,9 @@ main (int argc, char **argv) {
   Tag_Foray::set_default_burst_slop_expansion_ms(burst_slop_expansion);
   Tag_Foray::set_default_max_skipped_bursts(max_skipped_bursts);
   Tag_Foray::set_timestamp_wonkiness(timestamp_wonkiness);
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+  Tag_Foray::set_active_tag_dump_interval(active_tag_dump_interval);
+#endif // ACTIVE_TAG_DIAGNOSTICS
   Tag_Candidate::set_pulses_to_confirm_id(pulses_to_confirm);
   Tag_Candidate::set_sig_slop_dB(sig_slop_dB);
   Tag_Candidate::set_freq_slop_kHz(frequency_slop);

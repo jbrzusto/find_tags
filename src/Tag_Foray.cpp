@@ -100,8 +100,15 @@ Tag_Foray::start() {
   bool have_record = true;
   for( ; have_record; have_record = cr->get(r)) {
     // get begin time, allowing for small time reversals (10 seconds)
-    if (! tsBegin || (r.ts < tsBegin && r.ts >= tsBegin - 10.0))
+    if (! tsBegin || (r.ts < tsBegin && r.ts >= tsBegin - 10.0)) {
       tsBegin = r.ts;
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+      if (active_tag_dump_interval > 0.0 && next_active_tag_dump_time == 0.0) {
+        dump_active_tags(tsBegin);
+        next_active_tag_dump_time = tsBegin + active_tag_dump_interval;
+      }
+#endif // ACTIVE_TAG_DIAGNOSTICS
+    }
 
     // skip record if it includes a time reversal of more than 10 seconds
     // (small time reversals are perfectly valid, and typically due to interleaved data
@@ -196,6 +203,15 @@ Tag_Foray::start() {
 
         while (cron.ts() <= p.ts)
           process_event(cron.get());
+
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+        if (active_tag_dump_interval > 0.0 && p.ts > next_active_tag_dump_time) {
+          dump_active_tags(p.ts);
+          // bump up next active tag dump time by at least one interval, and by enough
+          // intervals to be greater than p.ts
+          next_active_tag_dump_time += active_tag_dump_interval * (1.0 + floor((p.ts - next_active_tag_dump_time) / active_tag_dump_interval));
+        }
+#endif // ACTIVE_TAG_DIAGNOSTICS
 
         if (pulses_only) {
           Tag_Candidate::filer->add_pulse(r.port, p);
@@ -332,6 +348,11 @@ unsigned int Tag_Foray::default_max_skipped_bursts = 60;
 unsigned int Tag_Foray::timestamp_wonkiness = 0;// maximum seconds of clock jump size in Lotek .DTA data files
 
 Tag_Foray::Run_Cand_Counter Tag_Foray::num_cands_with_run_id_ = Run_Cand_Counter();
+
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+double Tag_Foray::active_tag_dump_interval = 0; // seconds between dumps of active tag IDs (if > 0)
+double Tag_Foray::next_active_tag_dump_time = 0; // real (data) time of next active tag ID dump
+#endif // ACTIVE_TAG_DIAGNOSTICS
 
 void
 Tag_Foray::pause() {
@@ -505,3 +526,22 @@ Tag_Foray::num_cands_with_run_id (DB_Filer::Run_ID rid, int delta) {
     return(0);
   }
 };
+
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+void
+Tag_Foray::dump_active_tags(double ts) {
+  std::cout << std::setprecision(14);
+  for (auto tfi = tag_finders.begin(); tfi != tag_finders.end(); ++tfi) {
+    Tag_Finder_Key key = tfi->first;
+    std::cout << ts << ',' << key.first << ',' << key.second * 0.001 << ',';
+    tfi->second->graph->dumpActiveTags();
+    std::cout << std::endl;
+  }
+  std::cout << std::setprecision(6);
+};
+
+void
+Tag_Foray::set_active_tag_dump_interval(double t) {
+  active_tag_dump_interval = t;
+};
+#endif //ACTIVE_TAG_DIAGNOSTICS

@@ -71,6 +71,15 @@ public:
 
   Timestamp last_seen() {return ts;}; // return last timestamp seen on input
 
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+  // dump tags active for each Tag_Finder to cout
+  void dump_active_tags(double ts);
+  // set active tag dump interval
+  // i.e. how often are lists of active tags dumped? (seconds in data time)?
+  // only happens if t > 0
+  static void set_active_tag_dump_interval(double t);
+#endif // ACTIVE_TAG_DIAGNOSTICS
+
   static constexpr double MIN_VALID_TIMESTAMP = 1262304000; // unix timestamp for 1 Jan 2010, GMT
   static constexpr double BEAGLEBONE_POWERUP_TS = 946684800; // unix timestamp for 1 Jan 2000, GMT
 
@@ -180,6 +189,15 @@ protected:
   typedef std::unordered_map < DB_Filer::Run_ID, int > Run_Cand_Counter;
   static  Run_Cand_Counter num_cands_with_run_id_;
 
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+  // interval at which active tag list is dumped for each Tag_Finder
+  // only used if > 0
+  static double active_tag_dump_interval;
+
+  // timestamp at which next dump of active tags is required
+  // (only valid if active_tag_dump_interval > 0)
+  static double next_active_tag_dump_time;
+#endif // ACTIVE_TAG_DIAGNOSTICS
 
 public:
 

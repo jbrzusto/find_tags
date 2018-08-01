@@ -27,6 +27,11 @@ protected:
   // nodes get stamped with 0 and the new stamp value is set to 1.
   int stamp;
 
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+  // set of active tags, for diagnostics
+  TagSet active_tags;
+#endif // ACTIVE_TAG_DIAGNOSTICS
+
 public:
 
   Graph(std::string vizPrefix = "graph");
@@ -38,6 +43,9 @@ public:
   void viz();
   void dumpSetToNode();
   void validateSetToNode();
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+  void dumpActiveTags(); //!< dump comma-separated list of motusIDs of currently-active tags
+#endif // ACTIVE_TAG_DIAGNOSTICS
 
 protected:
 

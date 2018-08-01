@@ -38,6 +38,10 @@ Graph::root() {
 
 std::pair < Tag *, Tag * >
 Graph::addTag(Tag * tag, double tol, double timeFuzz, double maxTime, unsigned int timestamp_wonkiness) {
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+  active_tags.insert(tag);
+#endif // ACTIVE_TAG_DIAGNOSTICS
+
   auto ot = find(tag, tol, timeFuzz);
 
   // if we renamed a tag in the graph due to ambiguity management,
@@ -59,6 +63,9 @@ Graph::addTag(Tag * tag, double tol, double timeFuzz, double maxTime, unsigned i
 
 std::pair < Tag *, Tag * >
 Graph::delTag(Tag * tag) {
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+  active_tags.erase(tag);
+#endif // ACTIVE_TAG_DIAGNOSTICS
   auto p = Ambiguity::proxyFor(tag);
   if (!p) {
     // tag has not been proxied, so just delete
@@ -346,6 +353,21 @@ Graph::validateSetToNode() {
   if (!okay)
     throw std::runtime_error("validateSetToNode() failed");
 };
+
+#ifdef ACTIVE_TAG_DIAGNOSTICS
+void
+Graph::dumpActiveTags() {
+  bool comma = false;
+  for (auto i = active_tags.begin(); i != active_tags.end(); ++i) {
+    if (comma)
+      std::cout << ',';
+    else
+      comma = true;
+    std::cout << (*i)->motusID;
+  }
+};
+
+#endif // ACTIVE_TAG_DIAGNOSTICS
 
 void
 Graph::mapSet( Set * s, Node * n) {
