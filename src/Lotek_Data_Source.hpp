@@ -66,7 +66,7 @@ public:
                                          //! for small time reversals
                                          //! and interleaving of
                                          //! output pulses
-  static const int MAX_ANTENNAS=12;      //!< maximum number of antennas (0: direct beaglebone; 1-10 USB hub ports; 11: Lotek master antenna A1+A2+A3+A4
+  static const int MAX_ANTENNAS=8;      //!< maximum number of antennas (0: direct connection; 1-6 multiplex; -1: Lotek "Master" antenna A1+A2+A3+A4
   static const int MAX_LINE_FORMAT_CHARS=64; //!< maximum number of chars in scanf format string for an input line
 
 

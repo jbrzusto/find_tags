@@ -19,6 +19,11 @@ Lotek_Data_Source::Lotek_Data_Source(DB_Filer * db, Tag_Database *tdb, Frequency
     }
   }
   // generate the vector of antenna frequencies
+
+  // NOTE: indexes in this array are offset by one (e.g. antFreq[1] is
+  // the frequency for port 0) to accommodate the -1 value that
+  // represents "A1+A2+A3+A4" in antFreq[0]
+
   antFreq = std::vector < Frequency_MHz > ( MAX_ANTENNAS, defFreq);
 
   // start the db reader
@@ -103,8 +108,8 @@ Lotek_Data_Source::translateLine()
   }
 
   latestInputTS = dtar.ts;
-  if (dtar.freq != antFreq[dtar.ant]) {
-    antFreq[dtar.ant] = dtar.freq;
+  if (dtar.freq != antFreq[dtar.ant + 1]) {
+    antFreq[dtar.ant + 1] = dtar.freq;
     std::ostringstream freqRec;
     // make frequency setting record like: S,1366227448.192,5,-m,166.376,0,
 
