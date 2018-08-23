@@ -10,7 +10,8 @@ To build `find_tags_motus`, use the `master` branch.
 To build `find_tags_unifile`, use the `find_tags_unifile` branch.
 
 Note: for convenience of Windows users who wish to run the program, a compiled
-binary version of `find_tags_unifile` is available [here](https://public.sensorgnome.org/misc/find_tags_unifile.exe)
+binary version of `find_tags_unifile` is available [here](https://public.sensorgnome.org/misc/find_tags_unifile.exe).
+
 **The Windows version is untested - use at own risk.**
 
 find_tags_motus|find_tags_unifile
