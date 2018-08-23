@@ -6,6 +6,8 @@ always uses the last specified value for any non-vector option.  This simplifies
 option overrides.  See: https://github.com/jbrzusto/find_tags/issues/67
 
 There are two versions of the program:  `find_tags_motus` and `find_tags_unifile`
+To build `find_tags_motus`, use the `master` branch.
+To build `find_tags_unifile`, use the `find_tags_unifile` branch.
 
 find_tags_motus|find_tags_unifile
 ---|---
