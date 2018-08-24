@@ -12,6 +12,7 @@ CC=i686-w64-mingw32-gcc
 ## PRODUCTION FLAGS:
 CPPFLAGS=-Wall -O3 -std=c++0x  -ffast-math -ftree-vectorize -static-libgcc -static-libstdc++
 CCFLAGS=-Wall -O3 -ffast-math -ftree-vectorize -static-libgcc
+LDFLAGS=-static-libgcc -static-libstdc++
 SQLITECCFLAGS=-Wall -O3 -ftree-vectorize -static-libgcc
 
 ## SQLITE DOWNLOAD LINK:
@@ -51,7 +52,7 @@ sqlite3.o: sqlite3.c sqlite3.h
 find_tags_unifile.o: find_tags_unifile.cpp find_tags_common.hpp Freq_History.hpp Freq_Setting.hpp DFA_Node.hpp DFA_Graph.hpp Known_Tag.hpp Tag_Database.hpp Pulse.hpp Burst_Params.hpp Bounded_Range.hpp Tag_Candidate.hpp Tag_Finder.hpp Rate_Limiting_Tag_Finder.hpp Tag_Foray.hpp
 
 find_tags_unifile.exe: Freq_Setting.o Freq_History.o DFA_Node.o DFA_Graph.o Known_Tag.o Tag_Database.o Pulse.o Tag_Candidate.o Tag_Finder.o Rate_Limiting_Tag_Finder.o find_tags_unifile.o Tag_Foray.o sqlite3.o
-	$(CXX) $(PROFILING) -o find_tags_unifile.exe $^
+	$(CXX) $(LDFLAGS) $(PROFILING) -o find_tags_unifile.exe $^
 
 sqlite3.c sqlite3.h:
 	curl $(SQLITE_SRC) > SQLITE_SOURCE.ZIP
