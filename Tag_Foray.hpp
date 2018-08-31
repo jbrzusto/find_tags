@@ -18,8 +18,8 @@
 class Tag_Foray {
 
 public:
-  
-  Tag_Foray (Tag_Database &tags, std::istream * data, std::ostream * out, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing);
+
+  Tag_Foray (Tag_Database &tags, std::istream * data, std::ostream * out, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq,  float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq = false);
 
   //  ~Tag_Foray ();
 
@@ -31,7 +31,7 @@ protected:
   // settings
 
   std::istream * data; // stream from which data records are read
-  std::ostream * out;  // stream to which tag ID hits are output 
+  std::ostream * out;  // stream to which tag ID hits are output
   Frequency_MHz default_freq; // default listening frequency on a port where no frequency setting has been seen
   bool force_default_freq; // ignore in-line frequency settings and always use default?
   float min_dfreq; // minimum allowed pulse offset frequency; pulses with smaller offset frequency are discarded
@@ -43,17 +43,19 @@ protected:
   Gap pulse_rate_window; // number of consecutive seconds over which rate of incoming pulses must exceed max_pulse_rate in order to discard entire window
   Gap min_bogus_spacing; // when a window of pulses is discarded, we emit a bogus tag with ID 0.; this parameter sets the minimum number of seconds between consecutive emissions of this bogus tag ID
 
+  bool unsigned_dfreq;               // if true, ignore any sign on frequency offsets (use absolute value)
+
   // runtime storage
 
   // count lines of input seen
   unsigned long long line_no;
-  
+
   // port number can be represented as a short
 
   typedef short Port_Num;
-  
+
   // keep track of frequency settings on each port
-  
+
   std::map < Port_Num, Freq_Setting > port_freq;
 
   // we need a Tag_Finder for each combination of port and nominal frequency

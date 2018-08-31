@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-Tag_Foray::Tag_Foray (Tag_Database &tags, std::istream *data, std::ostream *out, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing) :
+Tag_Foray::Tag_Foray (Tag_Database &tags, std::istream *data, std::ostream *out, Frequency_MHz default_freq, bool force_default_freq, float min_dfreq, float max_dfreq, float max_pulse_rate, Gap pulse_rate_window, Gap min_bogus_spacing, bool unsigned_dfreq) :
   tags(tags),
   data(data),
   out(out),
@@ -13,9 +13,10 @@ Tag_Foray::Tag_Foray (Tag_Database &tags, std::istream *data, std::ostream *out,
   max_pulse_rate(max_pulse_rate),
   pulse_rate_window(pulse_rate_window),
   min_bogus_spacing(min_bogus_spacing),
+  unsigned_dfreq(unsigned_dfreq),
   line_no(0)
 {
-  
+
 };
 
 
@@ -42,7 +43,7 @@ Tag_Foray::start() {
       switch (buf[0]) {
       case 'S':
         {
-          /* a parameter-setting line like: 
+          /* a parameter-setting line like:
              S,1366227448.192,5,-m,166.376,0,
              is S, timestamp, port_num, param flag, value, return code, other error
           */
@@ -60,7 +61,7 @@ Tag_Foray::start() {
             // ignore non-frequency parameter setting
             continue;
           }
-        
+
           if (! force_default_freq)
             port_freq[port_num] = Freq_Setting(param_value);
           continue;
@@ -77,6 +78,9 @@ Tag_Foray::start() {
 
           if (dfreq > max_dfreq || dfreq < min_dfreq)
             continue;
+
+          if (dfreq < 0 && unsigned_dfreq)
+            dfreq = - dfreq;
 
           if (! port_freq.count(port_num))
             port_freq[port_num] = Freq_Setting(default_freq);
@@ -102,7 +106,7 @@ Tag_Foray::start() {
           };
 
           Pulse p = Pulse::make(ts, dfreq, sig, noise, port_freq[port_num].f_MHz);
-							       
+
           tag_finders[key]->process(p);
         }
         break;
@@ -136,7 +140,3 @@ Tag_Foray::test() {
     newtf->init();
   }
 }
-    
-
-
-
