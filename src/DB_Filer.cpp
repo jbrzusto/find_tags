@@ -596,7 +596,7 @@ DB_Filer::q_get_file_repo = R"(select val from meta where key='fileRepo')";
 
 const char *
 DB_Filer::q_get_blob = R"(select ts,
-case compressed when 0 then readfile(filename) else gzreadfile(filename) end,
+readfile2(filename, compressed),
 fileID from
 (select
    (printf('%s/%s/%s%s',
