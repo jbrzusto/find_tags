@@ -1,0 +1,59 @@
+## Makefile for cross-compiling with mingw under linux; creates windows executable
+
+## 32-bit version uses this tool:
+CXX=i686-w64-mingw32-g++
+CC=i686-w64-mingw32-gcc
+## 64-bit version uses this tool:
+## CXX=x86_64-w64-mingw32-g++
+
+## DEBUG FLAGS:
+##CPPFLAGS=-Wall -g3 -std=c++0x -ffast-math -ftree-vectorize -static-libgcc -static-libstdc++
+
+## PRODUCTION FLAGS:
+CPPFLAGS=-Wall -O3 -std=c++0x  -ffast-math -ftree-vectorize -static-libgcc -static-libstdc++
+CCFLAGS=-Wall -O3 -ffast-math -ftree-vectorize -static-libgcc
+LDFLAGS=-static-libgcc -static-libstdc++
+SQLITECCFLAGS=-Wall -O3 -ftree-vectorize -static-libgcc
+
+## SQLITE DOWNLOAD LINK:
+SQLITE_SRC=https://sqlite.org/2018/sqlite-amalgamation-3240000.zip
+
+
+all: find_tags_unifile.exe
+
+clean:
+	rm -f *.o find_tags.exe find_tags_unifile.exe
+
+Freq_Setting.o: Freq_Setting.cpp Freq_Setting.hpp find_tags_common.hpp
+
+Freq_History.o: Freq_History.cpp Freq_History.hpp find_tags_common.hpp
+
+DFA_Node.o: DFA_Node.cpp DFA_Node.hpp find_tags_common.hpp
+
+DFA_Graph.o: DFA_Graph.cpp DFA_Graph.hpp find_tags_common.hpp
+
+Known_Tag.o: Known_Tag.cpp Known_Tag.hpp find_tags_common.hpp
+
+Tag_Database.o: Tag_Database.cpp Tag_Database.hpp find_tags_common.hpp sqlite3.h
+
+Pulse.o: Pulse.cpp Pulse.hpp find_tags_common.hpp
+
+Tag_Candidate.o: Tag_Candidate.hpp Tag_Candidate.cpp Tag_Finder.hpp find_tags_common.hpp
+
+Tag_Finder.o: Tag_Finder.hpp Tag_Finder.cpp Tag_Candidate.hpp find_tags_common.hpp
+
+Tag_Foray.o: Tag_Foray.hpp Tag_Foray.cpp find_tags_common.hpp
+
+Rate_Limiting_Tag_Finder.o: Rate_Limiting_Tag_Finder.hpp find_tags_common.hpp
+
+sqlite3.o: sqlite3.c sqlite3.h
+	$(CC) -c $(SQLITECCFLAGS) -o $@ $<
+
+find_tags_unifile.o: find_tags_unifile.cpp find_tags_common.hpp Freq_History.hpp Freq_Setting.hpp DFA_Node.hpp DFA_Graph.hpp Known_Tag.hpp Tag_Database.hpp Pulse.hpp Burst_Params.hpp Bounded_Range.hpp Tag_Candidate.hpp Tag_Finder.hpp Rate_Limiting_Tag_Finder.hpp Tag_Foray.hpp
+
+find_tags_unifile.exe: Freq_Setting.o Freq_History.o DFA_Node.o DFA_Graph.o Known_Tag.o Tag_Database.o Pulse.o Tag_Candidate.o Tag_Finder.o Rate_Limiting_Tag_Finder.o find_tags_unifile.o Tag_Foray.o sqlite3.o
+	$(CXX) $(LDFLAGS) $(PROFILING) -o find_tags_unifile.exe $^
+
+sqlite3.c sqlite3.h:
+	curl $(SQLITE_SRC) > SQLITE_SOURCE.ZIP
+	unzip -j -o SQLITE_SOURCE.ZIP "*sqlite3.[hc]"
