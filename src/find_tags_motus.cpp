@@ -559,6 +559,7 @@ main (int argc, char **argv) {
             std::cout << y;
           else
             std::cout << ((y > 0) ? "1e1024" : "-1e1024");
+          std::cout << ",\"type\":\"real\"";
         }
         catch(const boost::bad_any_cast &) {
           try { std::cout << boost::any_cast<float>(x) << ",\"type\":\"real\""; }
